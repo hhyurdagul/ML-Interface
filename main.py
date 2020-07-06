@@ -79,26 +79,50 @@ class GUI:
         model_without_optimization_frame.grid(column=0, row=0)
 
         ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
-        tk.Radiobutton(model_without_optimization_frame, text=1, value=1, command=lambda: self.openNoOptimizationLayers(0)).grid(column=1, row=0)
-        tk.Radiobutton(model_without_optimization_frame, text=2, value=2, command=lambda: self.openNoOptimizationLayers(1)).grid(column=2, row=0)
-        tk.Radiobutton(model_without_optimization_frame, text=3, value=3, command=lambda: self.openNoOptimizationLayers(2)).grid(column=3, row=0)
         
-        names = {1:"Neurons in First Layer", 2:"Neurons in Second Layer", 3:"Neurons in Third Layer"}
+        no_optimization_names = {1:"Neurons in First Layer", 2:"Neurons in Second Layer", 3:"Neurons in Third Layer"}
 
         self.neuron_numbers_var = [tk.IntVar(value="") for i in range(3)]
-        self.activation_var = tk.IntVar(value="relu")
-
-        self.mwo = [
+        self.activation_var = [tk.IntVar(value="relu") for i in range(3)]
+        self.no_optimization_choice_var = tk.IntVar(value=0)
+        
+        self.no_optimization = [
                 [
-                    ttk.Label(model_without_optimization_frame, text=names[i+1]).grid(column=0, row=i+1),
+                    tk.Radiobutton(model_without_optimization_frame, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i+1, row=0),
+                    ttk.Label(model_without_optimization_frame, text=no_optimization_names[i+1]).grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                     ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=2, row=i+1),
-                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var, "relu", "relu", "tanh", "sigmoid").grid(column=3, row=i+1)
+                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid").grid(column=3, row=i+1)
                 ] for i in range(3)
         ]
 
-        for i,j in enumerate(self.mwo):
-            j[1].grid(column=1, row=i+1)
+        for i,j in enumerate(self.no_optimization):
+            j[2].grid(column=1, row=i+1)
+
+
+        ## Model With Optimization
+        model_with_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model With Optimization")
+        model_with_optimization_frame.grid(column=0, row=1)
+
+        optimization_names = {1:"One Hidden Layer", 2:"Two Hidden Layer", 3:"Three Hidden Layer"}
+        self.optimization_choice_var = tk.IntVar(value=0)
+
+        self.neuron_min_number_var = [tk.IntVar(value="") for i in range(3)]
+        self.neuron_max_number_var = [tk.IntVar(value="") for i in range(3)]
+
+        self.optimization = [
+                [
+                    tk.Radiobutton(model_with_optimization_frame, text=optimization_names[i+1], value=i+1, variable=self.optimization_choice_var, command=lambda: self.openOptimizationLayers(False)).grid(column=i*2, row=0),
+                    ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Min").grid(column=i*2, row=1),
+                    ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Max").grid(column=i*2, row=2),
+                    ttk.Entry(model_with_optimization_frame, textvariable=self.neuron_min_number_var[i], state=tk.DISABLED),
+                    ttk.Entry(model_with_optimization_frame, textvariable=self.neuron_max_number_var[i], state=tk.DISABLED)
+                ] for i in range(3)
+        ]
+        
+        for i,j in enumerate(self.optimization):
+            j[3].grid(column=i*2+1, row=1)
+            j[4].grid(column=i*2+1, row=2)
 
 
     def readCsv(self, file_path):
@@ -166,21 +190,29 @@ class GUI:
             else:
                 j["state"] = tk.DISABLED
 
-    def openNoOptimizationLayers(self, layer):
-        for i in self.mwo:
-            i[1]["state"] = tk.DISABLED
+    def openOptimizationLayers(self, var):
+        for i in self.no_optimization:
+            i[2]["state"] = tk.DISABLED
 
-        for i in range(layer+1):
-            self.mwo[i][1]["state"] = tk.NORMAL
+        for i in self.optimization:
+            i[3]["state"] = tk.DISABLED
+            i[4]["state"] = tk.DISABLED
 
+        if var:
+            for i in range(self.no_optimization_choice_var.get()):
+                self.no_optimization[i][2]["state"] = tk.NORMAL
+                self.optimization_choice_var.set(0)
 
+        if not var:
+            for i in range(self.optimization_choice_var.get()):
+                self.optimization[i][3]["state"] = tk.NORMAL
+                self.optimization[i][4]["state"] = tk.NORMAL
+                self.no_optimization_choice_var.set(0)
 
 
     def start(self):
         self.root.mainloop()
 
 
-
 s = GUI()
 s.start()
-
