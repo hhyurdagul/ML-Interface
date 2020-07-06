@@ -70,7 +70,36 @@ class GUI:
         self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(3)]
         [self.lag_entries[i-2].grid(column=1, row=i) for i in range(2,5)]
 
-               
+        # Create Model
+        create_model_frame = ttk.LabelFrame(self.root, text="Create Model")
+        create_model_frame.grid(column=1, row=0)
+        
+        ## Model Without Optimization
+        model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
+        model_without_optimization_frame.grid(column=0, row=0)
+
+        ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
+        tk.Radiobutton(model_without_optimization_frame, text=1, value=1, command=lambda: self.openNoOptimizationLayers(0)).grid(column=1, row=0)
+        tk.Radiobutton(model_without_optimization_frame, text=2, value=2, command=lambda: self.openNoOptimizationLayers(1)).grid(column=2, row=0)
+        tk.Radiobutton(model_without_optimization_frame, text=3, value=3, command=lambda: self.openNoOptimizationLayers(2)).grid(column=3, row=0)
+        
+        names = {1:"Neurons in First Layer", 2:"Neurons in Second Layer", 3:"Neurons in Third Layer"}
+
+        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(3)]
+        self.activation_var = tk.IntVar(value="relu")
+
+        self.mwo = [
+                [
+                    ttk.Label(model_without_optimization_frame, text=names[i+1]).grid(column=0, row=i+1),
+                    ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
+                    ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=2, row=i+1),
+                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var, "relu", "relu", "tanh", "sigmoid").grid(column=3, row=i+1)
+                ] for i in range(3)
+        ]
+
+        for i,j in enumerate(self.mwo):
+            j[1].grid(column=1, row=i+1)
+
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
@@ -136,6 +165,16 @@ class GUI:
                 j["state"] = tk.NORMAL
             else:
                 j["state"] = tk.DISABLED
+
+    def openNoOptimizationLayers(self, layer):
+        for i in self.mwo:
+            i[1]["state"] = tk.DISABLED
+
+        for i in range(layer+1):
+            self.mwo[i][1]["state"] = tk.NORMAL
+
+
+
 
     def start(self):
         self.root.mainloop()
