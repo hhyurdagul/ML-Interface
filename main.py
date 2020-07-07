@@ -6,6 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.stattools import acf
 
@@ -82,8 +83,11 @@ class GUI:
         # Create Model
         create_model_frame = ttk.LabelFrame(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
+        
+        self.model_instance = 0
+        self.runtime = datetime.now().strftime("%d/%m/%Y %H:%M")
         self.do_optimization = False
-
+        
         ## Model Without Optimization
         model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
         model_without_optimization_frame.grid(column=0, row=0)
@@ -173,7 +177,26 @@ class GUI:
         ttk.Label(hyperparameter_frame, text="Best Model Neuron Numbers").grid(column=0, row=6)
         self.best_model_neurons = [tk.IntVar(value="") for i in range(3)]
         [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=6) for i in range(3)]
+       
+        # Test Model
+        test_model_frame = ttk.LabelFrame(self.root, text="Test Model")
+        test_model_frame.grid(column=1, row=2)
         
+        forecast_num = tk.IntVar(value="")
+        ttk.Label(test_model_frame, text="# of Forecast").grid(column=0, row=0)
+        ttk.Entry(test_model_frame, textvariable=forecast_num).grid(column=1, row=0)
+
+        test_file_path = tk.StringVar()
+        ttk.Label(test_model_frame, text="Test File Path").grid(column=0, row=1)
+        ttk.Entry(test_model_frame, textvariable=test_file_path).grid(column=1, row=1)
+        ttk.Button(test_model_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
+
+        ttk.Button(test_model_frame, text="Test Model", command=lambda: self.testModel(forecast_num.get())).grid(column=0, row=2)
+        ttk.Button(test_model_frame, text="Actual vs Forecasted Graph", command=self.vsGraph).grid(column=1, row=2)
+
+        self.mape = tk.Variable(value="")
+        ttk.Label(test_model_frame, text="Test MAPE").grid(column=0, row=3)
+        ttk.Entry(test_model_frame, textvariable=self.mape).grid(column=1, row=3)
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
@@ -184,6 +207,11 @@ class GUI:
 
         for i in self.df.columns:
             self.input_list.insert(tk.END, i)
+
+    def getTestSet(self, file_path):
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
+        file_path.set(path)
+        self.test_df = pd.read_csv(path)
 
     def addPredictor(self):
         try:
@@ -320,9 +348,11 @@ class GUI:
         return X, y
 
     def createModel(self):
+        self.model_instance += 1
+
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
-        print(X_train.shape, y_train.shape)
+        self.last = X_train[-1]
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         momentum = float(self.hyperparameters["Momentum"].get())
@@ -333,12 +363,13 @@ class GUI:
                 }
 
         shape = (X_train.shape[1], X_train.shape[2])
-        model = Sequential()
-        model.add(Input(shape=shape))
-
         model_choice = self.model_var.get()
+        
         if not self.do_optimization:
-            if model_choice == 1:
+            model = Sequential()
+            model.add(Input(shape=shape))
+            
+            if model_choice == 0:
                 model.add(Flatten())
 
             layers = self.no_optimization_choice_var.get()
@@ -374,6 +405,114 @@ class GUI:
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
+
+        elif self.do_optimization:
+            layer = self.optimization_choice_var.get()
+
+            if model_choice == 0:
+                def build_model(hp):
+                    model = Sequential()
+                    model.add(Input(shape=shape))
+                    model.add(Flatten())
+                    for i in range(layer):
+                        n_min = self.neuron_min_number_var[i].get()
+                        n_max = self.neuron_max_number_var[i].get()
+                        step = int((n_max - n_min)/4)
+                        model.add(Dense(units=hp.Int('MLP_'+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu'))
+                    model.add(Dense(1))
+                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+                    return model
+                
+                name = str(self.model_instance) + ". MLP"
+
+            elif model_choice == 2:
+                def build_model(hp):
+                    model = Sequential()
+                    model.add(Input(shape=shape))
+                    for i in range(layer):
+                        n_min = self.neuron_min_number_var[i].get()
+                        n_max = self.neuron_max_number_var[i].get()
+                        step = int((n_max - n_min)/4)
+                        model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True))
+                        if i == layer-1:
+                            model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False))
+                    
+                    model.add(Dense(1))
+                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+                    return model
+                
+                name = str(self.model_instance) + ". LSTM"
+            
+            elif model_choice == 3:
+                def build_model(hp):
+                    model = Sequential()
+                    model.add(Input(shape=shape))
+                    for i in range(layer):
+                        n_min = self.neuron_min_number_var[i].get()
+                        n_max = self.neuron_max_number_var[i].get()
+                        step = int((n_max - n_min)/4)
+                        model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True)))
+                        if i == layer-1:
+                            model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False)))
+                    
+                    model.add(Dense(1))
+                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+                    return model
+
+                name = str(self.model_instance) + ". Bi-LSTM"
+
+
+            tuner = RandomSearch(build_model, objective='loss', max_trials=3, executions_per_trial=1, directory=self.runtime, project_name=name)
+            
+            tuner.search(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
+            hps = tuner.get_best_hyperparameters(num_trials = 1)[0]
+            model = tuner.hypermodel.build(hps)
+            
+            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
+            loss = history.history["loss"][-1]
+            self.train_loss.set(loss)
+            
+
+            if model_choice != 3:
+                for i in range(layer):
+                    self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["units"])
+            elif model_choice == 3:
+                for i in range(layer):
+                    self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["layer"]["config"]["units"])
+        
+        self.model = model
+
+    def testModel(self, num):
+        last = self.last
+        steps, features = last.shape[0], last.shape[1]
+        values = last.reshape((1, steps, features))
+        out = []
+
+        for i in range(num):
+            pred = self.model.predict(values, verbose=0)
+            out = np.append(out, pred)
+            values = values.reshape((values.shape[0], values.shape[1] * values.shape[2]))
+            values = np.append(values[:, 1:], pred)
+            values = values.reshape(1, values.shape[0])
+            values = values.reshape((1, steps, features))
+        
+        self.pred = out.reshape((-1))
+        
+        if self.scale_var.get() != "None":
+            self.pred = self.label_scaler.inverse_transform(self.pred)
+        
+        self.forecast = self.test_df[self.target_list.get(0)].iloc[:num].values
+
+        mape = np.mean(np.abs((self.forecast - self.pred) / self.forecast)) * 100
+        self.mape.set(mape)
+
+    def vsGraph(self):
+        
+        plt.plot(self.forecast)
+        plt.plot(self.pred)
+        plt.legend(["Test", "Predict"], loc="upper left")
+        plt.show()
+        
 
     def start(self):
         self.root.mainloop()

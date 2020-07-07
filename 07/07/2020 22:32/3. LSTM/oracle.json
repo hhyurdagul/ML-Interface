@@ -1,0 +1,1 @@
+{"ongoing_trials": {}, "hyperparameters": {"space": [{"class_name": "Int", "config": {"name": "LSTM_0", "default": null, "min_value": 8, "max_value": 24, "step": 4, "sampling": null}}], "values": {"LSTM_0": 8}}, "seed": 9849, "seed_state": 9854, "tried_so_far": ["93c33995e70778ba243ee0e3e85518e9", "23f3b3c1ad73652f4bebfe3029fe6724", "dc74c2ec97d3a56e2aeacc68ffbb1f93"]}
