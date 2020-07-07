@@ -7,6 +7,15 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import pandas as pd
 import numpy as np
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.stattools import acf
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv1D, MaxPooling1D
+from tensorflow.keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from kerastuner.tuners import RandomSearch
+
 
 class GUI:
     def __init__(self):
@@ -56,10 +65,10 @@ class GUI:
         lag_options_frame = ttk.LabelFrame(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
 
-        acf_lags = tk.IntVar(value="")
+        self.acf_lags = tk.IntVar(value="")
         ttk.Label(lag_options_frame, text="Number of Lags").grid(column=0, row=0)
-        ttk.Entry(lag_options_frame, textvariable=acf_lags).grid(column=1, row=0)
-        ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(acf_lags.get())).grid(column=2, row=0)
+        ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
+        ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(self.acf_lags.get())).grid(column=2, row=0)
 
         self.lag_option_var = tk.IntVar(value="")
         tk.Radiobutton(lag_options_frame, text="Use All Lags", value=0, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=1)
@@ -73,7 +82,8 @@ class GUI:
         # Create Model
         create_model_frame = ttk.LabelFrame(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
-        
+        self.do_optimization = False
+
         ## Model Without Optimization
         model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
         model_without_optimization_frame.grid(column=0, row=0)
@@ -83,7 +93,7 @@ class GUI:
         no_optimization_names = {1:"Neurons in First Layer", 2:"Neurons in Second Layer", 3:"Neurons in Third Layer"}
 
         self.neuron_numbers_var = [tk.IntVar(value="") for i in range(3)]
-        self.activation_var = [tk.IntVar(value="relu") for i in range(3)]
+        self.activation_var = [tk.StringVar(value="relu") for i in range(3)]
         self.no_optimization_choice_var = tk.IntVar(value=0)
         
         self.no_optimization = [
@@ -112,7 +122,7 @@ class GUI:
 
         self.optimization = [
                 [
-                    tk.Radiobutton(model_with_optimization_frame, text=optimization_names[i+1], value=i+1, variable=self.optimization_choice_var, command=lambda: self.openOptimizationLayers(False)).grid(column=i*2, row=0),
+                    tk.Radiobutton(model_with_optimization_frame, text=optimization_names[i+1], value=i+1, variable=self.optimization_choice_var, command=lambda: self.openOptimizationLayers(False)).grid(column=i*2+1, row=0),
                     ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Min").grid(column=i*2, row=1),
                     ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Max").grid(column=i*2, row=2),
                     ttk.Entry(model_with_optimization_frame, textvariable=self.neuron_min_number_var[i], state=tk.DISABLED),
@@ -124,6 +134,46 @@ class GUI:
             j[3].grid(column=i*2+1, row=1)
             j[4].grid(column=i*2+1, row=2)
 
+        
+        # Hyperparameters
+        hyperparameter_frame = ttk.LabelFrame(self.root, text="Hyperparameters")
+        hyperparameter_frame.grid(column=1, row=1)
+
+
+        self.hyperparameters = {"Epoch": tk.IntVar(), "Batch_Size": tk.IntVar(), "Optimizer": tk.StringVar(), "Loss_Function": tk.StringVar(), "Learning_Rate": tk.Variable(value=0.001), "Momentum": tk.Variable(value=0.0)}
+        
+        ttk.Label(hyperparameter_frame, text="Epoch").grid(column=0, row=0)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Epoch"]).grid(column=1, row=0)
+
+        ttk.Label(hyperparameter_frame, text="Batch Size").grid(column=2, row=0)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Batch_Size"]).grid(column=3, row=0)
+
+        ttk.Label(hyperparameter_frame, text="Optimizer").grid(column=0, row=1)
+        ttk.OptionMenu(hyperparameter_frame, self.hyperparameters["Optimizer"], "Adam", "Adam", "SGD", "RMSprop").grid(column=1, row=1)
+
+        ttk.Label(hyperparameter_frame, text="Loss_Function").grid(column=2, row=1)
+        ttk.OptionMenu(hyperparameter_frame, self.hyperparameters["Loss_Function"], "mean_squared_error", "mean_squared_error", "mean_absolute_error", "mean_absolute_percentage_error").grid(column=3, row=1)
+
+        ttk.Label(hyperparameter_frame, text="Learning Rate").grid(column=0, row=2)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Learning_Rate"]).grid(column=1, row=2)
+
+        ttk.Label(hyperparameter_frame, text="Momentum").grid(column=2, row=2)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Momentum"]).grid(column=3, row=2)
+
+        model_names = ["MLP Model", "CNN Model", "LSTM Model", "Bi-LSTM Model"]
+        self.model_var = tk.IntVar(value="")
+        ttk.Label(hyperparameter_frame, text="Model Type").grid(column=0, row=3, columnspan=4)
+        [tk.Radiobutton(hyperparameter_frame, text=model_names[i], value=i, variable=self.model_var).grid(column=i, row=4) for i in range(4)]
+
+        self.train_loss = tk.Variable(value="")
+        ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
+        ttk.Label(hyperparameter_frame, text="Train Loss").grid(column=1, row=5)
+        ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
+
+        ttk.Label(hyperparameter_frame, text="Best Model Neuron Numbers").grid(column=0, row=6)
+        self.best_model_neurons = [tk.IntVar(value="") for i in range(3)]
+        [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=6) for i in range(3)]
+        
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
@@ -201,14 +251,129 @@ class GUI:
         if var:
             for i in range(self.no_optimization_choice_var.get()):
                 self.no_optimization[i][2]["state"] = tk.NORMAL
-                self.optimization_choice_var.set(0)
+            self.optimization_choice_var.set(0)
+            
+            self.do_optimization = False
 
         if not var:
             for i in range(self.optimization_choice_var.get()):
                 self.optimization[i][3]["state"] = tk.NORMAL
                 self.optimization[i][4]["state"] = tk.NORMAL
-                self.no_optimization_choice_var.set(0)
+            self.no_optimization_choice_var.set(0)
+            self.do_optimization = True
 
+    def getDataset(self):
+        choice = self.scale_var.get()
+        
+        size_choice = self.size_choice_var.get()
+        size = self.train_size_var.get() if size_choice else (self.train_size_var.get()/100) * len(self.df)
+        size = int(size)
+
+        placeholder = [i for i in self.predictor_list.get(0, tk.END)]
+        features = self.df[placeholder].iloc[:size]
+        label = self.df[[self.target_list.get(0)]].iloc[:size]
+        
+        if choice == "StandardScaler":
+            self.feature_scaler = StandardScaler()
+            self.label_scaler = StandardScaler()
+            
+            features.iloc[:] = self.feature_scaler.fit_transform(features)
+            label.iloc[:] = self.label_scaler.fit_transform(label)
+        
+        elif choice == "MinMaxScaler":
+            self.feature_scaler = MinMaxScaler()
+            self.label_scaler = MinMaxScaler()
+            
+            features.iloc[:] = self.feature_scaler.fit_transform(features)
+            label.iloc[:] = self.label_scaler.fit_transform(label)
+
+        print(len(features), len(label))
+        return features, label
+
+    def createLag(self, features, label):
+        X, y = [], []
+        n = self.acf_lags.get()
+        for i in range(len(features) - n):
+            X.append(features.iloc[i:i+n].to_numpy())
+            y.append(label.iloc[i+n])
+
+        X, y = np.array(X), np.array(y)
+
+        lag_type = self.lag_option_var.get()
+        acf_vals = acf(self.df[self.target_list.get(0)].values, nlags=n, fft=False)
+
+        if lag_type == 1:
+            lag = self.lag_entries[0].get()
+            numbers = [int(i) for i in lag.split(',')]
+            X = X[:, numbers, :]
+
+        elif lag_type == 2:
+            lag = self.lag_entries[1].get()
+            numbers = np.argsort(acf_vals[1:])[-int(lag):]
+            X = X[:, numbers, :]
+
+        elif lag_type == 3:
+            lag = self.lag_entries[2].get()
+            numbers = [i for i,j in enumerate(acf_vals[1:]) if j > float(lag)]
+            X = X[:, numbers, :]
+        
+        return X, y
+
+    def createModel(self):
+        features, label = self.getDataset()
+        X_train, y_train = self.createLag(features, label)
+        print(X_train.shape, y_train.shape)
+
+        learning_rate = float(self.hyperparameters["Learning_Rate"].get())
+        momentum = float(self.hyperparameters["Momentum"].get())
+        optimizers = {
+                "Adam": Adam(learning_rate=learning_rate),
+                "SGD": SGD(learning_rate=learning_rate, momentum=momentum),
+                "RMSprop": RMSprop(learning_rate=learning_rate, momentum=momentum)
+                }
+
+        shape = (X_train.shape[1], X_train.shape[2])
+        model = Sequential()
+        model.add(Input(shape=shape))
+
+        model_choice = self.model_var.get()
+        if not self.do_optimization:
+            if model_choice == 1:
+                model.add(Flatten())
+
+            layers = self.no_optimization_choice_var.get()
+            for i in range(layers):
+                neuron_number = self.neuron_numbers_var[i].get()
+                activation_function = self.activation_var[i].get()
+                if model_choice == 0:
+                    model.add(Dense(neuron_number, activation=activation_function))
+                
+                elif model_choice == 1:
+                    model.add(Conv1D(filters=neuron_number, kernel_size=2, activation=activation_function))
+                    model.add(MaxPooling1D(pool_size=2))
+                
+                elif model_choice == 2:
+                    if i == layers-1:
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False))
+                    else:
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True))
+
+                elif model_choice == 3:
+                    if i == layers-1:
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False)))
+                    else:
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True)))
+            
+            if model_choice == 2:
+                model.add(Flatten())
+                model.add(Dense(32))
+
+            model.add(Dense(1))
+            model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+            
+            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
+            loss = history.history["loss"][-1]
+            self.train_loss.set(loss)
 
     def start(self):
         self.root.mainloop()
