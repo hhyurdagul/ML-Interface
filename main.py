@@ -1,29 +1,123 @@
+# Gui
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from pandastable import Table
 
+# Self Use
+from docx import Document
+
+# Data
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.stattools import acf
+from datetime import datetime
 
+# Keras
+from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D
 from tensorflow.keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+#from keras.models import Sequential
+#from keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
+#from keras.optimizers import Adam, SGD, RMSprop
 from kerastuner.tuners import RandomSearch
 
+# Sklearn
+from sklearn.svm import SVR, NuSVR
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+document = Document("Real Data/Load.docx")
+rows = document.tables[0].rows[1:]
+
+savedoc = Document("Real Data/Forecast_Bidirectional LSTM.docx")
+savetable = savedoc.tables[0]
 
 class GUI:
     def __init__(self):
-        self.root = tk.Tk()
+        self.gui = tk.Tk()
+        self.parent = ttk.Notebook(self.gui)
+
+        time_series = InputTemplate()
+        self.add(time_series, "Time Series")
+        
+        # svm = SupportVectorMachine()
+        # self.add(svm, "Support Vector Machine")
+      
+        self.parent.pack(expand=1, fill='both')
+
+    def add(self, frame, text):
+        self.parent.add(frame.root, text=text)
+
+    def start(self):
+        self.gui.mainloop()
+
+class InputTemplate(ttk.Frame):
+    def __init__(self):
+       super.__init__(self)
+        
+       get_train_set_frame = Labelframe(self, text="Get Train Set")
+       get_train_set_frame.grid(column=0, row=0)
+
+       file_path = tk.StringVar(value="")
+       ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
+
+       self.input_list = tk.Listbox(get_train_set_frame)
+       self.input_list.grid(column=0, row=1)
+
+       self.predictor_list = tk.Listbox(get_train_set_frame)
+       self.predictor_list.grid(column=1, row=1)
+
+       self.target_list = tk.Listbox(get_train_set_frame)
+       self.target_list.grid(column=2, row=1)
+
+       # Customize Train Set
+       customize_train_set_frame = ttk.Labelframe(self.root, text="Customize Train Set")
+       customize_train_set_frame.grid(column=0, row=1)
+
+       self.train_size_var = tk.IntVar(value="")
+       ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0)
+       ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var).grid(column=1, row=0)
+
+       self.size_choice_var = tk.IntVar(value=0)
+       tk.Radiobutton(customize_train_set_frame, text="As Percent", value=0, variable=self.size_choice_var).grid(column=0, row=1)
+       tk.Radiobutton(customize_train_set_frame, text="As Number", value=1, variable=self.size_choice_var).grid(column=1, row=1)
+
+       self.scale_var = tk.StringVar(value="None")
+       ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2)
+       ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
+
+       self.difference_choice_var = tk.IntVar(value=0)
+       self.interval_var = tk.IntVar(value="")
+       ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
+       self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
+       self.interval_entry.grid(column=2, row=3)
+       
+
+       # Lag Options
+       lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
+       lag_options_frame.grid(column=0, row=2)
+
+       self.acf_lags = tk.IntVar(value="")
+       ttk.Label(lag_options_frame, text="Number of Lags").grid(column=0, row=0)
+       ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
+
+       self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(3)]
+       [self.lag_entries[i-2].grid(column=1, row=i) for i in range(2,5)]
+
+
+
+
+class TimeSeries:
+    def __init__(self):
+        self.root = ttk.Frame()
         
         # Get Train Set
-        get_train_set_frame = ttk.LabelFrame(self.root, text="Get Train Set")
+        get_train_set_frame = ttk.Labelframe(self.root, text="Get Train Set")
         get_train_set_frame.grid(column=0, row=0)
 
         file_path = tk.StringVar(value="")
@@ -47,7 +141,7 @@ class GUI:
         ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
        
         # Customize Train Set
-        customize_train_set_frame = tk.LabelFrame(self.root, text="Customize Train Set")
+        customize_train_set_frame = ttk.Labelframe(self.root, text="Customize Train Set")
         customize_train_set_frame.grid(column=0, row=1)
 
         self.train_size_var = tk.IntVar(value="")
@@ -62,8 +156,16 @@ class GUI:
         ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2)
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
 
+        self.difference_choice_var = tk.IntVar(value=0)
+        self.interval_var = tk.IntVar(value="")
+        tk.Checkbutton(customize_train_set_frame, text='Difference', variable=self.difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=3)
+        ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
+        self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
+        self.interval_entry.grid(column=2, row=3)
+        
+
         # Lag Options
-        lag_options_frame = ttk.LabelFrame(self.root, text="Lag Options")
+        lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
 
         self.acf_lags = tk.IntVar(value="")
@@ -81,7 +183,7 @@ class GUI:
         [self.lag_entries[i-2].grid(column=1, row=i) for i in range(2,5)]
 
         # Create Model
-        create_model_frame = ttk.LabelFrame(self.root, text="Create Model")
+        create_model_frame = ttk.Labelframe(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
         
         self.model_instance = 0
@@ -89,7 +191,7 @@ class GUI:
         self.do_optimization = False
         
         ## Model Without Optimization
-        model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
+        model_without_optimization_frame = ttk.Labelframe(create_model_frame, text="Model Without Optimization")
         model_without_optimization_frame.grid(column=0, row=0)
 
         ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
@@ -115,7 +217,7 @@ class GUI:
 
 
         ## Model With Optimization
-        model_with_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model With Optimization")
+        model_with_optimization_frame = ttk.Labelframe(create_model_frame, text="Model With Optimization")
         model_with_optimization_frame.grid(column=0, row=1)
 
         optimization_names = {1:"One Hidden Layer", 2:"Two Hidden Layer", 3:"Three Hidden Layer"}
@@ -140,7 +242,7 @@ class GUI:
 
         
         # Hyperparameters
-        hyperparameter_frame = ttk.LabelFrame(self.root, text="Hyperparameters")
+        hyperparameter_frame = ttk.Labelframe(self.root, text="Hyperparameters")
         hyperparameter_frame.grid(column=1, row=1)
 
 
@@ -179,12 +281,13 @@ class GUI:
         [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=6) for i in range(3)]
        
         # Test Model
-        test_model_frame = ttk.LabelFrame(self.root, text="Test Model")
+        test_model_frame = ttk.Labelframe(self.root, text="Test Model")
         test_model_frame.grid(column=1, row=2)
         
         forecast_num = tk.IntVar(value="")
         ttk.Label(test_model_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_frame, textvariable=forecast_num).grid(column=1, row=0)
+        ttk.Button(test_model_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_frame, text="Test File Path").grid(column=0, row=1)
@@ -197,6 +300,76 @@ class GUI:
         self.mape = tk.Variable(value="")
         ttk.Label(test_model_frame, text="Test MAPE").grid(column=0, row=3)
         ttk.Entry(test_model_frame, textvariable=self.mape).grid(column=1, row=3)
+        ttk.Button(test_model_frame, text="My Func", command=self.myFunc).grid(column=0, row=4)
+
+
+
+    def myFunc(self):
+        pred_name = "TRAFLOAD_CELL_PS_DL_KB"
+        m_name = "Bi-LSTM"
+        self.model_var.set(3)
+        count = 1
+        for i in rows:
+            k = i.cells
+            percent = int(k[1].text[:-1])
+            lag = int(k[4].text)
+            layer_num = int(k[6].text)
+            neurons = k[7].text
+            af = ""
+            epoch = int(k[9].text)
+            batch_size = int(k[10].text)
+            loss_function = k[12].text.replace("\n", " ").strip()
+            pred_num = int(k[14].text)
+            
+            try:
+                interval = int(k[3].text)
+                self.difference_choice_var.set(1)
+                self.interval_var.set(interval)
+            except:
+                interval = "-"
+                self.difference_choice_var.set(0)
+
+            self.train_size_var.set(percent)
+            self.acf_lags.set(lag)
+            self.lag_option_var.set(0)
+            self.no_optimization_choice_var.set(layer_num)
+            self.openOptimizationLayers(True)
+            n_nums = [int(j) for j in k[7].text.split(',')]
+            for j in range(layer_num):
+                self.neuron_numbers_var[j].set(n_nums[j])
+                af += "Relu,"
+
+            self.hyperparameters["Epoch"].set(epoch)
+            self.hyperparameters["Batch_Size"].set(batch_size)
+            lss = {"Mean Squared error":"mean_squared_error", "Mean Absolute error":"mean_absolute_error", "MAPE":"mean_absolute_percentage_error"} 
+            self.hyperparameters["Loss_Function"].set(lss[loss_function])
+            self.createModel()
+            self.testModel(pred_num)
+            print(count, ". finished")
+            print("Test MAPE =", self.mape.get())
+            count += 1
+
+            st = savetable.add_row().cells
+            st[0].text = pred_name
+            st[1].text = str(percent) + "%"
+            st[2].text = "-"
+            st[3].text = str(interval)
+            st[4].text = str(lag)
+            st[5].text = "Use All Lags"
+            st[6].text = str(layer_num)
+            st[7].text = neurons
+            st[8].text = str(af[:-1])
+            st[9].text = str(epoch)
+            st[10].text = str(batch_size)
+            st[11].text = "Adam"
+            st[12].text = loss_function
+            st[13].text = "0.001"
+            st[14].text = str(pred_num)
+            st[15].text = str(self.mape.get())[:4]
+            
+            clear_session()
+
+        savedoc.save("Real Data/Forecast_Bidirectional LSTM.docx")
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
@@ -213,6 +386,12 @@ class GUI:
         file_path.set(path)
         self.test_df = pd.read_csv(path)
 
+    def showTestSet(self):
+        top = tk.Toplevel(self.root)
+        df = pd.DataFrame({"Test": self.forecast[:,0], "Predict": self.pred[:,0]})
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+
     def addPredictor(self):
         try:
             a = self.input_list.get(self.input_list.curselection())
@@ -223,7 +402,7 @@ class GUI:
 
     def ejectPredictor(self):
         try:
-            a = self.predictor_list.delete(self.predictor_list.curselection())
+            self.predictor_list.delete(self.predictor_list.curselection())
         except:
             pass
     
@@ -237,9 +416,13 @@ class GUI:
 
     def ejectTarget(self):
         try:
-            a = self.target_list.delete(self.target_list.curselection())
+            self.target_list.delete(self.target_list.curselection())
         except:
             pass
+
+    def openDifference(self):
+        s = tk.NORMAL if self.difference_choice_var.get() else tk.DISABLED
+        self.interval_entry["state"] = s
 
     def showACF(self, lags):
         top = tk.Toplevel()
@@ -290,30 +473,49 @@ class GUI:
             self.no_optimization_choice_var.set(0)
             self.do_optimization = True
 
+    def difference(self, data, diff, fill_values=None):
+        interval = self.interval_var.get()
+        if diff:
+            return np.array([data[i] - data[i-interval] for i in range(interval, len(data))])
+        else:
+            for i in range(len(data)):
+                if i >= interval:
+                    data[i] = data[i] + data[i-interval]
+                else:
+                    data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
+
+
     def getDataset(self):
         choice = self.scale_var.get()
-        
+        difference_choice = self.difference_choice_var.get()
+
         size_choice = self.size_choice_var.get()
         size = self.train_size_var.get() if size_choice else (self.train_size_var.get()/100) * len(self.df)
         size = int(size)
 
         placeholder = [i for i in self.predictor_list.get(0, tk.END)]
-        features = self.df[placeholder].iloc[:size]
-        label = self.df[[self.target_list.get(0)]].iloc[:size]
+        features = self.df[placeholder].iloc[:size].to_numpy()
+        label = self.df[[self.target_list.get(0)]].iloc[:size].to_numpy()
         
+        self.fill_values = label
+
+        if difference_choice:
+            features = self.difference(features, True)
+            label = self.difference(label, True)
+
         if choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
             
-            features.iloc[:] = self.feature_scaler.fit_transform(features)
-            label.iloc[:] = self.label_scaler.fit_transform(label)
+            features = self.feature_scaler.fit_transform(features)
+            label = self.label_scaler.fit_transform(label)
         
         elif choice == "MinMaxScaler":
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             
-            features.iloc[:] = self.feature_scaler.fit_transform(features)
-            label.iloc[:] = self.label_scaler.fit_transform(label)
+            features = self.feature_scaler.fit_transform(features)
+            label = self.label_scaler.fit_transform(label)
 
         print(len(features), len(label))
         return features, label
@@ -322,8 +524,10 @@ class GUI:
         X, y = [], []
         n = self.acf_lags.get()
         for i in range(len(features) - n):
-            X.append(features.iloc[i:i+n].to_numpy())
-            y.append(label.iloc[i+n])
+            X.append(features[i:i+n])
+            y.append(label[i+n])
+        
+        self.last = np.array(features[len(features)-n:])
 
         X, y = np.array(X), np.array(y)
 
@@ -344,6 +548,8 @@ class GUI:
             lag = self.lag_entries[2].get()
             numbers = [i for i,j in enumerate(acf_vals[1:]) if j > float(lag)]
             X = X[:, numbers, :]
+
+        print(X.shape, y.shape)
         
         return X, y
 
@@ -352,7 +558,7 @@ class GUI:
 
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
-        self.last = X_train[-1]
+        self.X_train = X_train
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         momentum = float(self.hyperparameters["Momentum"].get())
@@ -364,7 +570,7 @@ class GUI:
 
         shape = (X_train.shape[1], X_train.shape[2])
         model_choice = self.model_var.get()
-        
+
         if not self.do_optimization:
             model = Sequential()
             model.add(Input(shape=shape))
@@ -395,14 +601,14 @@ class GUI:
                     else:
                         model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True)))
             
-            if model_choice == 2:
+            if model_choice == 1:
                 model.add(Flatten())
                 model.add(Dense(32))
 
             model.add(Dense(1))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
-            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
+            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
 
@@ -468,7 +674,7 @@ class GUI:
             hps = tuner.get_best_hyperparameters(num_trials = 1)[0]
             model = tuner.hypermodel.build(hps)
             
-            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
+            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
             
@@ -479,29 +685,31 @@ class GUI:
             elif model_choice == 3:
                 for i in range(layer):
                     self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["layer"]["config"]["units"])
-        
         self.model = model
 
     def testModel(self, num):
-        last = self.last
-        steps, features = last.shape[0], last.shape[1]
-        values = last.reshape((1, steps, features))
-        out = []
+        input_value = self.last
+        steps, features = self.X_train.shape[1], self.X_train.shape[2]
+        shape = (1,steps,features)
+        pred = []
 
         for i in range(num):
-            pred = self.model.predict(values, verbose=0)
-            out = np.append(out, pred)
-            values = values.reshape((values.shape[0], values.shape[1] * values.shape[2]))
-            values = np.append(values[:, 1:], pred)
-            values = values.reshape(1, values.shape[0])
-            values = values.reshape((1, steps, features))
-        
-        self.pred = out.reshape((-1))
+            output = self.model.predict(input_value.reshape(shape), verbose=0)
+            pred = np.append(pred, output)
+            input_value = np.append(input_value, output)[-shape[1]:]
+
+        self.pred = np.array(pred).reshape(-1,1)
         
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred)
         
-        self.forecast = self.test_df[self.target_list.get(0)].iloc[:num].values
+        if self.difference_choice_var.get():
+            self.difference(self.pred, False, self.fill_values)
+        
+        self.forecast = self.test_df[[self.target_list.get(0)]]
+        self.forecast = np.asarray(self.forecast)[:num]
+
+        print(self.pred.shape, self.forecast.shape)
 
         mape = np.mean(np.abs((self.forecast - self.pred) / self.forecast)) * 100
         self.mape.set(mape)
@@ -512,11 +720,137 @@ class GUI:
         plt.plot(self.pred)
         plt.legend(["Test", "Predict"], loc="upper left")
         plt.show()
+
+class SupportVectorMachine:
+    def __init__(self):
+        self.root = ttk.Frame()
         
+        # Get Train Set
+        get_train_set_frame = ttk.Labelframe(self.root, text="Get Train Set")
+        get_train_set_frame.grid(column=0, row=0)
 
-    def start(self):
-        self.root.mainloop()
+        file_path = tk.StringVar(value="")
+        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
+        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
+        ttk.Button(get_train_set_frame, text="Read Csv", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
 
+        self.input_list = tk.Listbox(get_train_set_frame)
+        self.input_list.grid(column=0, row=1)
+
+        self.predictor_list = tk.Listbox(get_train_set_frame)
+        self.predictor_list.grid(column=1, row=1)
+
+        self.target_list = tk.Listbox(get_train_set_frame)
+        self.target_list.grid(column=2, row=1)
+
+        ttk.Button(get_train_set_frame, text="Add Predictor", command=self.addPredictor).grid(column=1, row=2)
+        ttk.Button(get_train_set_frame, text="Eject Predictor", command=self.ejectPredictor).grid(column=1, row=3)
+
+        ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(column=2, row=2)
+        ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
+       
+        # Customize Train Set
+        customize_train_set_frame = ttk.Labelframe(self.root, text="Customize Train Set")
+        customize_train_set_frame.grid(column=0, row=1)
+
+        self.train_size_var = tk.IntVar(value="")
+        ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0)
+        ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var).grid(column=1, row=0)
+
+        self.size_choice_var = tk.IntVar(value=0)
+        tk.Radiobutton(customize_train_set_frame, text="As Percent", value=0, variable=self.size_choice_var).grid(column=0, row=1)
+        tk.Radiobutton(customize_train_set_frame, text="As Number", value=1, variable=self.size_choice_var).grid(column=1, row=1)
+
+        self.scale_var = tk.StringVar(value="None")
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
+
+        # Model
+        self.model_frame = ttk.Labelframe(self.root, text="Model Frame")
+        self.model_frame.grid(column=1, row=0)
+
+        ## Model Type
+        self.model_type_frame = ttk.Labelframe(self.model_frame, text="Type of SVR Model")
+        self.model_type_frame.grid(column=0, row=0)
+
+        self.model_type_var = tk.IntVar(value=0)
+        tk.Radiobutton(self.model_type_frame, text="Epsilon-SVR", value=0, variable=self.model_type_var).grid(column=0, row=0)
+        tk.Radiobutton(self.model_type_frame, text="Nu-SVR", value=1, variable=self.model_type_var).grid(column=1, row=0)
+
+        ## Kernel Type
+        self.kernel_type_frame = ttk.Labelframe(self.model_frame, text="Kernel Function")
+        self.kernel_type_frame.grid(column=0, row=1)
+
+        self.kernel_type_var = tk.IntVar()
+        tk.Radiobutton(self.kernel_type_frame, text="Linear", value=0, variable=self.kernel_type_var).grid(column=0, row=0, sticky=tk.W)
+        tk.Radiobutton(self.kernel_type_frame, text="RBF", value=1, variable=self.kernel_type_var).grid(column=1, row=0, sticky=tk.W)
+        tk.Radiobutton(self.kernel_type_frame, text="Polynomial", value=2, variable=self.kernel_type_var).grid(column=0, row=1)
+        tk.Radiobutton(self.kernel_type_frame, text="Sigmoid", value=3, variable=self.kernel_type_var).grid(column=1, row=1)
+        
+        ## Parameter Optimization
+        self.parameter_optimization_frame = ttk.Labelframe(self.model_frame, text="Parameter Optimization")
+        self.parameter_optimization_frame.grid(column=1, row=0, rowspan=2)
+
+        self.grid_option_var = tk.IntVar(value=0)
+        ttk.Checkbutton(self.parameter_optimization_frame, text="Do grid search for optimal parameters", offvalue=0, onvalue=1, variable=self.grid_option_var).grid(column=0, row=0, columnspan=3)
+
+        self.grid_range_var = tk.IntVar(value="")
+        self.grid_times_var = tk.IntVar(value="")
+        ttk.Label(self.parameter_optimization_frame, text="Intervals:").grid(column=0, row=1)
+        ttk.Entry(self.parameter_optimization_frame, textvariable=self.grid_range_var, width=8, state=tk.DISABLED).grid(column=1, row=1)
+        ttk.Entry(self.parameter_optimization_frame, textvariable=self.grid_times_var, width=8, state=tk.DISABLED).grid(column=2, row=1)
+
+    def readCsv(self, file_path):
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
+        file_path.set(path)
+        self.df = pd.read_csv(path)
+        
+        self.input_list.delete(0, tk.END)
+
+        for i in self.df.columns:
+            self.input_list.insert(tk.END, i)
+
+    def getTestSet(self, file_path):
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
+        file_path.set(path)
+        self.test_df = pd.read_csv(path)
+
+    def showTestSet(self):
+        top = tk.Toplevel(self.root)
+        df = pd.DataFrame({"Test": self.label[:,0], "Predict": self.pred[:,0]})
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+
+    def addPredictor(self):
+        try:
+            a = self.input_list.get(self.input_list.curselection())
+            if a not in self.predictor_list.get(0,tk.END):
+                self.predictor_list.insert(tk.END, a)
+        except:
+            pass
+
+    def ejectPredictor(self):
+        try:
+            self.predictor_list.delete(self.predictor_list.curselection())
+        except:
+            pass
+    
+    def addTarget(self):
+        try:
+            a = self.input_list.get(self.input_list.curselection())
+            if self.target_list.size() < 1:
+                self.target_list.insert(tk.END, a)
+        except:
+            pass
+
+    def ejectTarget(self):
+        try:
+            self.target_list.delete(self.target_list.curselection())
+        except:
+            pass
+
+ 
 
 s = GUI()
 s.start()
+
