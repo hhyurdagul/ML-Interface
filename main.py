@@ -42,11 +42,11 @@ class GUI:
         self.gui = tk.Tk()
         self.parent = ttk.Notebook(self.gui)
 
-        time_series = InputTemplate()
+        time_series = TimeSeries()
         self.add(time_series, "Time Series")
         
-        # svm = SupportVectorMachine()
-        # self.add(svm, "Support Vector Machine")
+        #svm = SupportVectorMachine()
+        #self.add(svm, "Support Vector Machine")
       
         self.parent.pack(expand=1, fill='both')
 
@@ -55,61 +55,6 @@ class GUI:
 
     def start(self):
         self.gui.mainloop()
-
-class InputTemplate(ttk.Frame):
-    def __init__(self):
-       super.__init__(self)
-        
-       get_train_set_frame = Labelframe(self, text="Get Train Set")
-       get_train_set_frame.grid(column=0, row=0)
-
-       file_path = tk.StringVar(value="")
-       ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
-
-       self.input_list = tk.Listbox(get_train_set_frame)
-       self.input_list.grid(column=0, row=1)
-
-       self.predictor_list = tk.Listbox(get_train_set_frame)
-       self.predictor_list.grid(column=1, row=1)
-
-       self.target_list = tk.Listbox(get_train_set_frame)
-       self.target_list.grid(column=2, row=1)
-
-       # Customize Train Set
-       customize_train_set_frame = ttk.Labelframe(self.root, text="Customize Train Set")
-       customize_train_set_frame.grid(column=0, row=1)
-
-       self.train_size_var = tk.IntVar(value="")
-       ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0)
-       ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var).grid(column=1, row=0)
-
-       self.size_choice_var = tk.IntVar(value=0)
-       tk.Radiobutton(customize_train_set_frame, text="As Percent", value=0, variable=self.size_choice_var).grid(column=0, row=1)
-       tk.Radiobutton(customize_train_set_frame, text="As Number", value=1, variable=self.size_choice_var).grid(column=1, row=1)
-
-       self.scale_var = tk.StringVar(value="None")
-       ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2)
-       ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
-
-       self.difference_choice_var = tk.IntVar(value=0)
-       self.interval_var = tk.IntVar(value="")
-       ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
-       self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
-       self.interval_entry.grid(column=2, row=3)
-       
-
-       # Lag Options
-       lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
-       lag_options_frame.grid(column=0, row=2)
-
-       self.acf_lags = tk.IntVar(value="")
-       ttk.Label(lag_options_frame, text="Number of Lags").grid(column=0, row=0)
-       ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
-
-       self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(3)]
-       [self.lag_entries[i-2].grid(column=1, row=i) for i in range(2,5)]
-
-
 
 
 class TimeSeries:
@@ -631,6 +576,25 @@ class TimeSeries:
                 
                 name = str(self.model_instance) + ". MLP"
 
+            elif model_choice == 1:
+                def build_model(hp):
+                    model = Sequential()
+                    model.add(Input(shape=shape))
+                    for i in range(layer):
+                        n_min = self.neuron_min_number_var[i].get()
+                        n_max = self.neuron_max_number_var[i].get()
+                        step = int((n_max-n_min)/4)
+                        model.add(Conv1D(filters=hp.Int("CNN_"+str(i), min_value=n_min, max_value=n_max, step=step), kernel_size=2, activation="relu"))
+                        model.add(MaxPooling1D(pool_size=2))
+                    
+                    model.add(Flatten())
+                    model.add(Dense(32))
+                    model.add(Dense(1))
+                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+                    return model
+                
+                name = str(self.model_instance) + ". CNN"
+
             elif model_choice == 2:
                 def build_model(hp):
                     model = Sequential()
@@ -679,12 +643,16 @@ class TimeSeries:
             self.train_loss.set(loss)
             
 
-            if model_choice != 3:
-                for i in range(layer):
+            for i in range(layer):
+                if model_choice == 0:
                     self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["units"])
-            elif model_choice == 3:
-                for i in range(layer):
-                    self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["layer"]["config"]["units"])
+                elif model_choice == 1:
+                    self.best_model_neurons[i].set(model.get_layer(index=(2*i)).get_config()["filters"])
+                elif model_choice == 2:
+                    self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["units"])
+                elif model_choice == 3:
+                    self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["layer"]["config"]["units"])
+
         self.model = model
 
     def testModel(self, num):
@@ -693,7 +661,7 @@ class TimeSeries:
         shape = (1,steps,features)
         pred = []
 
-        for i in range(num):
+        for _ in range(num):
             output = self.model.predict(input_value.reshape(shape), verbose=0)
             pred = np.append(pred, output)
             input_value = np.append(input_value, output)[-shape[1]:]
