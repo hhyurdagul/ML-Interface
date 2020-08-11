@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.stattools import acf
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Keras
 from tensorflow.keras.backend import clear_session
@@ -22,20 +22,38 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D
 from tensorflow.keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-#from keras.models import Sequential
-#from keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
-#from keras.optimizers import Adam, SGD, RMSprop
 from kerastuner.tuners import RandomSearch
 
 # Sklearn
 from sklearn.svm import SVR, NuSVR
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import cross_val_score, GridSearchCV
 
 document = Document("Real Data/Load.docx")
 rows = document.tables[0].rows[1:]
 
 savedoc = Document("Real Data/Forecast_Bidirectional LSTM.docx")
 savetable = savedoc.tables[0]
+
+
+holiday_dates = [
+                 {"month":1, "day":1},
+                 {"month":4, "day":23},
+                 {"month":5, "day":1},
+                 {"month":5, "day":19},
+                 {"month":7, "day":15},
+                 {"month":8, "day":30},
+                 {"month":10, "day":29}
+]
+
+def isHoliday(d):
+    for i in holiday_dates:
+        if(i["day"] == d.day) and (i["month"] == d.month):
+            return 1
+    return 0
+
+def isWeekend(d):
+    return 1 if d.weekday() == 5 or d.weekday() == 6 else 0
 
 class GUI:
     def __init__(self):
@@ -45,8 +63,8 @@ class GUI:
         time_series = TimeSeries()
         self.add(time_series, "Time Series")
         
-        #svm = SupportVectorMachine()
-        #self.add(svm, "Support Vector Machine")
+        svm = SupportVectorMachine()
+        self.add(svm, "Support Vector Machine")
       
         self.parent.pack(expand=1, fill='both')
 
@@ -711,6 +729,9 @@ class SupportVectorMachine:
         self.target_list = tk.Listbox(get_train_set_frame)
         self.target_list.grid(column=2, row=1)
 
+        self.date_var = tk.StringVar(value="Select Date Column")
+        ttk.Button(get_train_set_frame, textvariable=self.date_var, command=self.selectDate).grid(column=0, row=2)
+
         ttk.Button(get_train_set_frame, text="Add Predictor", command=self.addPredictor).grid(column=1, row=2)
         ttk.Button(get_train_set_frame, text="Eject Predictor", command=self.ejectPredictor).grid(column=1, row=3)
 
@@ -734,45 +755,113 @@ class SupportVectorMachine:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
 
         # Model
-        self.model_frame = ttk.Labelframe(self.root, text="Model Frame")
-        self.model_frame.grid(column=1, row=0)
+        model_frame = ttk.Labelframe(self.root, text="Model Frame")
+        model_frame.grid(column=1, row=0)
 
         ## Model Type
-        self.model_type_frame = ttk.Labelframe(self.model_frame, text="Type of SVR Model")
-        self.model_type_frame.grid(column=0, row=0)
+        model_type_frame = ttk.Labelframe(model_frame, text="Type of SVR Model")
+        model_type_frame.grid(column=0, row=0)
 
         self.model_type_var = tk.IntVar(value=0)
-        tk.Radiobutton(self.model_type_frame, text="Epsilon-SVR", value=0, variable=self.model_type_var).grid(column=0, row=0)
-        tk.Radiobutton(self.model_type_frame, text="Nu-SVR", value=1, variable=self.model_type_var).grid(column=1, row=0)
+        tk.Radiobutton(model_type_frame, text="Epsilon-SVR", value=0, variable=self.model_type_var, command=self.openEntries).grid(column=0, row=0)
+        tk.Radiobutton(model_type_frame, text="Nu-SVR", value=1, variable=self.model_type_var, command=self.openEntries).grid(column=1, row=0)
 
         ## Kernel Type
-        self.kernel_type_frame = ttk.Labelframe(self.model_frame, text="Kernel Function")
-        self.kernel_type_frame.grid(column=0, row=1)
+        kernel_type_frame = ttk.Labelframe(model_frame, text="Kernel Function")
+        kernel_type_frame.grid(column=0, row=1)
 
         self.kernel_type_var = tk.IntVar()
-        tk.Radiobutton(self.kernel_type_frame, text="Linear", value=0, variable=self.kernel_type_var).grid(column=0, row=0, sticky=tk.W)
-        tk.Radiobutton(self.kernel_type_frame, text="RBF", value=1, variable=self.kernel_type_var).grid(column=1, row=0, sticky=tk.W)
-        tk.Radiobutton(self.kernel_type_frame, text="Polynomial", value=2, variable=self.kernel_type_var).grid(column=0, row=1)
-        tk.Radiobutton(self.kernel_type_frame, text="Sigmoid", value=3, variable=self.kernel_type_var).grid(column=1, row=1)
+        tk.Radiobutton(kernel_type_frame, text="Linear", value=0, variable=self.kernel_type_var, command=self.openEntries).grid(column=0, row=0, sticky=tk.W)
+        tk.Radiobutton(kernel_type_frame, text="RBF", value=1, variable=self.kernel_type_var, command=self.openEntries).grid(column=1, row=0, sticky=tk.W)
+        tk.Radiobutton(kernel_type_frame, text="Polynomial", value=2, variable=self.kernel_type_var, command=self.openEntries).grid(column=0, row=1)
+        tk.Radiobutton(kernel_type_frame, text="Sigmoid", value=3, variable=self.kernel_type_var, command=self.openEntries).grid(column=1, row=1)
         
         ## Parameter Optimization
-        self.parameter_optimization_frame = ttk.Labelframe(self.model_frame, text="Parameter Optimization")
-        self.parameter_optimization_frame.grid(column=1, row=0, rowspan=2)
+        parameter_optimization_frame = ttk.Labelframe(model_frame, text="Parameter Optimization")
+        parameter_optimization_frame.grid(column=0, row=2)
 
         self.grid_option_var = tk.IntVar(value=0)
-        ttk.Checkbutton(self.parameter_optimization_frame, text="Do grid search for optimal parameters", offvalue=0, onvalue=1, variable=self.grid_option_var).grid(column=0, row=0, columnspan=3)
+        tk.Checkbutton(parameter_optimization_frame, text="Do grid search for optimal parameters", offvalue=0, onvalue=1, variable=self.grid_option_var, command=self.openEntries).grid(column=0, row=0, columnspan=3)
 
-        self.grid_range_var = tk.IntVar(value="")
-        self.grid_times_var = tk.IntVar(value="")
-        ttk.Label(self.parameter_optimization_frame, text="Intervals:").grid(column=0, row=1)
-        ttk.Entry(self.parameter_optimization_frame, textvariable=self.grid_range_var, width=8, state=tk.DISABLED).grid(column=1, row=1)
-        ttk.Entry(self.parameter_optimization_frame, textvariable=self.grid_times_var, width=8, state=tk.DISABLED).grid(column=2, row=1)
+        self.interval_var = tk.IntVar(value="")
+        ttk.Label(parameter_optimization_frame, text="Interval:").grid(column=0, row=1)
+        self.interval_entry = ttk.Entry(parameter_optimization_frame, textvariable=self.interval_var, width=8, state=tk.DISABLED)
+        self.interval_entry.grid(column=1, row=1, pady=2)
+
+        self.cross_val_option = tk.IntVar(value=0)
+        self.cross_val_var = tk.IntVar(value="")
+        tk.Checkbutton(parameter_optimization_frame, text="Cross validate; folds:", offvalue=0, onvalue=1, variable=self.cross_val_option, command=self.openEntries).grid(column=0, row=2)
+        self.cross_val_entry = tk.Entry(parameter_optimization_frame, textvariable=self.cross_val_var, state=tk.DISABLED, width=8)
+        self.cross_val_entry.grid(column=1, row=2)
+
+        ## Model Parameters
+        model_parameters_frame = ttk.LabelFrame(model_frame, text="Model Parameters")
+        model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
+        
+        parameter_names = ["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]
+        self.parameters = [tk.Variable(value="0.10"), tk.Variable(value="0.50"), tk.Variable(value="1.00"), tk.Variable(value="0.10"), tk.Variable(value="0.00"), tk.Variable(value="3.00")]
+        self.optimization_parameters = [[tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()]]
+        
+        ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
+        ttk.Label(model_parameters_frame, text="------ Search Range ------").grid(column=2, row=0, columnspan=2)
+
+        self.model_parameters_frame_options = [
+            [
+                ttk.Label(model_parameters_frame, text=j+":").grid(column=0, row=i+1),
+                ttk.Entry(model_parameters_frame, textvariable=self.parameters[i], state=tk.DISABLED, width=9),
+                ttk.Entry(model_parameters_frame, textvariable=self.optimization_parameters[i][0], state=tk.DISABLED, width=9),
+                ttk.Entry(model_parameters_frame, textvariable=self.optimization_parameters[i][1], state=tk.DISABLED, width=9)
+            ] for i,j in enumerate(parameter_names)
+        ]
+
+        for i, j in enumerate(self.model_parameters_frame_options):
+            j[1].grid(column=1, row=i+1, padx=2, pady=2)
+            j[2].grid(column=2, row=i+1, padx=2, pady=2)
+            j[3].grid(column=3, row=i+1, padx=2, pady=2)
+
+        ttk.Label(model_parameters_frame, text="Gamma:").grid(column=0, row=7)
+        self.gamma_choice = tk.IntVar(value=0)
+        self.gamma_radios = [tk.Radiobutton(model_parameters_frame, text=j, value=i, variable=self.gamma_choice, state=tk.DISABLED, command=self.openEntries) for i, j in enumerate(["Scale", "Auto", "Value"])]
+        
+        for i, j in enumerate(self.gamma_radios):
+            j.grid(column=i+1, row=7)
+    
+        ttk.Button(model_frame, text="Create Model", command=self.createModel).grid(column=0, row=3)
+
+        self.svm_train_score = tk.Variable(value="")
+        ttk.Label(model_frame, text="SVM Train Score:").grid(column=1, row=3)
+        ttk.Entry(model_frame, textvariable=self.svm_train_score, width=12).grid(column=2, row=3)
+
+        # Test Model
+        test_model_frame = ttk.LabelFrame(self.root, text="Test Model")
+        test_model_frame.grid(column=1, row=1)
+
+        forecast_num = tk.IntVar(value="")
+        ttk.Label(test_model_frame, text="# of Forecast").grid(column=0, row=0)
+        ttk.Entry(test_model_frame, textvariable=forecast_num).grid(column=1, row=0)
+        ttk.Button(test_model_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
+
+        test_file_path = tk.StringVar()
+        ttk.Label(test_model_frame, text="Test File Path").grid(column=0, row=1)
+        ttk.Entry(test_model_frame, textvariable=test_file_path).grid(column=1, row=1)
+        ttk.Button(test_model_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
+
+        self.mape = tk.Variable(value="")
+        ttk.Label(test_model_frame, text="Test MAPE").grid(column=0, row=3)
+        ttk.Entry(test_model_frame, textvariable=self.mape).grid(column=1, row=3)
+        ttk.Button(test_model_frame, text="Test Model", command=lambda: self.forecast(forecast_num.get())).grid(column=2, row=3)
+        ttk.Button(test_model_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
+
+        self.openEntries()
+
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv")])
         file_path.set(path)
         self.df = pd.read_csv(path)
+        self.fillInputList()
         
+    def fillInputList(self):
         self.input_list.delete(0, tk.END)
 
         for i in self.df.columns:
@@ -785,9 +874,22 @@ class SupportVectorMachine:
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.label[:,0], "Predict": self.pred[:,0]})
+        df = pd.DataFrame({"Test": self.y_true, "Predict": self.pred})
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
+
+    def selectDate(self):
+        a = self.input_list.get(self.input_list.curselection())
+        self.date_var.set("Selected " + a)
+        date = pd.to_datetime(self.df[a])
+        self.df["holiday"] = date.apply(isHoliday)
+        self.df["weekend"] = date.apply(isWeekend)
+        self.df["hour"] = date.apply(lambda x: x.hour)
+        self.df["day"] = date.apply(lambda x: x.day)
+        self.df["month"] = date.apply(lambda x: x.month)
+        self.df["year"] = date.apply(lambda x: x.year)
+        self.fillInputList()
+        self.date = date
 
     def addPredictor(self):
         try:
@@ -817,7 +919,152 @@ class SupportVectorMachine:
         except:
             pass
 
- 
+    def openEntries(self):
+        to_open = []
+        for i in self.model_parameters_frame_options:
+            i[1]["state"] = tk.DISABLED
+            i[2]["state"] = tk.DISABLED
+            i[3]["state"] = tk.DISABLED
+
+        self.interval_entry["state"] = tk.DISABLED
+        self.cross_val_entry["state"] = tk.DISABLED
+
+        if self.kernel_type_var.get() == 0:
+            for i in self.gamma_radios:
+                i["state"] = tk.DISABLED
+        else:
+            for i in self.gamma_radios:
+                i["state"] = tk.NORMAL
+            if self.gamma_choice.get() == 2:
+                to_open.append(3)
+        
+        if self.cross_val_option.get() == 1:
+            self.cross_val_entry["state"] = tk.NORMAL
+
+        if self.kernel_type_var.get() == 2:
+            to_open.append(5)
+            to_open.append(4)
+        elif self.kernel_type_var.get() == 3:
+            to_open.append(4) 
+
+        to_open.append(self.model_type_var.get())
+        to_open.append(2)
+
+        to_open.sort()
+        
+        opt = self.grid_option_var.get()
+
+        self.open(to_open, opt)
+
+    def open(self, to_open, opt=0):
+        if opt == 1:
+            self.interval_entry["state"] = tk.NORMAL
+            for i in to_open:
+                self.model_parameters_frame_options[i][2]["state"] = tk.NORMAL
+                self.model_parameters_frame_options[i][3]["state"] = tk.NORMAL
+        else:
+            for i in to_open:
+                self.model_parameters_frame_options[i][1]["state"] = tk.NORMAL
+        
+        self.vars_nums = to_open
+    
+    def createModel(self):
+        gamma_choice = self.gamma_choice.get()
+        kernels = ["linear", "rbf", "poly", "sigmoid"]
+        kernel = kernels[self.kernel_type_var.get()]
+
+        size = int(self.train_size_var.get()) if self.size_choice_var.get() else int(len(self.df)*(self.train_size_var.get()/100))
+        
+        df = self.df.iloc[:size]
+        self.features = df[list(self.predictor_list.get(0, tk.END))]
+        self.label = df[self.target_list.get(0)]
+        
+        X = self.features
+        y = self.label
+
+        if self.grid_option_var.get() == 0:
+            epsilon = float(self.parameters[0].get())
+            nu = float(self.parameters[1].get())
+            C = float(self.parameters[2].get())
+            gamma = float(self.parameters[3].get()) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
+            coef0 = float(self.parameters[4].get())
+            degree = float(self.parameters[5].get())
+            
+            if self.model_type_var.get() == 0:
+                model = SVR(kernel=kernel, C=C, epsilon=epsilon, gamma=gamma, coef0=coef0, degree=degree)
+            else:
+                model = NuSVR(kernel=kernel, C=C, nu=nu, gamma=gamma, coef0=coef0, degree=degree)
+
+            if self.cross_val_option.get() == 1:
+                cvs = cross_val_score(model, X, y, cv=self.cross_val_var.get()).mean()             
+                self.svm_train_score.set(cvs)
+            
+            else:
+                model.fit(X, y)
+                s = model.score(X, y)
+                self.svm_train_score.set(s)
+
+            self.model = model
+            
+        else:
+            params = {}
+            interval = self.interval_var.get()
+            
+            params["C"] = np.unique(np.linspace(float(self.optimization_parameters[2][0].get()), float(self.optimization_parameters[2][1].get()), interval))
+            if self.model_type_var.get() == 0:
+                params["epsilon"] = np.unique(np.linspace(float(self.optimization_parameters[0][0].get()), float(self.optimization_parameters[0][1].get()), interval))
+                model = SVR()
+            else:
+                min_nu = max(0.0001, float(self.optimization_parameters[1][0].get()))
+                max_nu = min(1, float(self.optimization_parameters[1][1].get()))
+                params["nu"] = np.unique(np.linspace(min_nu, max_nu, interval))
+                model = NuSVR()
+            if kernel != "linear":
+                if gamma_choice == 2:
+                    params["gamma"] = np.unique(np.linspace(float(self.optimization_parameters[3][0].get()), float(self.optimization_parameters[3][1].get()), interval))
+                elif gamma_choice == 1:
+                    params["gamma"] = ["auto"]
+                else:
+                    params["gamma"] = ["scale"]
+            
+            if kernel == "poly" or kernel == "sigmoid":
+                params["coef0"] = np.unique(np.linspace(float(self.optimization_parameters[4][0].get()), float(self.optimization_parameters[4][1].get()), interval))
+
+            if kernel == "poly":
+                params["degree"] = np.unique(np.linspace(float(self.optimization_parameters[5][0].get()), float(self.optimization_parameters[5][1].get()), interval, dtype=int))
+
+            params["kernel"] = [kernel]
+
+            cv = self.cross_val_var.get() if self.cross_val_option.get() == 1 else None
+            regressor = GridSearchCV(model, params, cv=cv)
+            regressor.fit(X, y)
+            s = regressor.score(X, y)
+            self.svm_train_score.set(s)
+
+            self.model = regressor
+        
+    def forecast(self, num):
+        p = []
+        last_t = self.date.iloc[-1]
+        for _ in range(num):
+            last_t += timedelta(hours=1)
+            df = pd.DataFrame([{"holiday": isHoliday(last_t), "weekend": isWeekend(last_t), "hour": last_t.hour, "day": last_t.day, "month": last_t.month, "year":last_t.month}])
+            last = df[list(self.predictor_list.get(0, tk.END))]
+            pred = self.model.predict(last)
+            p.append(pred)
+        
+        self.pred = np.array(p).reshape(-1)
+        y_true = self.test_df[self.target_list.get(0)][:num].values.reshape(-1)
+        
+        mape = np.mean(np.abs((y_true-self.pred)/y_true)) * 100
+        self.mape.set(mape)
+        self.y_true = y_true
+
+    def vsGraph(self):
+        plt.plot(self.pred)
+        plt.plot(self.y_true)
+        plt.legend(["pred", "test"], loc="upper left")
+        plt.show()
 
 s = GUI()
 s.start()
