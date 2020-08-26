@@ -14,7 +14,7 @@ from sklearn.svm import SVR, NuSVR
 
 from datetime import timedelta
 
-from .tools import *
+from .helpers import *
 
 class SupportVectorMachine:
     def __init__(self):
@@ -313,7 +313,12 @@ class SupportVectorMachine:
             else:
                 model = NuSVR(kernel=kernel, C=C, nu=nu, gamma=gamma, coef0=coef0, degree=degree)
 
-            if self.validation_option.get() == 1:
+            if self.validation_option.get() == 0:
+                model.fit(X, y)
+                s = model.score(X, y)
+                self.svm_train_score.set(s)
+            
+            elif self.validation_option.get() == 1:
                 X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train)
                 s = model.score(X_test, y_test)
@@ -360,6 +365,7 @@ class SupportVectorMachine:
             params["kernel"] = [kernel]
 
             cv = self.gs_cross_val_var.get() if self.gs_cross_val_option.get() == 1 else None
+            
             regressor = GridSearchCV(model, params, cv=cv)
             regressor.fit(X, y)
             s = regressor.score(X, y)

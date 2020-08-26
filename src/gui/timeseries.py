@@ -27,7 +27,7 @@ from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from kerastuner.tuners import RandomSearch
 
 # Helper
-from .tools import loss
+from .helpers import loss
 
 class TimeSeries:
     def __init__(self):

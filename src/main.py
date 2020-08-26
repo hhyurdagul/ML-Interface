@@ -2,9 +2,14 @@
 import tkinter as tk
 from tkinter import ttk
 
+import warnings
+warnings.filterwarnings("ignore")
+
 from gui.timeseries import TimeSeries
 from gui.supportvectormachine import SupportVectorMachine
 from gui.generalregression import GeneralizedRegressionNeuralNetwork
+
+
 
 class GUI:
     def __init__(self):
