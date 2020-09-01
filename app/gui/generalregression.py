@@ -12,14 +12,14 @@ import numpy as np
 from datetime import timedelta
 
 # Sklearn
-from sklearn.model_selection import cross_val_score, GridSearchCV, train_test_split
+from sklearn.model_selection import cross_val_score, GridSearchCV, train_test_split, cross_validate
 
 from pyGRNN import GRNN
 
 from .helpers import *
 
 
-class GeneralizedRegressionNeuralNetwork:
+class GeneralRegressionNeuralNetwork:
     def __init__(self):
         self.root = ttk.Frame()
         
@@ -60,6 +60,8 @@ class GeneralizedRegressionNeuralNetwork:
         tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=3, columnspan=2, sticky=tk.W)
         ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=1)
         ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=2)
+        self.do_forecast_option = tk.IntVar(value=0)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=4, columnspan=2)
 
         # Sigma Options
         sigma_options_frame = ttk.LabelFrame(self.root, text="Sigma Options")
@@ -189,6 +191,8 @@ class GeneralizedRegressionNeuralNetwork:
         op = self.find_sigma_option.get()
         val_option = self.validation_option.get() 
         
+        do_forecast = self.do_forecast_option.get()
+
         features = self.df[list(self.predictor_list.get(0, tk.END))]
         label = self.df[self.target_list.get(0)]
 
@@ -198,19 +202,33 @@ class GeneralizedRegressionNeuralNetwork:
 
             if val_option == 0:
                 model.fit(features, label)
-                s = model.score(features, label)
-                self.score.set(s)
+                if do_forecast == 0:
+                    pred = model.predict(features)
+                    losses = loss(label, pred)[:-1]
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = model
+
             elif val_option == 1:
                 X_train, X_test, y_train, y_test = train_test_split(features, label, test_size=self.random_percent_var.get())
                 model.fit(X_train, y_train)
-                s = model.score(X_test, y_test)
-                self.score.set(s)
-            elif val_option == 2:
-                s = cross_val_score(model, features, label, cv=self.cross_val_var.get()).mean()
-                self.score.set(s)
-                model.fit(features, label)
+                if do_forecast == 0:
+                    pred = model.predict(X_test)
+                    losses = loss(y_test, pred)[:-1]
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = model
 
-            self.model = model
+            elif val_option == 2:
+                cvs = cross_validate(model, features, label, cv=self.cross_val_var.get(), scoring=skloss)
+                for i,j in enumerate(list(cvs.values())[2:]):
+                    self.test_metrics_vars[i].set(j.mean())
+            
+            elif val_option == 3:
+                cvs = cross_validate(model, features, label, cv=features.values.shape[0]-1, scoring=skloss)
+                for i,j in enumerate(list(cvs.values())[2:]):
+                    self.test_metrics_vars[i].set(j.mean())
+
 
         else:
             min_sigma = self.minmax_sigma_values[0].get()

@@ -80,7 +80,6 @@ class TimeSeries:
         self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
         self.interval_entry.grid(column=2, row=3)
         
-
         # Lag Options
         lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
@@ -161,7 +160,6 @@ class TimeSeries:
         # Hyperparameters
         hyperparameter_frame = ttk.Labelframe(self.root, text="Hyperparameters")
         hyperparameter_frame.grid(column=1, row=1)
-
 
         self.hyperparameters = {"Epoch": tk.IntVar(), "Batch_Size": tk.IntVar(), "Optimizer": tk.StringVar(), "Loss_Function": tk.StringVar(), "Learning_Rate": tk.Variable(value=0.001), "Momentum": tk.Variable(value=0.0)}
         
@@ -303,7 +301,7 @@ class TimeSeries:
 #            clear_session()
 # 
 #        savedoc.save("Real Data/Forecast_Bidirectional LSTM.docx")
-# 
+    
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx")])
         file_path.set(path)

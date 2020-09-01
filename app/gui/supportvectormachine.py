@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
 from sklearn.svm import SVR, NuSVR
 
 from datetime import timedelta
@@ -49,7 +49,7 @@ class SupportVectorMachine:
         model_validation_frame.grid(column=0, row=1)
 
         self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=30)
+        self.random_percent_var = tk.IntVar(value=70)
         self.cross_val_var = tk.IntVar(value=5)
         tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=0, columnspan=2, sticky=tk.W)
         tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=1, sticky=tk.W)
@@ -57,7 +57,8 @@ class SupportVectorMachine:
         tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=3, columnspan=2, sticky=tk.W)
         ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=1)
         ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=2)
-
+        self.do_forecast_option = tk.IntVar(value=0)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=4, columnspan=2)
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
@@ -162,7 +163,7 @@ class SupportVectorMachine:
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
-        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE", "MASE"]
+        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
         self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
@@ -282,6 +283,8 @@ class SupportVectorMachine:
         kernels = ["linear", "rbf", "poly", "sigmoid"]
         kernel = kernels[self.kernel_type_var.get()]
         
+        do_forecast = self.do_forecast_option.get()
+
         df = self.df
         self.features = df[list(self.predictor_list.get(0, tk.END))]
         self.label = df[self.target_list.get(0)]
@@ -304,25 +307,34 @@ class SupportVectorMachine:
 
             if self.validation_option.get() == 0:
                 model.fit(X, y)
-                s = model.score(X, y)
-                self.svm_train_score.set(s)
+                if do_forecast == 0:
+                    pred = model.predict(X)
+                    losses = loss(y, pred)[:-1]
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = model
             
             elif self.validation_option.get() == 1:
-                X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=self.random_percent_var.get()/100)
+                X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train)
-                s = model.score(X_test, y_test)
-                self.svm_train_score.set(s)
+                if do_forecast == 0:
+                    pred = model.predict(X_test)
+                    losses = loss(y_test, pred)[:-1]
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = model
+        
 
             elif self.validation_option.get() == 2:
-                cvs = cross_val_score(model, X, y, cv=self.cross_val_var.get()).mean()             
-                self.svm_train_score.set(cvs)
+                cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
+                for i,j in enumerate(list(cvs.values())[2:]):
+                    self.test_metrics_vars[i].set(j.mean())
+
 
             elif self.validation_option.get() == 3:
-                cvs = cross_val_score(model, X, y, cv=X.shape[0]-1).mean()
-                self.svm_train_score.set(cvs)
-            
-            model.fit(X, y)
-            self.model = model
+                cvs = cross_validate(model, X, y, cv=X.shape[0]-1, scoring=skloss)
+                for i,j in enumerate(list(cvs.values())[2:]):
+                    self.test_metrics_vars[i].set(j.mean())
             
         else:
             params = {}
@@ -357,8 +369,11 @@ class SupportVectorMachine:
             
             regressor = GridSearchCV(model, params, cv=cv)
             regressor.fit(X, y)
-            s = regressor.score(X, y)
-            self.svm_train_score.set(s)
+            if do_forecast == 0:
+                pred = regressor.predict(X)
+                losses = loss(y, pred)[:-1]
+                for i,j in enumerate(losses):
+                    self.test_metrics_vars[i].set(j)
 
             self.model = regressor
         

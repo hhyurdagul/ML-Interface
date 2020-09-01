@@ -1,4 +1,3 @@
-# Gui
 import tkinter as tk
 from tkinter import ttk
 
@@ -7,9 +6,7 @@ warnings.filterwarnings("ignore")
 
 from gui.timeseries import TimeSeries
 from gui.supportvectormachine import SupportVectorMachine
-from gui.generalregression import GeneralizedRegressionNeuralNetwork
-
-
+from gui.generalregression import GeneralRegressionNeuralNetwork
 
 class GUI:
     def __init__(self):
@@ -22,9 +19,9 @@ class GUI:
         svm = SupportVectorMachine()
         self.add(svm, "Support Vector Machine")
       
-        grnn = GeneralizedRegressionNeuralNetwork()
+        grnn = GeneralRegressionNeuralNetwork()
         self.add(grnn, "GRNN")
-
+        
         self.parent.pack(expand=1, fill='both')
 
     def add(self, frame, text):
@@ -33,7 +30,5 @@ class GUI:
     def start(self):
         self.gui.mainloop()
 
-
 s = GUI()
 s.start()
-
