@@ -149,7 +149,7 @@ class SupportVectorMachine:
         forecast_num = tk.IntVar(value="")
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
+        ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
@@ -195,7 +195,7 @@ class SupportVectorMachine:
         else:
             self.test_df = pd.read_excel(path)
 
-    def showTestSet(self):
+    def showPredicts(self):
         top = tk.Toplevel(self.root)
         df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         pt = Table(top, dataframe=df, editable=False)
@@ -284,14 +284,12 @@ class SupportVectorMachine:
         kernel = kernels[self.kernel_type_var.get()]
         
         do_forecast = self.do_forecast_option.get()
+        val_option = self.validation_option.get()
 
         df = self.df
-        self.features = df[list(self.predictor_list.get(0, tk.END))]
-        self.label = df[self.target_list.get(0)]
+        X = df[list(self.predictor_list.get(0, tk.END))]
+        y = df[self.target_list.get(0)]
         
-        X = self.features
-        y = self.label
-
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
             nu = float(self.parameters[1].get())
@@ -305,33 +303,35 @@ class SupportVectorMachine:
             else:
                 model = NuSVR(kernel=kernel, C=C, nu=nu, gamma=gamma, coef0=coef0, degree=degree)
 
-            if self.validation_option.get() == 0:
+            if val_option == 0:
                 model.fit(X, y)
                 if do_forecast == 0:
                     pred = model.predict(X)
                     losses = loss(y, pred)[:-1]
+                    self.y_test = y
+                    self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 self.model = model
             
-            elif self.validation_option.get() == 1:
+            elif val_option == 1:
                 X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train)
                 if do_forecast == 0:
                     pred = model.predict(X_test)
                     losses = loss(y_test, pred)[:-1]
+                    self.y_test = y_test
+                    self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 self.model = model
-        
 
-            elif self.validation_option.get() == 2:
+            elif val_option == 2:
                 cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
                 for i,j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
-
-            elif self.validation_option.get() == 3:
+            elif val_option == 3:
                 cvs = cross_validate(model, X, y, cv=X.shape[0]-1, scoring=skloss)
                 for i,j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
@@ -368,19 +368,34 @@ class SupportVectorMachine:
             cv = self.gs_cross_val_var.get() if self.gs_cross_val_option.get() == 1 else None
             
             regressor = GridSearchCV(model, params, cv=cv)
-            regressor.fit(X, y)
-            if do_forecast == 0:
-                pred = regressor.predict(X)
-                losses = loss(y, pred)[:-1]
-                for i,j in enumerate(losses):
-                    self.test_metrics_vars[i].set(j)
+            
+            if val_option == 0:
+                regressor.fit(X, y)
+                if do_forecast == 0:
+                    pred = regressor.predict(X)
+                    losses = loss(y, pred)[:-1]
+                    self.y_test = y
+                    self.pred = pred
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = regressor
 
-            self.model = regressor
+            elif val_option == 1:
+                X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+                regressor.fit(X_train, y_train)
+                if do_forecast == 0:
+                    pred = regressor.predict(X_test)
+                    losses = loss(y_test, pred)[:-1]
+                    self.y_test = y_test
+                    self.pred = pred
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = regressor
         
     def forecast(self, num):
         
         X_test = self.test_df[list(self.predictor_list.get(0, tk.END))][:num].values
-        y_test = self.test_df[self.target_list.get(0)][:num].values.reshape(-1)
+        y_test = self.test_df[self.target_list.get(0)][:num]
         
         self.pred = self.model.predict(X_test)
 
@@ -392,9 +407,11 @@ class SupportVectorMachine:
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
-        plt.plot(self.pred)
-        plt.plot(self.y_test)
-        plt.legend(["pred", "test"], loc="upper left")
+        y_test = self.y_test.values.reshape(-1)
+        pred = self.pred
+        plt.plot(y_test)
+        plt.plot(pred)
+        plt.legend(["test", "pred"], loc="upper left")
         plt.show()
 
 

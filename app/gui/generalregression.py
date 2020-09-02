@@ -52,7 +52,7 @@ class GeneralRegressionNeuralNetwork:
         model_validation_frame.grid(column=0, row=1)
 
         self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=30)
+        self.random_percent_var = tk.IntVar(value=70)
         self.cross_val_var = tk.IntVar(value=5)
         tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=0, columnspan=2, sticky=tk.W)
         tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=1, sticky=tk.W)
@@ -101,7 +101,7 @@ class GeneralRegressionNeuralNetwork:
         forecast_num = tk.IntVar(value="")
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
+        ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
@@ -115,7 +115,7 @@ class GeneralRegressionNeuralNetwork:
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
-        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE", "MASE"]
+        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
         self.test_metrics_vars = [tk.DoubleVar(), tk.DoubleVar(), tk.DoubleVar(), tk.DoubleVar(), tk.DoubleVar(), tk.DoubleVar()]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
@@ -145,7 +145,7 @@ class GeneralRegressionNeuralNetwork:
         else:
             self.test_df = pd.read_excel(path)
 
-    def showTestSet(self):
+    def showPredicts(self):
         top = tk.Toplevel(self.root)
         df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         pt = Table(top, dataframe=df, editable=False)
@@ -193,70 +193,87 @@ class GeneralRegressionNeuralNetwork:
         
         do_forecast = self.do_forecast_option.get()
 
-        features = self.df[list(self.predictor_list.get(0, tk.END))]
-        label = self.df[self.target_list.get(0)]
+        X = self.df[list(self.predictor_list.get(0, tk.END))]
+        y = self.df[self.target_list.get(0)]
 
         if op == 0:
             sigma = self.sigma_var.get()
-            model = GRNN(sigma=sigma)
+            model = GRNN(sigma=sigma, n_splits=2)
 
             if val_option == 0:
-                model.fit(features, label)
+                model.fit(X, y)
                 if do_forecast == 0:
-                    pred = model.predict(features)
-                    losses = loss(label, pred)[:-1]
+                    pred = model.predict(X)
+                    losses = loss(y, pred)[:-1]
+                    self.y_test = y
+                    self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 self.model = model
 
             elif val_option == 1:
-                X_train, X_test, y_train, y_test = train_test_split(features, label, test_size=self.random_percent_var.get())
+                X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train)
                 if do_forecast == 0:
                     pred = model.predict(X_test)
                     losses = loss(y_test, pred)[:-1]
+                    self.y_test = y_test
+                    self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 self.model = model
 
             elif val_option == 2:
-                cvs = cross_validate(model, features, label, cv=self.cross_val_var.get(), scoring=skloss)
+                cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
                 for i,j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
             
             elif val_option == 3:
-                cvs = cross_validate(model, features, label, cv=features.values.shape[0]-1, scoring=skloss)
+                cvs = cross_validate(model, X, y, cv=X.values.shape[0]-1, scoring=skloss)
                 for i,j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
-
         else:
+            model = GRNN(n_splits=2)
             min_sigma = self.minmax_sigma_values[0].get()
             max_sigma = self.minmax_sigma_values[1].get()
             interval = self.minmax_sigma_values[2].get()
 
+            sigma = np.unique(np.linspace(min_sigma, max_sigma, interval))
+
             params = {
-                    "sigma": np.unique(np.linspace(min_sigma, max_sigma, interval))
+                    "sigma": sigma
                     }
 
-            reg = GridSearchCV(model, params)
+            reg = GridSearchCV(model, params, cv=2)
             
-            cv = self.cross_val_var.get() if val_option == 2 else 5
-            if val_option == 1:
-                X_train, X_test, y_train, y_test = train_test_split(features, label, test_size=self.random_percent_var.get())
+            if val_option == 0:
+                reg.fit(X, y)
+                if do_forecast == 0:
+                    pred = reg.predict(X)
+                    losses = loss(y, pred)[:-1]
+                    self.y_test = y
+                    self.pred = pred
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = reg
+            
+            elif val_option == 1: 
+                X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                 reg.fit(X_train, y_train)
-                s = reg.fit(X_test, y_test)
-                self.score.set(s)
-            else: 
-                reg.fit(features, label, cv=cv)
-                s = reg.score(features, label)
-                self.score.set(s)
+                if do_forecast == 0:
+                    pred = reg.predict(X_test)
+                    losses = loss(y_test, pred)
+                    self.y_test = y_test
+                    self.pred = pred
+                    for i,j in enumerate(losses):
+                        self.test_metrics_vars[i].set(j)
+                self.model = reg
             
-            self.model = reg
 
     def forecast(self, num):
-        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))]
-        y_test = self.test_df[self.target_list.get(0)][:num].values.reshape(-1)
+        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[:num]
+        y_test = self.test_df[self.target_list.get(0)][:num]
         
         self.pred = self.model.predict(X_test)
         self.y_test = y_test
@@ -266,8 +283,10 @@ class GeneralRegressionNeuralNetwork:
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
-        plt.plot(self.pred)
-        plt.plot(self.y_test)
-        plt.legend(["pred", "test"], loc="upper left")
+        y_test = self.y_test.values.reshape(-1)
+        pred = self.pred
+        plt.plot(y_test)
+        plt.plot(pred)
+        plt.legend(["test", "pred"], loc="upper left")
         plt.show()
 
