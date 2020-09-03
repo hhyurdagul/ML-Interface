@@ -84,7 +84,7 @@ class TimeSeries:
         lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
 
-        self.acf_lags = tk.IntVar(value="")
+        self.acf_lags = tk.IntVar(value=40)
         ttk.Label(lag_options_frame, text="Number of Lags").grid(column=0, row=0)
         ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
         ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(self.acf_lags.get())).grid(column=2, row=0)
@@ -95,8 +95,8 @@ class TimeSeries:
         tk.Radiobutton(lag_options_frame, text="Use Best N", value=2, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=3)
         tk.Radiobutton(lag_options_frame, text="Use Correlation > n", value=3, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=4)
         
-        self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(3)]
-        [self.lag_entries[i-2].grid(column=1, row=i) for i in range(2,5)]
+        self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(4)]
+        [self.lag_entries[i-1].grid(column=1, row=i) for i in range(1,5)]
 
         # Create Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
@@ -372,7 +372,7 @@ class TimeSeries:
         self.train_loss.set(params["train_loss"])
 
         features, label = self.getDataset()
-        self.X_train, self.y_train = self.createLag(features, label)
+        self.createLag(features, label)
 
     def addPredictor(self):
         try:
@@ -427,7 +427,7 @@ class TimeSeries:
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
     def openEntries(self):
-        o = self.lag_option_var.get() - 1
+        o = self.lag_option_var.get()
         for i, j in enumerate(self.lag_entries):
             if i == o:
                 j["state"] = tk.NORMAL
@@ -506,45 +506,57 @@ class TimeSeries:
         print(len(features), len(label))
         return features, label
 
-    def createLag(self, features, label):
+    def getLags(self, features, label, n):
         X, y = [], []
-        n = self.acf_lags.get()
+        print(n)
         for i in range(len(features) - n):
             X.append(features[i:i+n])
             y.append(label[i+n])
         
         self.last = np.array(features[len(features)-n:])
 
-        X, y = np.array(X), np.array(y)
+        return np.array(X), np.array(y)
 
+    def createLag(self, features, label):
         lag_type = self.lag_option_var.get()
-        acf_vals = acf(self.df[self.target_list.get(0)].values, nlags=n, fft=False)
+        acf_lags = self.acf_lags.get()
+        acf_vals = acf(self.df[self.target_list.get(0)].values, nlags=acf_lags, fft=False)
+
+        if lag_type == 0:
+            max_lag = int(self.lag_entries[0].get())
+            self.lags = list(range(max_lag))
+            print(0)
 
         if lag_type == 1:
-            lag = self.lag_entries[0].get()
-            numbers = [int(i) for i in lag.split(',')]
-            X = X[:, numbers, :]
+            lag = self.lag_entries[1].get()
+            self.lags = [int(i) for i in lag.split(',')]
+            max_lag = max(self.lags) + 1
+            print(1)
 
         elif lag_type == 2:
-            lag = self.lag_entries[1].get()
+            lag = self.lag_entries[2].get()
             numbers = np.argsort(acf_vals[1:])[-int(lag):]
-            X = X[:, numbers, :]
+            self.lags = np.sort(numbers)
+            max_lag = max(self.lags) + 1
+            print(2)
 
         elif lag_type == 3:
-            lag = self.lag_entries[2].get()
-            numbers = [i for i,j in enumerate(acf_vals[1:]) if j > float(lag)]
-            X = X[:, numbers, :]
+            lag = self.lag_entries[3].get()
+            numbers = np.array(acf_vals[1:])
+            self.lags = np.sort(np.argsort(numbers[numbers>float(lag)]))
+            max_lag = max(self.lags) + 1
+            print(3)
 
-        print(X.shape, y.shape)
-        
-        return X, y
+        print(self.lags)
+        X, y = self.getLags(features, label, max_lag)
+        return X, y 
 
     def createModel(self):
         self.model_instance += 1
 
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
-        self.X_train = X_train
+        X_train = X_train[:, self.lags]
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         momentum = float(self.hyperparameters["Momentum"].get())
@@ -555,6 +567,7 @@ class TimeSeries:
                 }
 
         shape = (X_train.shape[1], X_train.shape[2])
+        print(shape)
         model_choice = self.model_var.get()
 
         if not self.do_optimization:
@@ -591,7 +604,7 @@ class TimeSeries:
                 model.add(Flatten())
                 model.add(Dense(32))
 
-            model.add(Dense(1))
+            model.add(Dense(1, activation='relu'))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
@@ -611,7 +624,7 @@ class TimeSeries:
                         n_max = self.neuron_max_number_var[i].get()
                         step = int((n_max - n_min)/4)
                         model.add(Dense(units=hp.Int('MLP_'+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu'))
-                    model.add(Dense(1))
+                    model.add(Dense(1, activation='relu'))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -630,7 +643,7 @@ class TimeSeries:
                     
                     model.add(Flatten())
                     model.add(Dense(32))
-                    model.add(Dense(1))
+                    model.add(Dense(1, activation='relu'))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -648,7 +661,7 @@ class TimeSeries:
                         if i == layer-1:
                             model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False))
                     
-                    model.add(Dense(1))
+                    model.add(Dense(1, activation='relu'))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -666,7 +679,7 @@ class TimeSeries:
                         if i == layer-1:
                             model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False)))
                     
-                    model.add(Dense(1))
+                    model.add(Dense(1, activation='relu'))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
 
@@ -698,12 +711,12 @@ class TimeSeries:
 
     def testModel(self, num):
         input_value = self.last
-        steps, features = self.X_train.shape[1], self.X_train.shape[2]
+        steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
         pred = []
 
         for _ in range(num):
-            output = self.model.predict(input_value.reshape(shape), verbose=0)
+            output = self.model.predict(input_value.reshape(shape)[:, self.lags], verbose=0)
             pred = np.append(pred, output)
             input_value = np.append(input_value, output)[-shape[1]:]
 
@@ -717,8 +730,6 @@ class TimeSeries:
         
         self.forecast = self.test_df[[self.target_list.get(0)]]
         self.forecast = np.asarray(self.forecast)[:num]
-
-        print(self.pred.shape, self.forecast.shape)
 
         seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
         

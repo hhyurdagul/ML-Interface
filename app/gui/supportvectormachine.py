@@ -340,9 +340,9 @@ class SupportVectorMachine:
             params = {}
             interval = self.interval_var.get()
             
-            params["C"] = np.unique(np.linspace(float(self.optimization_parameters[2][0].get()), float(self.optimization_parameters[2][1].get()), interval))
+            params["C"] = np.unique(np.logspace(float(self.optimization_parameters[2][0].get()), float(self.optimization_parameters[2][1].get()), interval))
             if self.model_type_var.get() == 0:
-                params["epsilon"] = np.unique(np.linspace(float(self.optimization_parameters[0][0].get()), float(self.optimization_parameters[0][1].get()), interval))
+                params["epsilon"] = np.unique(np.logspace(float(self.optimization_parameters[0][0].get()), float(self.optimization_parameters[0][1].get()), interval))
                 model = SVR()
             else:
                 min_nu = max(0.0001, float(self.optimization_parameters[1][0].get()))
@@ -351,7 +351,7 @@ class SupportVectorMachine:
                 model = NuSVR()
             if kernel != "linear":
                 if gamma_choice == 2:
-                    params["gamma"] = np.unique(np.linspace(float(self.optimization_parameters[3][0].get()), float(self.optimization_parameters[3][1].get()), interval))
+                    params["gamma"] = np.unique(np.logspace(float(self.optimization_parameters[3][0].get()), float(self.optimization_parameters[3][1].get()), interval))
                 elif gamma_choice == 1:
                     params["gamma"] = ["auto"]
                 else:
