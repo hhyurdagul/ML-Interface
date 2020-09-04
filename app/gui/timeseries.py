@@ -340,7 +340,8 @@ class TimeSeries:
                 "scale_type": self.scale_var.get(),
                 "difference_choice": self.difference_choice_var.get(),
                 "interval": self.interval_var.get(),
-                "lag_number": self.acf_lags.get(),
+                "acf_lags": self.acf_lags.get(),
+                "lag_number": self.lag_entries[self.lag_option_var.get()].get(),
                 "lag_choice": self.lag_option_var.get(),
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
@@ -363,8 +364,14 @@ class TimeSeries:
         self.scale_var.set(params["scale_type"])
         self.difference_choice_var.set(params["difference_choice"])
         self.interval_var.set(params["interval"])
-        self.acf_lags.set(params["lag_number"])
+        try:
+            self.acf_lags.set(params["acf_lags"])
+        except:
+            pass
         self.lag_option_var.set(params["lag_choice"])
+        self.openEntries()
+        self.lag_entries[params["lag_choice"]].delete(0,tk.END)
+        self.lag_entries[params["lag_choice"]].insert(0, params["lag_number"])
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
         [self.hyperparameters[i].set(j) for (i,j) in params["hyperparameters"].items()]
