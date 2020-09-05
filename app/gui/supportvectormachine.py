@@ -4,15 +4,16 @@ from tkinter import filedialog
 from pandastable import Table
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
 from sklearn.svm import SVR, NuSVR
+from joblib import dump, load
 
 from datetime import timedelta
+import os
 
 from .helpers import *
 
@@ -134,9 +135,8 @@ class SupportVectorMachine:
     
         ttk.Button(model_frame, text="Create Model", command=self.createModel).grid(column=0, row=3)
 
-        self.svm_train_score = tk.Variable(value="")
-        ttk.Label(model_frame, text="SVM Train Score:").grid(column=1, row=3)
-        ttk.Entry(model_frame, textvariable=self.svm_train_score, width=12).grid(column=2, row=3)
+        ttk.Button(model_frame, text="Save Model", command=self.saveModel).grid(column=1, row=3)
+        ttk.Button(model_frame, text="Load Model", command=self.loadModel).grid(column=2, row=3)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -228,6 +228,16 @@ class SupportVectorMachine:
             self.target_list.delete(self.target_list.curselection())
         except:
             pass
+    
+    def saveModel(self):
+        path = filedialog.asksaveasfilename()
+        os.mkdir(path)
+        model_path = path + "/model.joblib"
+        dump(self.model, model_path)
+
+    def loadModel(self):
+        path = filedialog.askopenfilename()
+        self.model = load(path)
 
     def openEntries(self):
         to_open = []
@@ -339,10 +349,10 @@ class SupportVectorMachine:
         else:
             params = {}
             interval = self.interval_var.get()
-            
-            params["C"] = np.unique(np.logspace(float(self.optimization_parameters[2][0].get()), float(self.optimization_parameters[2][1].get()), interval))
+             
+            params["C"] = np.unique(np.logspace(float(self.optimization_parameters[2][0].get()), float(self.optimization_parameters[2][1].get()), interval, base=2))
             if self.model_type_var.get() == 0:
-                params["epsilon"] = np.unique(np.logspace(float(self.optimization_parameters[0][0].get()), float(self.optimization_parameters[0][1].get()), interval))
+                params["epsilon"] = np.unique(np.linspace(float(self.optimization_parameters[0][0].get()), float(self.optimization_parameters[0][1].get()), interval))
                 model = SVR()
             else:
                 min_nu = max(0.0001, float(self.optimization_parameters[1][0].get()))
@@ -351,7 +361,7 @@ class SupportVectorMachine:
                 model = NuSVR()
             if kernel != "linear":
                 if gamma_choice == 2:
-                    params["gamma"] = np.unique(np.logspace(float(self.optimization_parameters[3][0].get()), float(self.optimization_parameters[3][1].get()), interval))
+                    params["gamma"] = np.unique(np.logspace(float(self.optimization_parameters[3][0].get()), float(self.optimization_parameters[3][1].get()), interval, base=2))
                 elif gamma_choice == 1:
                     params["gamma"] = ["auto"]
                 else:
@@ -383,6 +393,7 @@ class SupportVectorMachine:
             elif val_option == 1:
                 X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                 regressor.fit(X_train, y_train)
+                print("This is best params", regressor.best_params_)
                 if do_forecast == 0:
                     pred = regressor.predict(X_test)
                     losses = loss(y_test, pred)[:-1]
