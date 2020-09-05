@@ -14,6 +14,7 @@ from joblib import dump, load
 
 from datetime import timedelta
 import os
+import json
 
 from .helpers import *
 
@@ -234,10 +235,36 @@ class SupportVectorMachine:
         os.mkdir(path)
         model_path = path + "/model.joblib"
         dump(self.model, model_path)
+        with open(path+"/model.json", 'w') as outfile:
+            json.dump(self.model.get_params(), outfile)
 
     def loadModel(self):
-        path = filedialog.askopenfilename()
-        self.model = load(path)
+        path = filedialog.askdirectory()
+        model_path = path + "/model.joblib"
+        self.model = load(model_path)
+        infile = open(path+"/model.json")
+        params = json.load(infile)
+        try:
+            self.parameters[0].set(params["epsilon"])
+            self.model_type_var.set(0)
+        except:
+            self.parameters[1].set(params["nu"])
+            self.model_type_var.set(1)
+        self.parameters[2].set(np.log(params["C"]))
+        if params["gamma"] == "scale":
+            self.gamma_choice.set(0)
+        elif params["gamma"] == "auto":
+            self.gamma_choice.set(1)
+        else:
+            self.gamma_choice.set(2)
+            self.parameters[3].set(np.log(params["gamma"]))
+        self.parameters[4].set(params["coef0"])
+        self.parameters[5].set(params["degree"])
+        
+        kernel = 0 if params["kernel"] == "linear" else 1 if params["kernel"] == "rbf" else 2 if params["kernel"] == "poly" else 3
+        self.kernel_type_var.set(kernel)
+        
+        self.openEntries()
 
     def openEntries(self):
         to_open = []
@@ -303,8 +330,8 @@ class SupportVectorMachine:
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
             nu = float(self.parameters[1].get())
-            C = float(self.parameters[2].get())
-            gamma = float(self.parameters[3].get()) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
+            C = np.exp(float(self.parameters[2].get()))
+            gamma = np.exp(float(self.parameters[3].get())) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
             coef0 = float(self.parameters[4].get())
             degree = float(self.parameters[5].get())
             
@@ -388,12 +415,11 @@ class SupportVectorMachine:
                     self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
-                self.model = regressor
+                self.model = regressor.best_estimator_
 
             elif val_option == 1:
                 X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                 regressor.fit(X_train, y_train)
-                print("This is best params", regressor.best_params_)
                 if do_forecast == 0:
                     pred = regressor.predict(X_test)
                     losses = loss(y_test, pred)[:-1]
@@ -401,7 +427,7 @@ class SupportVectorMachine:
                     self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
-                self.model = regressor
+                self.model = regressor.best_estimator_
         
     def forecast(self, num):
         
