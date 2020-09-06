@@ -611,7 +611,7 @@ class TimeSeries:
                 model.add(Flatten())
                 model.add(Dense(32))
 
-            model.add(Dense(1, activation='relu'))
+            model.add(Dense(1))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
@@ -631,7 +631,7 @@ class TimeSeries:
                         n_max = self.neuron_max_number_var[i].get()
                         step = int((n_max - n_min)/4)
                         model.add(Dense(units=hp.Int('MLP_'+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu'))
-                    model.add(Dense(1, activation='relu'))
+                    model.add(Dense(1))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -650,7 +650,7 @@ class TimeSeries:
                     
                     model.add(Flatten())
                     model.add(Dense(32))
-                    model.add(Dense(1, activation='relu'))
+                    model.add(Dense(1))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -668,7 +668,7 @@ class TimeSeries:
                         if i == layer-1:
                             model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False))
                     
-                    model.add(Dense(1, activation='relu'))
+                    model.add(Dense(1))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -686,7 +686,7 @@ class TimeSeries:
                         if i == layer-1:
                             model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False)))
                     
-                    model.add(Dense(1, activation='relu'))
+                    model.add(Dense(1))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
 
