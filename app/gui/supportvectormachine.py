@@ -250,14 +250,14 @@ class SupportVectorMachine:
         except:
             self.parameters[1].set(params["nu"])
             self.model_type_var.set(1)
-        self.parameters[2].set(np.log(params["C"]))
+        self.parameters[2].set(np.log2(params["C"]))
         if params["gamma"] == "scale":
             self.gamma_choice.set(0)
         elif params["gamma"] == "auto":
             self.gamma_choice.set(1)
         else:
             self.gamma_choice.set(2)
-            self.parameters[3].set(np.log(params["gamma"]))
+            self.parameters[3].set(np.log2(params["gamma"]))
         self.parameters[4].set(params["coef0"])
         self.parameters[5].set(params["degree"])
         
@@ -330,7 +330,7 @@ class SupportVectorMachine:
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
             nu = float(self.parameters[1].get())
-            C = np.exp(float(self.parameters[2].get()))
+            C = float(self.parameters[2].get()) ** 2
             gamma = np.exp(float(self.parameters[3].get())) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
             coef0 = float(self.parameters[4].get())
             degree = float(self.parameters[5].get())
