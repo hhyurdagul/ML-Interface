@@ -7,6 +7,7 @@ warnings.filterwarnings("ignore")
 from gui.timeseries import TimeSeries
 from gui.supportvectormachine import SupportVectorMachine
 from gui.generalregression import GeneralRegressionNeuralNetwork
+from gui.mlp import MultiLayerPerceptron
 
 class GUI:
     def __init__(self):
@@ -21,7 +22,10 @@ class GUI:
       
         grnn = GeneralRegressionNeuralNetwork()
         self.add(grnn, "GRNN")
-        
+
+        mlp = MultiLayerPerceptron()
+        self.add(mlp, "Mlp")
+
         self.parent.pack(expand=1, fill='both')
 
     def add(self, frame, text):
