@@ -1,1 +1,0 @@
-{"train_size": 40, "size_choice": 0, "scale_type": "None", "difference_choice": 1, "interval": 96, "lag_number": 5, "lag_choice": 0, "num_layers": 3, "num_neurons": [18, 18, 60], "hyperparameters": {"Epoch": 32, "Batch_Size": 48, "Optimizer": "Adam", "Loss_Function": "mean_absolute_error", "Learning_Rate": 0.001, "Momentum": 0.0}, "model": 0, "train_loss": 4.418639659881592}

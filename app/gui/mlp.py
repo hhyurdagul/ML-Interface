@@ -98,9 +98,62 @@ class MultiLayerPerceptron:
         for i,j in enumerate(self.no_optimization):
             j[2].grid(column=1, row=i+1)
 
+        ## Model With Optimization
+        model_with_optimization_frame = ttk.Labelframe(create_model_frame, text="Model With Optimization")
+        model_with_optimization_frame.grid(column=0, row=1)
+
+        optimization_names = ["One Hidden Layer", "Two Hidden Layer", "Three Hidden Layer"]
+        self.optimization_choice_var = tk.IntVar(value=0)
+        self.min_max_neuron_numbers = [[tk.IntVar(value=""), tk.IntVar(value="")] for i in range(3)]
+
+        self.optimization = [
+                [
+                    tk.Radiobutton(model_with_optimization_frame, text=optimization_names[i], value=i+1, variable=self.optimization_choice_var, command=lambda: self.openLayers(False)).grid(column=i*2+1, row=0),
+                    ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Min").grid(column=i*2, row=1),
+                    ttk.Label(model_with_optimization_frame, text=f"N{i+1}_Max").grid(column=i*2, row=2),
+                    ttk.Entry(model_with_optimization_frame, textvariable=self.min_max_neuron_numbers[i][0], state=tk.DISABLED),
+                    ttk.Entry(model_with_optimization_frame, textvariable=self.min_max_neuron_numbers[i][1], state=tk.DISABLED),
+                ] for i in range(3)
+        ]
+
+        for i,j in enumerate(self.optimization):
+            j[3].grid(column=i*2+1, row=1)
+            j[4].grid(column=i*2+1, row=2)
+
+
+        # Hyperparameters
+        hyperparameter_frame = ttk.Labelframe(self.root, text="Hyperparameters")
+        hyperparameter_frame.grid(column=1, row=1)
+
+        self.hyperparameters = [tk.IntVar(), tk.IntVar(), tk.StringVar(), tk.StringVar(), tk.DoubleVar(value=0.001), tk.DoubleVar(value=0.0)]
+
+        ttk.Label(hyperparameter_frame, text="Epoch").grid(column=0, row=0)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[0]).grid(column=1, row=0)
+
+        ttk.Label(hyperparameter_frame, text="Batch Size").grid(column=2, row=0)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[1]).grid(column=3, row=0)
+
+        ttk.Label(hyperparameter_frame, text="Optimizer").grid(column=0, row=1)
+        ttk.OptionMenu(hyperparameter_frame, self.hyperparameters[2], "Adam", "Adam", "SGD", "RMSprop").grid(column=1, row=1)
+
+        ttk.Label(hyperparameter_frame, text="Loss_Function").grid(column=2, row=1)
+        ttk.OptionMenu(hyperparameter_frame, self.hyperparameters[3], "mean_squared_error", "mean_squared_error", "mean_absolute_error", "mean_absolute_percentage_error").grid(column=3, row=1)
+        
+        ttk.Label(hyperparameter_frame, text="Learning Rate").grid(column=0, row=2)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[4]).grid(column=1, row=2)
+
+        ttk.Label(hyperparameter_frame, text="Momentum").grid(column=2, row=2)
+        ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[5]).grid(column=3, row=2)
+        
+        self.train_loss = tk.Variable(value="")
+        ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
+        ttk.Label(hyperparameter_frame, text="Train Loss").grid(column=1, row=5)
+        ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
+        ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=5)
+
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=1, row=1)
+        test_model_frame.grid(column=0, row=2, columnspan=2)
 
         ## Test Model Main
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
@@ -187,7 +240,75 @@ class MultiLayerPerceptron:
             pass
 
     def openLayers(self, var):
+        for i in self.no_optimization:
+            i[2]["state"] = tk.DISABLED
+        for i in self.optimization:
+            i[3]["state"] = tk.DISABLED
+            i[4]["state"] = tk.DISABLED
+
+        if var:
+            for i in range(self.no_optimization_choice_var.get()):
+                self.no_optimization[i][2]["state"] = tk.NORMAL
+            self.optimization_choice_var.set(0)
+            self.do_optimization = False
+
+        if not var:
+            for i in range(self.optimization_choice_var.get()):
+                self.optimization[i][3]["state"] = tk.NORMAL
+                self.optimization[i][4]["state"] = tk.NORMAL
+            self.no_optimization_choice_var.set(0)
+            self.do_optimization = True
+
+    def saveModel(self):
         pass
+
+    def loadModel(self):
+        pass
+
+    def createModel(self):
+        X = self.df[list(self.predictor_list.get(0, tk.END))]
+        y = self.df[self.target_list.get(0)]
+
+        layers = self.no_optimization_choice_var.get()
+        
+        model = Sequential()
+
+        for i in range(layers):
+            neuron_number = self.neuron_numbers_var[i].get()
+            activation = self.activation_var[i].get()
+            if i == 0:
+                model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1]))
+            else:
+                model.add(Dense(neuron_number, activation=activation))
+
+        model.add(Dense(1))
+        model.compile(optimizer="adam", loss="mean_absolute_error")
+
+        do_forecast = self.do_forecast_option.get()
+        val_option = self.validation_option.get()
+
+        if val_option == 0:
+            model.fit(X, y, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
+            if do_forecast == 0:
+                pred = model.predict(X).reshape(-1)
+                losses = loss(y, pred)[:-1]
+                self.y_test = y
+                self.pred = pred
+                for i,j in enumerate(losses):
+                    self.test_metrics_vars[i].set(j)
+            self.model = model
+
+        elif val_option == 1:
+            X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+            model.fit(X_train, y_train, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
+            if do_forecast == 0:
+                pred = model.predict(X_test).reshape(-1)
+                losses = loss(y_test, pred)[:-1]
+                self.y_test = y_test
+                self.pred = pred
+                for i,j in enumerate(losses):
+                    self.test_metrics_vars[i].set(j) 
+            self.model = model
         
     def forecast(self, num):
         
@@ -195,11 +316,9 @@ class MultiLayerPerceptron:
         y_test = self.test_df[self.target_list.get(0)][:num]
         
         self.pred = self.model.predict(X_test)
-
         self.y_test = y_test
-
+        
         losses = loss(y_test, self.pred)
-
         for i in range(6):
             self.test_metrics_vars[i].set(losses[i])
 
