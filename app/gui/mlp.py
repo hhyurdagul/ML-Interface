@@ -23,7 +23,6 @@ from kerastuner.tuners import RandomSearch
 
 from .helpers import *
 
-
 class MultiLayerPerceptron:
     def __init__(self):
         self.root = ttk.Frame()
@@ -266,26 +265,42 @@ class MultiLayerPerceptron:
         pass
 
     def createModel(self):
-        X = self.df[list(self.predictor_list.get(0, tk.END))]
-        y = self.df[self.target_list.get(0)]
+        X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
+        y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)
 
         layers = self.no_optimization_choice_var.get()
         
-        model = Sequential()
+        learning_rate = self.hyperparameters[4].get()
+        momentum = self.hyperparameters[5].get()
 
-        for i in range(layers):
-            neuron_number = self.neuron_numbers_var[i].get()
-            activation = self.activation_var[i].get()
-            if i == 0:
-                model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1]))
-            else:
-                model.add(Dense(neuron_number, activation=activation))
+        optimizers = {
+                "Adam": Adam(learning_rate=learning_rate),
+                "SGD": SGD(learning_rate=learning_rate, momentum=momentum),
+                "RMSprop": RMSprop(learning_rate=learning_rate, momentum=momentum)
+                }
+        
+        def base_model():
+            model = Sequential()
 
-        model.add(Dense(1))
-        model.compile(optimizer="adam", loss="mean_absolute_error")
+            for i in range(layers):
+                neuron_number = self.neuron_numbers_var[i].get()
+                activation = self.activation_var[i].get()
+                if i == 0:
+                    model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1]))
+                else:
+                    model.add(Dense(neuron_number, activation=activation))
+
+            model.add(Dense(1, activation="relu"))
+            model.compile(optimizer=optimizers[self.hyperparameters[2].get()], loss=self.hyperparameters[3].get())
+            return model
 
         do_forecast = self.do_forecast_option.get()
         val_option = self.validation_option.get()
+
+        if val_option == 0 or val_option == 1:
+            model = base_model()
+        elif val_option == 2 or val_option == 3:
+            model = KerasRegressor(build_fn=base_model, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
 
         if val_option == 0:
             model.fit(X, y, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
@@ -299,31 +314,42 @@ class MultiLayerPerceptron:
             self.model = model
 
         elif val_option == 1:
-            X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
             model.fit(X_train, y_train, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
             if do_forecast == 0:
                 pred = model.predict(X_test).reshape(-1)
                 losses = loss(y_test, pred)[:-1]
-                self.y_test = y_test
+                self.y_test = y_test.reshape(-1)
                 self.pred = pred
                 for i,j in enumerate(losses):
                     self.test_metrics_vars[i].set(j) 
             self.model = model
+
+        elif val_option == 2:
+            cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
+            for i, j in enumerate(list(cvs.values())[2:]):
+                self.test_metrics_vars[i].set(j.mean())
         
+        elif val_option == 3:
+            cvs = cross_validate(model, X, y, cv=X.shape[0]-1, scoring=skloss)
+            for i, j in enumerate(list(cvs.values())[2:]):
+                self.test_metrics_vars[i].set(j.mean())
+
+
     def forecast(self, num):
         
-        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))][:num].values
-        y_test = self.test_df[self.target_list.get(0)][:num]
+        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))][:num].to_numpy()
+        y_test = self.test_df[self.target_list.get(0)][:num].to_numpy().reshape(-1)
         
-        self.pred = self.model.predict(X_test)
+        self.pred = self.model.predict(X_test).reshape(-1)
         self.y_test = y_test
-        
+
         losses = loss(y_test, self.pred)
         for i in range(6):
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
-        y_test = self.y_test.values.reshape(-1)
+        y_test = self.y_test
         pred = self.pred
         plt.plot(y_test)
         plt.plot(pred)

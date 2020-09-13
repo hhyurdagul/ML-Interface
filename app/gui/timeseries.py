@@ -613,7 +613,7 @@ class TimeSeries:
                 model.add(Flatten())
                 model.add(Dense(32))
 
-            model.add(Dense(1))
+            model.add(Dense(1, activation="relu"))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
