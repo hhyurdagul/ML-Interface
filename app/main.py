@@ -8,6 +8,7 @@ from gui.timeseries import TimeSeries
 from gui.supportvectormachine import SupportVectorMachine
 from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.mlp import MultiLayerPerceptron
+from gui.sarima import SARIMA
 
 class GUI:
     def __init__(self):
@@ -25,6 +26,9 @@ class GUI:
 
         mlp = MultiLayerPerceptron()
         self.add(mlp, "Mlp")
+        
+        sarima = SARIMA()
+        self.add(sarima, "SARIMA")
 
         self.parent.pack(expand=1, fill='both')
 

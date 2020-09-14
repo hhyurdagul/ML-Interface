@@ -171,6 +171,8 @@ class MultiLayerPerceptron:
         ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.forecast(forecast_num.get())).grid(column=2, row=3)
         ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
 
+        ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=3)
+        
         ## Test Model Metrics
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
@@ -259,11 +261,42 @@ class MultiLayerPerceptron:
             self.do_optimization = True
 
     def saveModel(self):
-        pass
+        path = filedialog.asksaveasfilename()
+        os.mkdir(path)
+        self.model.save(path+"/model.h5")
+        params = {
+                "predictors": list(self.predictor_list.get(0, tk.END)),
+                "validation_option": self.validation_option.get(),
+                "do_forecast": self.do_forecast_option.get(),
+                "num_layers": self.no_optimization_choice_var.get(),
+                "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
+                "hyperparameters": [i.get() for i in self.hyperparameters],
+                }
+        
+        if self.validation_option.get() == 1:
+            params["random_percent"] = self.random_percent_var.get()
+        
+        elif self.validation_option.get() == 2:
+            params["k_fold_cv"] = self.cross_val_var.get()
+
+        with open(path+"/model.json", 'w') as outfile:
+            json.dump(params, outfile)
 
     def loadModel(self):
-        pass
+        path = filedialog.askdirectory()
+        self.model = load_model(path+"/model.h5")
+        infile = open(path+"/model.json")
+        params = json.load(infile)
+        infile.close()
 
+        self.validation_option.set(params["validation_option"])
+        self.do_forecast_option.set(params["do_forecast"])
+        self.no_optimization_choice_var.set(params["num_layers"])
+        for i in range(params["num_layers"]):
+            self.neuron_numbers_var[i].set(params["num_neurons"][i])
+        for i, j in enumerate(self.hyperparameters):
+            j.set(params["hyperparameters"][i])
+    
     def createModel(self):
         X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
         y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)

@@ -536,7 +536,7 @@ class TimeSeries:
             self.lags = list(range(max_lag))
             print(0)
 
-        if lag_type == 1:
+        elif lag_type == 1:
             lag = self.lag_entries[1].get()
             self.lags = [int(i) for i in lag.split(',')]
             max_lag = max(self.lags) + 1
