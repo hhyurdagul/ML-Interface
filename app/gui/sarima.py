@@ -8,15 +8,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
-from sklearn.svm import SVR, NuSVR
-
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.arima_model import ARIMA
-
-from datetime import timedelta
-import os
-import json
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 from .helpers import *
 
@@ -47,25 +41,35 @@ class SARIMA:
 
         ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(column=2, row=2)
         ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
-       
-
         
         # Graphs
         graph_frame = ttk.Labelframe(self.root, text="Graphs")
-        graph_frame.grid(column=1, row=0)
+        graph_frame.grid(column=0, row=1)
         
-        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(0)).grid(column=0, row=0)
-        ttk.Button(graph_frame, text="First Difference ACF", command=lambda: self.showAcf(1)).grid(column=1, row=0)
+        self.train_size = tk.IntVar(value=100)
+        ttk.Label(graph_frame, text="Train Size").grid(column=0, row=0)
+        ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1, row=0)
+
+        self.train_choice = tk.IntVar(value=0)
+        tk.Radiobutton(graph_frame, text="As Percent", variable=self.train_choice, value=0).grid(column=0, row=1)
+        tk.Radiobutton(graph_frame, text="As Number", variable=self.train_choice, value=1).grid(column=1, row=1)
+
+        lags = tk.IntVar(value=40)
+        ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
+        ttk.Entry(graph_frame, textvariable=lags).grid(column=1, row=2)
+
+        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(0, lags.get())).grid(column=0, row=3)
+        ttk.Button(graph_frame, text="First Difference ACF", command=lambda: self.showAcf(1, lags.get())).grid(column=1, row=3)
         
         self.season_number_var = tk.IntVar(value="")
-        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(column=0, row=1)
-        ttk.Button(graph_frame, text="Seasonal Difference ACF", command=lambda: self.showAcf(2)).grid(column=1, row=1)
+        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(column=0, row=4)
+        ttk.Button(graph_frame, text="Seasonal Difference ACF", command=lambda: self.showAcf(2, lags.get())).grid(column=1, row=4)
 
-        ttk.Button(graph_frame, text="Both Difference ACF", command=lambda: self.showAcf(3)).grid(column=0, row=2, columnspan=2)
+        ttk.Button(graph_frame, text="Both Difference ACF", command=lambda: self.showAcf(3, lags.get())).grid(column=0, row=5, columnspan=2)
 
         # Crete Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
-        create_model_frame.grid(column=2, row=0)
+        create_model_frame.grid(column=1, row=0)
 
         ## Model Without Optimization
         model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
@@ -76,7 +80,7 @@ class SARIMA:
             [
                 ttk.Label(model_without_optimization_frame, text=j).grid(column=0, row=i+1),
                 ttk.Entry(model_without_optimization_frame, textvariable=self.pdq_var[i], width=8).grid(column=1, row=i+1)
-            ] for i, j in enumerate(['p', 'q', 'd'])
+            ] for i, j in enumerate(['p', 'd', 'q'])
         ]
         
         self.seasonality_option = tk.IntVar(value=0)
@@ -88,7 +92,7 @@ class SARIMA:
             [
                 ttk.Label(model_without_optimization_frame, text=j).grid(column=2, row=i+1),
                 ttk.Entry(model_without_optimization_frame, textvariable=self.PQDM_var[i], width=8, state=tk.DISABLED)
-            ] for i, j in enumerate(['P', 'Q', 'D', 'M'])
+            ] for i, j in enumerate(['P', 'D', 'Q', 's'])
         ]
         
         for i, j in enumerate(self.seasonals):
@@ -98,7 +102,7 @@ class SARIMA:
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=1, row=1, columnspan=2)
+        test_model_frame.grid(column=1, row=1)
 
         ## Test Model Main
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
@@ -184,8 +188,38 @@ class SARIMA:
         except:
             pass
 
-    def showAcf(self, choice):
-        pass
+    def showAcf(self, choice, lags):
+        top = tk.Toplevel()
+        fig = plt.Figure((20,15))
+
+        data = self.df[self.target_list.get(0)]
+        size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        data = data.iloc[-size:]
+
+        ax = fig.add_subplot(211)
+        ax1 = fig.add_subplot(212)
+
+        if choice == 0:
+            plot_acf(data, ax=ax, lags=lags)
+            plot_pacf(data, ax=ax1, lags=lags)
+        elif choice == 1:
+            plot_acf(data.diff()[1:], ax=ax, lags=lags)
+            plot_pacf(data.diff()[1:], ax=ax1, lags=lags)
+        elif choice == 2:
+            s = self.season_number_var.get()
+            plot_acf(data.diff(s)[s:], ax=ax, lags=lags)
+            plot_pacf(data.diff(s)[s:], ax=ax1, lags=lags)
+        elif choice == 3:
+            s = self.season_number_var.get()
+            plot_acf(data.diff()[1:].diff(s)[s:], ax=ax, lags=lags)
+            plot_pacf(data.diff()[1:].diff(s)[s:], ax=ax1, lags=lags)
+
+        canvas = FigureCanvasTkAgg(fig, top)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        toolbar = NavigationToolbar2Tk(canvas, top)
+        toolbar.update()
+        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
     def openSeasons(self):
         if self.seasonality_option.get() == 1:
@@ -196,18 +230,22 @@ class SARIMA:
                 i[1]["state"] = tk.DISABLED
 
     def createModel(self):
-        series = self.df[self.target_list.get(0)].values
-        pqd = tuple(i.get() for i in self.pdq_var)
+        data = self.df[self.target_list.get(0)]
+        size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        series = data.iloc[-size:]
 
+        pqd = tuple(i.get() for i in self.pdq_var)
+        
         if self.seasonality_option.get() == 1:
             PQDM = tuple(i.get() for i in self.PQDM_var)
             model = SARIMAX(series, order=pqd, seasonal_order=PQDM)
             self.model = model.fit()
+            self.end = len(series)
         else:
             model = ARIMA(series, order=pqd)
             self.model = model.fit()
+            self.end = len(series)-1
         
-        self.end = len(series)
 
     
     def forecast(self, num):
@@ -215,7 +253,8 @@ class SARIMA:
         y_test = self.test_df[self.target_list.get(0)][:num]
         
         self.pred = self.model.predict(start=self.end+1, end=self.end+num)
-
+        
+        self.pred.index = y_test.index
         self.y_test = y_test
 
         losses = loss(y_test, self.pred)
