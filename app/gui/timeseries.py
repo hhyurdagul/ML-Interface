@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Conv1D, MaxPooling1D
-from tensorflow.keras.layers import Input, Flatten, Dense, LSTM, Bidirectional
+from tensorflow.keras.layers import Input, Flatten, Dropout, Dense, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from kerastuner.tuners import RandomSearch
 
@@ -124,9 +124,14 @@ class TimeSeries:
                     ttk.Label(model_without_optimization_frame, text=no_optimization_names[i+1]).grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                     ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=2, row=i+1),
-                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid").grid(column=3, row=i+1)
+                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid", "linear").grid(column=3, row=i+1)
                 ] for i in range(3)
         ]
+
+        self.output_activation = tk.StringVar(value="relu")
+        ttk.Label(model_without_optimization_frame, text="Output Activation").grid(column=1, row=5),
+        ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=5)
+
 
         for i,j in enumerate(self.no_optimization):
             j[2].grid(column=1, row=i+1)
@@ -471,11 +476,12 @@ class TimeSeries:
             return np.array([data[i] - data[i-interval] for i in range(interval, len(data))])
         else:
             for i in range(len(data)):
+                print("Before:",data[i])
                 if i >= interval:
                     data[i] = data[i] + data[i-interval]
                 else:
                     data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
-
+                print("After",data[i])
 
     def getDataset(self):
         choice = self.scale_var.get()
@@ -497,6 +503,9 @@ class TimeSeries:
         if difference_choice:
             features = self.difference(features, True)
             label = self.difference(label, True)
+            print(features[-30:])
+            print(label[-30:])
+
 
         if choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -562,6 +571,7 @@ class TimeSeries:
 
     def createModel(self):
         self.model_instance += 1
+        clear_session()
 
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
@@ -600,20 +610,24 @@ class TimeSeries:
                 elif model_choice == 2:
                     if i == layers-1:
                         model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(Dropout(0.2))
                     else:
                         model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True))
+                        model.add(Dropout(0.2))
 
                 elif model_choice == 3:
                     if i == layers-1:
                         model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False)))
+                        model.add(Dropout(0.2))
                     else:
                         model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True)))
+                        model.add(Dropout(0.2))
             
             if model_choice == 1:
                 model.add(Flatten())
                 model.add(Dense(32))
 
-            model.add(Dense(1, activation="relu"))
+            model.add(Dense(1, activation=self.output_activation.get()))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)

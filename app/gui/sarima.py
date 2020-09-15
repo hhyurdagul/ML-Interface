@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
 from sklearn.svm import SVR, NuSVR
-from joblib import dump, load
+
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.arima_model import ARIMA
 
 from datetime import timedelta
 import os
@@ -47,45 +48,57 @@ class SARIMA:
         ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(column=2, row=2)
         ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
        
-        # Model testing and validation
-        model_validation_frame = ttk.Labelframe(self.root, text="Model testing and validation")
-        model_validation_frame.grid(column=0, row=1)
 
-        self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=70)
-        self.cross_val_var = tk.IntVar(value=5)
-        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=0, columnspan=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=1, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=3, columnspan=2, sticky=tk.W)
-        ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=1)
-        ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=2)
-        self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=4, columnspan=2)
+        
+        # Graphs
+        graph_frame = ttk.Labelframe(self.root, text="Graphs")
+        graph_frame.grid(column=1, row=0)
+        
+        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(0)).grid(column=0, row=0)
+        ttk.Button(graph_frame, text="First Difference ACF", command=lambda: self.showAcf(1)).grid(column=1, row=0)
+        
+        self.season_number_var = tk.IntVar(value="")
+        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(column=0, row=1)
+        ttk.Button(graph_frame, text="Seasonal Difference ACF", command=lambda: self.showAcf(2)).grid(column=1, row=1)
+
+        ttk.Button(graph_frame, text="Both Difference ACF", command=lambda: self.showAcf(3)).grid(column=0, row=2, columnspan=2)
 
         # Crete Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
-        create_model_frame.grid(column=1, row=0)
+        create_model_frame.grid(column=2, row=0)
 
         ## Model Without Optimization
         model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
         model_without_optimization_frame.grid(column=0, row=0)
 
-        self.pdq_var = tk.StringVar(value="1,0,0")
-        ttk.Label(model_without_optimization_frame, text="(p, d, q): ").grid(column=0, row=0)
-        ttk.Entry(model_without_optimization_frame, textvariable=self.pdq_var).grid(column=1, row=0)
+        self.pdq_var = [tk.IntVar(value="") for _ in range(3)]
+        [
+            [
+                ttk.Label(model_without_optimization_frame, text=j).grid(column=0, row=i+1),
+                ttk.Entry(model_without_optimization_frame, textvariable=self.pdq_var[i], width=8).grid(column=1, row=i+1)
+            ] for i, j in enumerate(['p', 'q', 'd'])
+        ]
         
         self.seasonality_option = tk.IntVar(value=0)
-        self.PQDM_var = tk.StringVar(value="0,0,0,0")
-        tk.Checkbutton(model_without_optimization_frame, text="Seasonality", offvalue=0, onvalue=1, variable=self.seasonality_option).grid(column=0, row=1, columnspan=2)
-        ttk.Label(model_without_optimization_frame, text="(P, D, Q, M): ").grid(column=0, row=2)
-        ttk.Entry(model_without_optimization_frame, textvariable=self.PQDM_var).grid(column=1, row=2)
+        tk.Checkbutton(model_without_optimization_frame, text="Seasonality", offvalue=0, onvalue=1, variable=self.seasonality_option, command=self.openSeasons).grid(column=0, row=0, columnspan=2)
+        
+        self.PQDM_var = [tk.IntVar(value="") for _ in range(4)]
+        
+        self.seasonals = [
+            [
+                ttk.Label(model_without_optimization_frame, text=j).grid(column=2, row=i+1),
+                ttk.Entry(model_without_optimization_frame, textvariable=self.PQDM_var[i], width=8, state=tk.DISABLED)
+            ] for i, j in enumerate(['P', 'Q', 'D', 'M'])
+        ]
+        
+        for i, j in enumerate(self.seasonals):
+            j[1].grid(column=3, row=i+1)
 
         ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=1)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=1, row=1)
+        test_model_frame.grid(column=1, row=1, columnspan=2)
 
         ## Test Model Main
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
@@ -171,16 +184,31 @@ class SARIMA:
         except:
             pass
 
-    def createModel(self):
-        pqd = tuple(int(i) for i in self.pdq_var.get().split(","))[:3]
-        PQDM = tuple(int(i) for i in self.PQDM_var.get().split(","))[:4]
+    def showAcf(self, choice):
+        pass
 
+    def openSeasons(self):
+        if self.seasonality_option.get() == 1:
+            for i in self.seasonals:
+                i[1]["state"] = tk.NORMAL
+        else:
+            for i in self.seasonals:
+                i[1]["state"] = tk.DISABLED
+
+    def createModel(self):
         series = self.df[self.target_list.get(0)].values
+        pqd = tuple(i.get() for i in self.pdq_var)
+
+        if self.seasonality_option.get() == 1:
+            PQDM = tuple(i.get() for i in self.PQDM_var)
+            model = SARIMAX(series, order=pqd, seasonal_order=PQDM)
+            self.model = model.fit()
+        else:
+            model = ARIMA(series, order=pqd)
+            self.model = model.fit()
         
         self.end = len(series)
 
-        model = SARIMAX(series, order=pqd, seasonal_order=PQDM)
-        self.model = model.fit()
     
     def forecast(self, num):
         
