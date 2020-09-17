@@ -79,7 +79,14 @@ class TimeSeries:
         ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
         self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
         self.interval_entry.grid(column=2, row=3)
-        
+ 
+        self.s_difference_choice_var = tk.IntVar(value=0)
+        self.s_interval_var = tk.IntVar(value="")
+        tk.Checkbutton(customize_train_set_frame, text='Second Difference', variable=self.s_difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=4)
+        ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=4)
+        self.s_interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.s_interval_var, state=tk.DISABLED)
+        self.s_interval_entry.grid(column=2, row=4)
+
         # Lag Options
         lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
@@ -420,18 +427,32 @@ class TimeSeries:
     def openDifference(self):
         s = tk.NORMAL if self.difference_choice_var.get() else tk.DISABLED
         self.interval_entry["state"] = s
+        
+        s_s = tk.NORMAL if self.s_difference_choice_var.get() else tk.DISABLED
+        self.s_interval_entry["state"] = s_s
 
     def showACF(self, lags):
         top = tk.Toplevel()
-        fig = plt.Figure((20, 15))
+        fig = plt.Figure((10, 8))
         
         data = self.df[self.target_list.get(0)]
 
         ax = fig.add_subplot(211)
-        plot_acf(data, ax=ax, lags=lags)
-
         ax1 = fig.add_subplot(212)
-        plot_pacf(data, ax=ax1, lags=lags)
+
+        if self.s_difference_choice_var.get():
+            plot_acf(data.diff(self.interval_var.get())[self.interval_var.get():].diff(self.s_interval_var.get())[self.s_interval_var.get():], ax=ax, lags=lags)
+            plot_pacf(data.diff(self.interval_var.get())[self.interval_var.get():].diff(self.s_interval_var.get())[self.s_interval_var.get():], ax=ax1, lags=lags)
+        
+        elif self.difference_choice_var.get():
+            plot_acf(data.diff(self.interval_var.get())[self.interval_var.get():], ax=ax, lags=lags)
+            plot_pacf(data.diff(self.interval_var.get())[self.interval_var.get():], ax=ax1, lags=lags)
+ 
+        else:
+            plot_acf(data, ax=ax, lags=lags)
+            plot_pacf(data, ax=ax1, lags=lags)
+        
+        
 
         canvas = FigureCanvasTkAgg(fig, top)
         canvas.draw()
@@ -470,8 +491,7 @@ class TimeSeries:
             self.no_optimization_choice_var.set(0)
             self.do_optimization = True
 
-    def difference(self, data, diff, fill_values=None):
-        interval = self.interval_var.get()
+    def difference(self, data, diff, interval=None, fill_values=None):
         if diff:
             return np.array([data[i] - data[i-interval] for i in range(interval, len(data))])
         else:
@@ -497,15 +517,18 @@ class TimeSeries:
         placeholder = [i for i in self.predictor_list.get(0, tk.END)]
         features = self.df[placeholder].iloc[-size:].to_numpy()
         label = self.df[[self.target_list.get(0)]].iloc[-size:].to_numpy()
-        
-        self.fill_values = label
 
         if difference_choice:
-            features = self.difference(features, True)
-            label = self.difference(label, True)
-            print(features[-30:])
-            print(label[-30:])
+            self.fill_values = label
+            interval = self.interval_var.get()
+            features = self.difference(features, True, interval)
+            label = self.difference(label, True, interval)
 
+        if self.s_difference_choice_var.get():
+            self.s_fill_values = label
+            s_interval = self.s_interval_var.get()
+            features = self.difference(features, True, s_interval)
+            label = self.difference(label, True, s_interval)
 
         if choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -748,8 +771,11 @@ class TimeSeries:
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred)
         
+        if self.s_difference_choice_var.get():
+            self.difference(self.pred, False, self.s_interval_var.get(), self.s_fill_values)
+        
         if self.difference_choice_var.get():
-            self.difference(self.pred, False, self.fill_values)
+            self.difference(self.pred, False, self.interval_var.get(), self.fill_values)
         
         self.forecast = self.test_df[[self.target_list.get(0)]]
         self.forecast = np.asarray(self.forecast)[:num]
