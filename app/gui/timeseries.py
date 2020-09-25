@@ -496,12 +496,11 @@ class TimeSeries:
             return np.array([data[i] - data[i-interval] for i in range(interval, len(data))])
         else:
             for i in range(len(data)):
-                print("Before:",data[i])
                 if i >= interval:
                     data[i] = data[i] + data[i-interval]
                 else:
+                    print(data[i], "+", fill_values[(len(fill_values) - interval)+i], "=", data[i] + fill_values[(len(fill_values) - interval)+i])
                     data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
-                print("After",data[i])
 
     def getDataset(self):
         choice = self.scale_var.get()
@@ -518,17 +517,7 @@ class TimeSeries:
         features = self.df[placeholder].iloc[-size:].to_numpy()
         label = self.df[[self.target_list.get(0)]].iloc[-size:].to_numpy()
 
-        if difference_choice:
-            self.fill_values = label
-            interval = self.interval_var.get()
-            features = self.difference(features, True, interval)
-            label = self.difference(label, True, interval)
-
-        if self.s_difference_choice_var.get():
-            self.s_fill_values = label
-            s_interval = self.s_interval_var.get()
-            features = self.difference(features, True, s_interval)
-            label = self.difference(label, True, s_interval)
+        print("Before Lagged =", features)
 
         if choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -543,6 +532,18 @@ class TimeSeries:
             
             features = self.feature_scaler.fit_transform(features)
             label = self.label_scaler.fit_transform(label)
+
+        if difference_choice:
+            self.fill_values = label
+            interval = self.interval_var.get()
+            features = self.difference(features, True, interval)
+            label = self.difference(label, True, interval)
+
+        if self.s_difference_choice_var.get():
+            self.s_fill_values = label
+            s_interval = self.s_interval_var.get()
+            features = self.difference(features, True, s_interval)
+            label = self.difference(label, True, s_interval)
 
         print(len(features), len(label))
         return features, label
@@ -599,6 +600,7 @@ class TimeSeries:
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
         X_train = X_train[:, self.lags]
+        print("After Lagged =", X_train)
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         momentum = float(self.hyperparameters["Momentum"].get())
@@ -653,7 +655,7 @@ class TimeSeries:
             model.add(Dense(1, activation=self.output_activation.get()))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
-            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
+            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1, shuffle=False)
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
 
@@ -757,25 +759,28 @@ class TimeSeries:
 
     def testModel(self, num):
         input_value = self.last
+        print("last =", input_value)
         steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
         pred = []
 
         for _ in range(num):
             output = self.model.predict(input_value.reshape(shape)[:, self.lags], verbose=0)
+            print("output =", output)
             pred = np.append(pred, output)
             input_value = np.append(input_value, output)[-shape[1]:]
+            print("1 Step After =", input_value)
 
         self.pred = np.array(pred).reshape(-1,1)
-        
-        if self.scale_var.get() != "None":
-            self.pred = self.label_scaler.inverse_transform(self.pred)
         
         if self.s_difference_choice_var.get():
             self.difference(self.pred, False, self.s_interval_var.get(), self.s_fill_values)
         
         if self.difference_choice_var.get():
             self.difference(self.pred, False, self.interval_var.get(), self.fill_values)
+        
+        if self.scale_var.get() != "None":
+            self.pred = self.label_scaler.inverse_transform(self.pred)
         
         self.forecast = self.test_df[[self.target_list.get(0)]]
         self.forecast = np.asarray(self.forecast)[:num]
