@@ -15,6 +15,7 @@ import os
 import json
 
 # Keras
+from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Input, Flatten, Dense
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
@@ -312,6 +313,7 @@ class MultiLayerPerceptron:
         return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
 
     def createModel(self):
+        clear_session()
         lookback_option = self.lookback_option.get()
         if lookback_option == 0:
             X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()

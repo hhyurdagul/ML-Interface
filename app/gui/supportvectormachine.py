@@ -59,8 +59,13 @@ class SupportVectorMachine:
         tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=3, columnspan=2, sticky=tk.W)
         ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=1)
         ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=2)
+        self.lookback_option = tk.IntVar(value=0)
+        self.lookback_val_var = tk.IntVar(value="")
+        tk.Checkbutton(model_validation_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=4)
+        tk.Entry(model_validation_frame, textvariable=self.lookback_val_var).grid(column=1, row=4)
+
         self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=4, columnspan=2)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=5, columnspan=2)
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
