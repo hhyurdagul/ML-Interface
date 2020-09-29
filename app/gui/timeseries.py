@@ -119,29 +119,29 @@ class TimeSeries:
 
         ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
         
-        no_optimization_names = {1:"Neurons in First Layer", 2:"Neurons in Second Layer", 3:"Neurons in Third Layer"}
+        no_optimization_names = ["Neurons in First Layer", "Neurons in Second Layer", "Neurons in Third Layer", "Neurons in Fourth Layer", "Neurons in Fifth Layer"]
 
-        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(3)]
-        self.activation_var = [tk.StringVar(value="relu") for i in range(3)]
+        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(5)]
+        self.activation_var = [tk.StringVar(value="relu") for i in range(5)]
         self.no_optimization_choice_var = tk.IntVar(value=0)
         
         self.no_optimization = [
                 [
                     tk.Radiobutton(model_without_optimization_frame, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i+1, row=0),
-                    ttk.Label(model_without_optimization_frame, text=no_optimization_names[i+1]).grid(column=0, row=i+1),
+                    ttk.Label(model_without_optimization_frame, text=no_optimization_names[i]).grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
-                    ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=2, row=i+1),
-                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid", "linear").grid(column=3, row=i+1)
-                ] for i in range(3)
+                    ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=3, row=i+1, columnspan=2),
+                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid", "linear").grid(column=5, row=i+1)
+                ] for i in range(len(no_optimization_names))
         ]
 
         self.output_activation = tk.StringVar(value="relu")
-        ttk.Label(model_without_optimization_frame, text="Output Activation").grid(column=1, row=5),
-        ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=5)
+        ttk.Label(model_without_optimization_frame, text="Output Activation").grid(column=1, row=7),
+        ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=7)
 
 
         for i,j in enumerate(self.no_optimization):
-            j[2].grid(column=1, row=i+1)
+            j[2].grid(column=1, row=i+1, columnspan=2)
 
 
         ## Model With Optimization
@@ -754,7 +754,7 @@ class TimeSeries:
                     self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["units"])
                 elif model_choice == 3:
                     self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["layer"]["config"]["units"])
-
+        model.summary()
         self.model = model
 
     def testModel(self, num):
