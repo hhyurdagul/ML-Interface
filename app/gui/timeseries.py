@@ -22,7 +22,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Conv1D, MaxPooling1D
-from tensorflow.keras.layers import Input, Flatten, Dropout, Dense, LSTM, Bidirectional
+from tensorflow.keras.layers import Input, Flatten, Dropout, Dense
+from tensorflow.keras.layers import SimpleRNN, GRU, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from kerastuner.tuners import RandomSearch
 
@@ -194,19 +195,21 @@ class TimeSeries:
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Momentum"]).grid(column=3, row=2)
 
         model_names = ["MLP Model", "CNN Model", "LSTM Model", "Bi-LSTM Model"]
+        second_model_names = ["RNN Model", "GRU Model", "CNN-LSTM Model"]
         self.model_var = tk.IntVar(value="")
         ttk.Label(hyperparameter_frame, text="Model Type").grid(column=0, row=3, columnspan=4)
         [tk.Radiobutton(hyperparameter_frame, text=model_names[i], value=i, variable=self.model_var).grid(column=i, row=4) for i in range(4)]
+        [tk.Radiobutton(hyperparameter_frame, text=second_model_names[i], value=i+4, variable=self.model_var).grid(column=i, row=5) for i in range(3)]
 
         self.train_loss = tk.Variable(value="")
-        ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
-        ttk.Label(hyperparameter_frame, text="Train Loss").grid(column=1, row=5)
-        ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
-        ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=5)
+        ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=6)
+        ttk.Label(hyperparameter_frame, text="Train Loss").grid(column=1, row=6)
+        ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=6)
+        ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=6)
 
-        ttk.Label(hyperparameter_frame, text="Best Model Neuron Numbers").grid(column=0, row=6)
+        ttk.Label(hyperparameter_frame, text="Best Model Neuron Numbers").grid(column=0, row=7)
         self.best_model_neurons = [tk.IntVar(value="") for i in range(3)]
-        [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=6) for i in range(3)]
+        [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=7) for i in range(3)]
        
         # Test Model
         test_model_frame = ttk.Labelframe(self.root, text="Test Frame")
@@ -646,6 +649,22 @@ class TimeSeries:
                         model.add(Dropout(0.2))
                     else:
                         model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True)))
+                        model.add(Dropout(0.2))
+
+                elif model_choice == 4:
+                    if i == layers-1:
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(Dropout(0.2))
+                    else:
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True))
+                        model.add(Dropout(0.2))
+                
+                elif model_choice == 4:
+                    if i == layers-1:
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(Dropout(0.2))
+                    else:
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=True))
                         model.add(Dropout(0.2))
             
             if model_choice == 1:
