@@ -50,18 +50,23 @@ class GeneralRegressionNeuralNetwork:
         # Model testing and validation
         model_validation_frame = ttk.Labelframe(self.root, text="Model testing and validation")
         model_validation_frame.grid(column=0, row=1)
+        
+        self.do_forecast_option = tk.IntVar(value=0)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=0, columnspan=2)
 
         self.validation_option = tk.IntVar(value=0)
         self.random_percent_var = tk.IntVar(value=70)
         self.cross_val_var = tk.IntVar(value=5)
-        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=0, columnspan=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=1, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=3, columnspan=2, sticky=tk.W)
-        ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=1)
-        ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=2)
-        self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=4, columnspan=2)
+        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=1, columnspan=2, sticky=tk.W)
+        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
+        tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option).grid(column=0, row=3, sticky=tk.W)
+        tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=4, columnspan=2, sticky=tk.W)
+        ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=2)
+        ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=3)
+        self.lookback_option = tk.IntVar(value=0)
+        self.lookback_val_var = tk.IntVar(value="")
+        tk.Checkbutton(model_validation_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=5)
+        tk.Entry(model_validation_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=5)
 
         # Sigma Options
         sigma_options_frame = ttk.LabelFrame(self.root, text="Sigma Options")
@@ -186,15 +191,31 @@ class GeneralRegressionNeuralNetwork:
             op = tk.DISABLED
         for i in self.sigma_find_list:
             i[1]["state"] = op
+    
+    def getLookback(self, lookback):
+        X = self.df[list(self.predictor_list.get(0, tk.END))]
+        y = self.df[self.target_list.get(0)]
+
+        for i in range(1, lookback+1):
+            X[f"t-{i}"] = y.shift(i)
+        X.dropna(inplace=True)
+
+        return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
 
     def createModel(self):
         op = self.find_sigma_option.get()
         val_option = self.validation_option.get() 
         
         do_forecast = self.do_forecast_option.get()
-
-        X = self.df[list(self.predictor_list.get(0, tk.END))]
-        y = self.df[self.target_list.get(0)]
+        lookback_option = self.lookback_option.get()
+        
+        if lookback_option == 0:
+            X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
+            y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)
+        else:
+            lookback = self.lookback_val_var.get()
+            X, y = self.getLookback(lookback)
+            self.last = y[-lookback:]
 
         if op == 0:
             sigma = self.sigma_var.get()
@@ -212,26 +233,33 @@ class GeneralRegressionNeuralNetwork:
                 self.model = model
 
             elif val_option == 1:
-                X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
-                model.fit(X_train, y_train)
                 if do_forecast == 0:
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
+                    model.fit(X_train, y_train)
                     pred = model.predict(X_test)
                     losses = loss(y_test, pred)[:-1]
                     self.y_test = y_test
                     self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
+                else:
+                    size = int((self.random_percent_var.get()/100)*len(X))
+                    X = X[-size:]
+                    y = y[-size:]
+                    model.fit(X, y)
                 self.model = model
 
             elif val_option == 2:
-                cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
-                for i,j in enumerate(list(cvs.values())[2:]):
-                    self.test_metrics_vars[i].set(j.mean())
+                if do_forecast == 0:
+                    cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
+                    for i,j in enumerate(list(cvs.values())[2:]):
+                        self.test_metrics_vars[i].set(j.mean())
             
             elif val_option == 3:
-                cvs = cross_validate(model, X, y, cv=X.values.shape[0]-1, scoring=skloss)
-                for i,j in enumerate(list(cvs.values())[2:]):
-                    self.test_metrics_vars[i].set(j.mean())
+                if do_forecast == 0:
+                    cvs = cross_validate(model, X, y, cv=X.values.shape[0]-1, scoring=skloss)
+                    for i,j in enumerate(list(cvs.values())[2:]):
+                        self.test_metrics_vars[i].set(j.mean())
 
         else:
             model = GRNN(n_splits=2)
@@ -259,9 +287,9 @@ class GeneralRegressionNeuralNetwork:
                 self.model = reg
             
             elif val_option == 1: 
-                X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
-                reg.fit(X_train, y_train)
                 if do_forecast == 0:
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
+                    reg.fit(X_train, y_train)
                     pred = reg.predict(X_test)
                     losses = loss(y_test, pred)
                     self.y_test = y_test
@@ -272,18 +300,35 @@ class GeneralRegressionNeuralNetwork:
             
 
     def forecast(self, num):
-        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[:num]
-        y_test = self.test_df[self.target_list.get(0)][:num]
-        
-        self.pred = self.model.predict(X_test)
+        lookback_option = self.lookback_option.get()
+        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[:num].to_numpy()
+        y_test = self.test_df[self.target_list.get(0)][:num].to_numpy().reshape(-1)
         self.y_test = y_test
+        
+        if lookback_option == 0:
+            self.pred = self.model.predict(X_test)
+        else:
+            pred = []
+            last = self.last
+            lookback = self.lookback_val_var.get()
+            for i in range(num):
+                X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[i]
+                for j in range(1, lookback+1):
+                    X_test[f"t-{j}"] = last[-j]
+                to_pred = X_test.to_numpy().reshape(1, -1)
+                print(to_pred)
+                out = np.round(self.model.predict(to_pred))
+                print(out)
+                last = np.append(last, out)[-lookback:]
+                pred.append(out)
+            self.pred = np.array(pred).reshape(-1)
+        
         losses = loss(y_test, self.pred)
-
         for i in range(6):
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
-        y_test = self.y_test.values.reshape(-1)
+        y_test = self.y_test
         pred = self.pred
         plt.plot(y_test)
         plt.plot(pred)

@@ -315,12 +315,12 @@ class TimeSeries:
 #        savedoc.save("Real Data/Forecast_Bidirectional LSTM.docx")
     
     def readCsv(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx")])
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
 
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
-        elif path.endswith(".xlsx") or path.endswith(".xls"):
+        else:
             self.df = pd.read_excel(path)
         
         self.input_list.delete(0, tk.END)
@@ -329,11 +329,11 @@ class TimeSeries:
             self.input_list.insert(tk.END, i)
 
     def getTestSet(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx")])
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
-        elif path.endswith(".xlsx"):
+        else:
             self.test_df = pd.read_excel(path)
 
     def showTestSet(self):
