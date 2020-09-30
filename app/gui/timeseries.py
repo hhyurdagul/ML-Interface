@@ -354,6 +354,7 @@ class TimeSeries:
                 "size_choice": self.size_choice_var.get(),
                 "scale_type": self.scale_var.get(),
                 "difference_choice": self.difference_choice_var.get(),
+                "second_difference_choice": self.s_difference_choice_var.get(),
                 "acf_lags": self.acf_lags.get(),
                 "lag_number": self.lag_entries[self.lag_option_var.get()].get(),
                 "lag_choice": self.lag_option_var.get(),
@@ -365,6 +366,8 @@ class TimeSeries:
                 }
         if self.difference_choice_var.get() == 1:
             params["interval"] = self.interval_var.get()
+        if self.s_difference_choice_var.get() == 1:
+            params["second_interval"] = self.s_interval_var.get()
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -379,12 +382,16 @@ class TimeSeries:
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])
         self.difference_choice_var.set(params["difference_choice"])
-        if params["difference_choice"] == 1:
-            self.interval_var.set(params["interval"])
         try:
-            self.acf_lags.set(params["acf_lags"])
+            self.s_difference_choice_var.set(params["second_difference_choice"])
+            if params["second_difference_choice"] == 1:
+                self.s_interval_var.set(params["second_interval"])
         except:
             pass
+        if params["difference_choice"] == 1:
+            self.interval_var.set(params["interval"])
+
+        self.acf_lags.set(params["acf_lags"])
         self.lag_option_var.set(params["lag_choice"])
         self.openEntries()
         self.lag_entries[params["lag_choice"]].delete(0,tk.END)

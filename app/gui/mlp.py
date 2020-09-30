@@ -276,6 +276,7 @@ class MultiLayerPerceptron:
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
                 "hyperparameters": [i.get() for i in self.hyperparameters],
+                "lookback_option": self.lookback_option.get(),
                 }
         
         if self.validation_option.get() == 1:
@@ -283,7 +284,10 @@ class MultiLayerPerceptron:
         
         elif self.validation_option.get() == 2:
             params["k_fold_cv"] = self.cross_val_var.get()
-
+        
+        if self.lookback_option.get() == 1:
+            params["lookback_value"] = self.lookback_val_var.get()
+        
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -297,10 +301,21 @@ class MultiLayerPerceptron:
         self.validation_option.set(params["validation_option"])
         self.do_forecast_option.set(params["do_forecast"])
         self.no_optimization_choice_var.set(params["num_layers"])
+        try:
+            self.lookback_option.set(params["lookback_option"])
+            if params["lookback_option"] == 1:
+                self.lookback_val_var.set(params["lookback_value"])
+        except:
+            pass
         for i in range(params["num_layers"]):
             self.neuron_numbers_var[i].set(params["num_neurons"][i])
         for i, j in enumerate(self.hyperparameters):
             j.set(params["hyperparameters"][i])
+        if params["validation_option"] == 1:
+            self.random_percent_var.set(params["random_percent"])
+        if params["validation_option"] == 2:
+            self.cross_val_var.set(params["k_fold_cv"])
+        self.getData()
    
     def getLookback(self, lookback):
         X = self.df[list(self.predictor_list.get(0, tk.END))]
@@ -312,8 +327,7 @@ class MultiLayerPerceptron:
         
         return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
 
-    def createModel(self):
-        clear_session()
+    def getData(self):
         lookback_option = self.lookback_option.get()
         if lookback_option == 0:
             X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
@@ -322,7 +336,11 @@ class MultiLayerPerceptron:
             lookback = self.lookback_val_var.get()
             X, y = self.getLookback(lookback)
             self.last = y[-lookback:]
-            print(self.last)
+        return X, y
+
+    def createModel(self):
+        clear_session()
+        X, y = self.getData()
 
         layers = self.no_optimization_choice_var.get()
         
