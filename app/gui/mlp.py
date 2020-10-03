@@ -20,6 +20,7 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Input, Flatten, Dense
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.initializers import GlorotUniform
 from kerastuner.tuners import RandomSearch
 
 from .helpers import *
@@ -360,11 +361,11 @@ class MultiLayerPerceptron:
                 neuron_number = self.neuron_numbers_var[i].get()
                 activation = self.activation_var[i].get()
                 if i == 0:
-                    model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1]))
+                    model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1], kernel_initializer=GlorotUniform(seed=0)))
                 else:
-                    model.add(Dense(neuron_number, activation=activation))
+                    model.add(Dense(neuron_number, activation=activation, kernel_initializer=GlorotUniform(seed=0)))
 
-            model.add(Dense(1, activation="relu"))
+            model.add(Dense(1, activation="relu", kernel_initializer=GlorotUniform(seed=0)))
             model.compile(optimizer=optimizers[self.hyperparameters[2].get()], loss=self.hyperparameters[3].get())
             return model
 

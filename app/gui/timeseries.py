@@ -25,6 +25,7 @@ from tensorflow.keras.layers import Conv1D, MaxPooling1D
 from tensorflow.keras.layers import Input, Flatten, Dropout, Dense
 from tensorflow.keras.layers import SimpleRNN, GRU, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+from tensorflow.keras.initializers import GlorotUniform
 from kerastuner.tuners import RandomSearch
 
 # Helper
@@ -636,49 +637,49 @@ class TimeSeries:
                 neuron_number = self.neuron_numbers_var[i].get()
                 activation_function = self.activation_var[i].get()
                 if model_choice == 0:
-                    model.add(Dense(neuron_number, activation=activation_function))
+                    model.add(Dense(neuron_number, activation=activation_function, kernel_initializer=GlorotUniform(seed=0)))
                 
                 elif model_choice == 1:
-                    model.add(Conv1D(filters=neuron_number, kernel_size=2, activation=activation_function))
+                    model.add(Conv1D(filters=neuron_number, kernel_size=2, activation=activation_function, kernel_initializer=GlorotUniform(seed=0)))
                     model.add(MaxPooling1D(pool_size=2))
                 
                 elif model_choice == 2:
                     if i == layers-1:
-                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True))
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
 
                 elif model_choice == 3:
                     if i == layers-1:
-                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False)))
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0))))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True)))
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0))))
                         model.add(Dropout(0.2))
 
                 elif model_choice == 4:
                     if i == layers-1:
-                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True))
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
                 
                 elif model_choice == 4:
                     if i == layers-1:
-                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=False))
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=True))
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
                         model.add(Dropout(0.2))
             
             if model_choice == 1:
                 model.add(Flatten())
-                model.add(Dense(32))
+                model.add(Dense(32, kernel_initializer=GlorotUniform(seed=0)))
 
-            model.add(Dense(1, activation=self.output_activation.get()))
+            model.add(Dense(1, activation=self.output_activation.get(), kernel_initializer=GlorotUniform(seed=0)))
             model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
             
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1, shuffle=False)
@@ -712,12 +713,12 @@ class TimeSeries:
                         n_min = self.neuron_min_number_var[i].get()
                         n_max = self.neuron_max_number_var[i].get()
                         step = int((n_max-n_min)/4)
-                        model.add(Conv1D(filters=hp.Int("CNN_"+str(i), min_value=n_min, max_value=n_max, step=step), kernel_size=2, activation="relu"))
+                        model.add(Conv1D(filters=hp.Int("CNN_"+str(i), min_value=n_min, max_value=n_max, step=step), kernel_size=2, activation="relu", kernel_initializer=GlorotUniform(seed=0)))
                         model.add(MaxPooling1D(pool_size=2))
                     
                     model.add(Flatten())
-                    model.add(Dense(32))
-                    model.add(Dense(1))
+                    model.add(Dense(32, kernel_initializer=GlorotUniform(seed=0)))
+                    model.add(Dense(1, kernel_initializer=GlorotUniform(seed=0)))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
                 
@@ -731,9 +732,9 @@ class TimeSeries:
                         n_min = self.neuron_min_number_var[i].get()
                         n_max = self.neuron_max_number_var[i].get()
                         step = int((n_max - n_min)/4)
-                        model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True))
+                        model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
                         if i == layer-1:
-                            model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False))
+                            model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
                     
                     model.add(Dense(1))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
@@ -749,11 +750,11 @@ class TimeSeries:
                         n_min = self.neuron_min_number_var[i].get()
                         n_max = self.neuron_max_number_var[i].get()
                         step = int((n_max - n_min)/4)
-                        model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True)))
+                        model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True, kernel_initializer=GlorotUniform(seed=0))))
                         if i == layer-1:
-                            model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False)))
+                            model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False, kernel_initializer=GlorotUniform(seed=0))))
                     
-                    model.add(Dense(1))
+                    model.add(Dense(1, kernel_initializer=GlorotUniform(seed=0)))
                     model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
                     return model
 
