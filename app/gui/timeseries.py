@@ -25,8 +25,16 @@ from tensorflow.keras.layers import Conv1D, MaxPooling1D
 from tensorflow.keras.layers import Input, Flatten, Dropout, Dense
 from tensorflow.keras.layers import SimpleRNN, GRU, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-from tensorflow.keras.initializers import GlorotUniform
+from tensorflow.keras.initializers import GlorotUniform, Orthogonal
 from kerastuner.tuners import RandomSearch
+
+# Seed
+from random import seed
+from numpy.random import seed as np_seed
+from tensorflow.random import set_seed
+seed(0)
+np_seed(0)
+set_seed(0)
 
 # Helper
 from .helpers import loss
@@ -510,25 +518,20 @@ class TimeSeries:
                 if i >= interval:
                     data[i] = data[i] + data[i-interval]
                 else:
-                    print(data[i], "+", fill_values[(len(fill_values) - interval)+i], "=", data[i] + fill_values[(len(fill_values) - interval)+i])
                     data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
 
     def getDataset(self):
         choice = self.scale_var.get()
         difference_choice = self.difference_choice_var.get()
         
-        print("a")
-
         size_choice = self.size_choice_var.get()
         size = self.train_size_var.get() if size_choice==1 else (self.train_size_var.get()/100) * len(self.df)
         size = int(size)
-        print(size)
 
         placeholder = [i for i in self.predictor_list.get(0, tk.END)]
         features = self.df[placeholder].iloc[-size:].to_numpy()
         label = self.df[[self.target_list.get(0)]].iloc[-size:].to_numpy()
 
-        print("Before Lagged =", features)
 
         if choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -556,12 +559,10 @@ class TimeSeries:
             features = self.difference(features, True, s_interval)
             label = self.difference(label, True, s_interval)
 
-        print(len(features), len(label))
         return features, label
 
     def getLags(self, features, label, n):
         X, y = [], []
-        print(n)
         for i in range(len(features) - n):
             X.append(features[i:i+n])
             y.append(label[i+n])
@@ -578,29 +579,24 @@ class TimeSeries:
         if lag_type == 0:
             max_lag = int(self.lag_entries[0].get())
             self.lags = list(range(max_lag))
-            print(0)
 
         elif lag_type == 1:
             lag = self.lag_entries[1].get()
             self.lags = [int(i) for i in lag.split(',')]
             max_lag = max(self.lags) + 1
-            print(1)
 
         elif lag_type == 2:
             lag = self.lag_entries[2].get()
             numbers = np.argsort(acf_vals[1:])[-int(lag):]
             self.lags = np.sort(numbers)
             max_lag = max(self.lags) + 1
-            print(2)
 
         elif lag_type == 3:
             lag = self.lag_entries[3].get()
             numbers = np.array(acf_vals[1:])
             self.lags = np.sort(np.argsort(numbers[numbers>float(lag)]))
             max_lag = max(self.lags) + 1
-            print(3)
 
-        print(self.lags)
         X, y = self.getLags(features, label, max_lag)
         return X, y 
 
@@ -611,7 +607,6 @@ class TimeSeries:
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
         X_train = X_train[:, self.lags]
-        print("After Lagged =", X_train)
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         momentum = float(self.hyperparameters["Momentum"].get())
@@ -622,7 +617,6 @@ class TimeSeries:
                 }
 
         shape = (X_train.shape[1], X_train.shape[2])
-        print(shape)
         model_choice = self.model_var.get()
 
         if not self.do_optimization:
@@ -645,34 +639,34 @@ class TimeSeries:
                 
                 elif model_choice == 2:
                     if i == layers-1:
-                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
 
                 elif model_choice == 3:
                     if i == layers-1:
-                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0))))
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0))))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0))))
+                        model.add(Bidirectional(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0))))
                         model.add(Dropout(0.2))
 
                 elif model_choice == 4:
                     if i == layers-1:
-                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
                 
-                elif model_choice == 4:
+                elif model_choice == 5:
                     if i == layers-1:
-                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
                     else:
-                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
+                        model.add(GRU(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
             
             if model_choice == 1:
@@ -786,17 +780,14 @@ class TimeSeries:
 
     def testModel(self, num):
         input_value = self.last
-        print("last =", input_value)
         steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
         pred = []
 
         for _ in range(num):
             output = self.model.predict(input_value.reshape(shape)[:, self.lags], verbose=0)
-            print("output =", output)
             pred = np.append(pred, output)
             input_value = np.append(input_value, output)[-shape[1]:]
-            print("1 Step After =", input_value)
 
         self.pred = np.array(pred).reshape(-1,1)
         

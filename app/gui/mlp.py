@@ -23,6 +23,14 @@ from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras.initializers import GlorotUniform
 from kerastuner.tuners import RandomSearch
 
+# Seed
+from random import seed
+from numpy.random import seed as np_seed
+from tensorflow.random import set_seed
+seed(0)
+np_seed(0)
+set_seed(0)
+
 from .helpers import *
 
 class MultiLayerPerceptron:
