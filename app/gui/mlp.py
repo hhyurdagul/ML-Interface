@@ -93,9 +93,11 @@ class MultiLayerPerceptron:
 
         ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
 
+        layer_count = 20
+
         no_optimization_names = ["Neurons in First Layer", "Neurons in Second Layer", "Neurons in Third Layer", "Neurons in Fourth Layer", "Neurons in Fifth Layer"]
-        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(5)]
-        self.activation_var = [tk.StringVar(value="relu") for i in range(5)]
+        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(layer_count)]
+        self.activation_var = [tk.StringVar(value="relu") for i in range(layer_count)]
         self.no_optimization_choice_var = tk.IntVar(value=0)
 
         self.no_optimization = [
@@ -105,11 +107,38 @@ class MultiLayerPerceptron:
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                     ttk.Label(model_without_optimization_frame, text="Optimization Function").grid(column=3, row=i+1, columnspan=2),
                     ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid").grid(column=5, row=i+1)
-                ] for i in range(len(no_optimization_names))
+                ] for i in range(5)
         ]
 
+        self.output_activation = tk.StringVar(value="relu")
+        ttk.Label(model_without_optimization_frame, text="Output Activation").grid(column=1, row=7),
+        ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=7)
+    
+        top_level = tk.Toplevel(self.root)
+        top = ttk.Frame(top_level)
+        top.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        for i in range(5, 20):
+            self.no_optimization.append(
+                    [
+                        tk.Radiobutton(top, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
+                        ttk.Label(top, text=f"Neurons in {i+1}. Layer:").grid(column=0, row=i+1-5, columnspan=4),
+                        ttk.Entry(top, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
+                        ttk.Label(top, text="Activation Function").grid(column=9, row=i+1-5, columnspan=4),
+                        ttk.OptionMenu(top, self.activation_var[i], "relu", "relu", "tanh", "sigmoid", "linear").grid(column=13, row=i+1-5, columnspan=3)
+                    ]
+            )
+        
         for i,j in enumerate(self.no_optimization):
-            j[2].grid(column=1, row=i+1, columnspan=2)
+            if i > 4:
+                j[2].grid(column=4, row=i+1-5, columnspan=5)
+            else:
+                j[2].grid(column=1, row=i+1, columnspan=2)
+        
+        top_level.withdraw()
+        
+        ttk.Button(model_without_optimization_frame, text="More Layers", command=top_level.deiconify).grid(column=3, row=7)
+        ttk.Button(top, text="Done", command=top_level.withdraw).grid(column=0, row=16)
 
         ## Model With Optimization
         model_with_optimization_frame = ttk.Labelframe(create_model_frame, text="Model With Optimization")
@@ -426,6 +455,7 @@ class MultiLayerPerceptron:
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
+        self.model.summary()
 
     def forecast(self, num):
         lookback_option = self.lookback_option.get()
