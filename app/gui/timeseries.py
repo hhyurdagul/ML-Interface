@@ -275,78 +275,6 @@ class TimeSeries:
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i], width=8).grid(column=1,row=i, padx=3)
             ttk.Entry(test_model_metrics_frame, textvariable=self.rounded_test_metrics_vars[i], width=8).grid(column=2,row=i, padx=3)
 
-#    def myFunc(self):
-#        document = Document("Real Data/Load.docx")
-#        rows = document.tables[0].rows[1:]
-#        
-#        savedoc = Document("Real Data/Forecast_Bidirectional LSTM.docx")
-#        savetable = savedoc.tables[0]
-#        pred_name = "TRAFLOAD_CELL_PS_DL_KB"
-#        _name = "Bi-LSTM"
-#        self.model_var.set(3)
-#        count = 1
-#        for i in rows:
-#            k = i.cells
-#            percent = int(k[1].text[:-1])
-#            lag = int(k[4].text)
-#            layer_num = int(k[6].text)
-#            neurons = k[7].text
-#            af = ""
-#            epoch = int(k[9].text)
-#            batch_size = int(k[10].text)
-#            loss_function = k[12].text.replace("\n", " ").strip()
-#            pred_num = int(k[14].text)
-#            
-#            try:
-#                interval = int(k[3].text)
-#                self.difference_choice_var.set(1)
-#                self.interval_var.set(interval)
-#            except:
-#                interval = "-"
-#                self.difference_choice_var.set(0)
-# 
-#            self.train_size_var.set(percent)
-#            self.acf_lags.set(lag)
-#            self.lag_option_var.set(0)
-#            self.no_optimization_choice_var.set(layer_num)
-#            self.openOptimizationLayers(True)
-#            n_nums = [int(j) for j in k[7].text.split(',')]
-#            for j in range(layer_num):
-#                self.neuron_numbers_var[j].set(n_nums[j])
-#                af += "Relu,"
-# 
-#            self.hyperparameters["Epoch"].set(epoch)
-#            self.hyperparameters["Batch_Size"].set(batch_size)
-#            lss = {"Mean Squared error":"mean_squared_error", "Mean Absolute error":"mean_absolute_error", "MAPE":"mean_absolute_percentage_error"} 
-#            self.hyperparameters["Loss_Function"].set(lss[loss_function])
-#            self.createModel()
-#            self.testModel(pred_num)
-#            print(count, ". finished")
-#            print("Test MAPE =", self.test_metrics_vars[3].get())
-#            count += 1
-# 
-#            st = savetable.add_row().cells
-#            st[0].text = pred_name
-#            st[1].text = str(percent) + "%"
-#            st[2].text = "-"
-#            st[3].text = str(interval)
-#            st[4].text = str(lag)
-#            st[5].text = "Use All Lags"
-#            st[6].text = str(layer_num)
-#            st[7].text = neurons
-#            st[8].text = str(af[:-1])
-#            st[9].text = str(epoch)
-#            st[10].text = str(batch_size)
-#            st[11].text = "Adam"
-#            st[12].text = loss_function
-#            st[13].text = "0.001"
-#            st[14].text = str(pred_num)
-#            st[15].text = str(self.test_metrics_vars[3].get())[:4]
-#            
-#            clear_session()
-# 
-#        savedoc.save("Real Data/Forecast_Bidirectional LSTM.docx")
-    
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
@@ -542,7 +470,7 @@ class TimeSeries:
                     data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
 
     def getDataset(self):
-        choice = self.scale_var.get()
+        scale_choice = self.scale_var.get()
         difference_choice = self.difference_choice_var.get()
         
         size_choice = self.size_choice_var.get()
@@ -554,14 +482,14 @@ class TimeSeries:
         label = self.df[[self.target_list.get(0)]].iloc[-size:].to_numpy()
 
 
-        if choice == "StandardScaler":
+        if scale_choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
             
             features = self.feature_scaler.fit_transform(features)
             label = self.label_scaler.fit_transform(label)
         
-        elif choice == "MinMaxScaler":
+        elif scale_choice == "MinMaxScaler":
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             

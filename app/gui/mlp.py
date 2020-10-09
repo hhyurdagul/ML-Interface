@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from datetime import timedelta
 import os
@@ -193,9 +194,16 @@ class MultiLayerPerceptron:
         ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
         ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=5)
 
+        customize_train_set_frame = ttk.LabelFrame(self.root, text="Custome Train Set")
+        customize_train_set_frame.grid(column=0, row=2)
+
+        self.scale_var = tk.StringVar(value="None")
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=0)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=0, row=1)
+
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=0, row=2, columnspan=2)
+        test_model_frame.grid(column=1, row=2)
 
         ## Test Model Main
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
@@ -358,7 +366,6 @@ class MultiLayerPerceptron:
     def getLookback(self, lookback):
         X = self.df[list(self.predictor_list.get(0, tk.END))]
         y = self.df[self.target_list.get(0)]
-
         for i in range(1, lookback+1):
             X[f"t-{i}"] = y.shift(i)
         X.dropna(inplace=True)
@@ -367,13 +374,33 @@ class MultiLayerPerceptron:
 
     def getData(self):
         lookback_option = self.lookback_option.get()
+        scale_choice = self.scale_var.get()
+        
         if lookback_option == 0:
             X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
             y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)
+        
         else:
             lookback = self.lookback_val_var.get()
             X, y = self.getLookback(lookback)
+        
+        if scale_choice == "StandardScaler":
+            self.feature_scaler = StandardScaler()
+            self.label_scaler = StandardScaler()
+
+            X = self.feature_scaler.fit_transform(X)
+            y = self.label_scaler.fit_transform(y.reshape(-1,1)).reshape(-1)
+        
+        elif scale_choice == "MinMaxScaler":
+            self.feature_scaler = MinMaxScaler()
+            self.label_scaler = MinMaxScaler()
+            
+            X = self.feature_scaler.fit_transform(X)
+            y = self.label_scaler.fit_transform(y.reshape(-1,1)).reshape(-1)
+        
+        if lookback_option == 1:
             self.last = y[-lookback:]
+
         return X, y
 
     def createModel(self):
@@ -474,12 +501,17 @@ class MultiLayerPerceptron:
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j]
                 to_pred = X_test.to_numpy().reshape(1,-1)
+                if self.scale_var.get() != "None":
+                    to_pred = self.feature_scaler.transform(to_pred).reshape(1,-1)
                 print(to_pred)
                 out = np.round(self.model.predict(to_pred))
                 print(out)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
             self.pred = np.array(pred).reshape(-1)
+
+        if self.scale_var.get() != "None":
+            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
 
         losses = loss(y_test, self.pred)
         for i in range(6):
