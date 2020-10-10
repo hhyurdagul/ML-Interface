@@ -363,9 +363,7 @@ class MultiLayerPerceptron:
             self.cross_val_var.set(params["k_fold_cv"])
         self.getData()
    
-    def getLookback(self, lookback):
-        X = self.df[list(self.predictor_list.get(0, tk.END))]
-        y = self.df[self.target_list.get(0)]
+    def getLookback(self, X, y, lookback):
         for i in range(1, lookback+1):
             X[f"t-{i}"] = y.shift(i)
         X.dropna(inplace=True)
@@ -375,37 +373,40 @@ class MultiLayerPerceptron:
     def getData(self):
         lookback_option = self.lookback_option.get()
         scale_choice = self.scale_var.get()
-        
-        if lookback_option == 0:
-            X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
-            y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)
-        
-        else:
-            lookback = self.lookback_val_var.get()
-            X, y = self.getLookback(lookback)
+
+        X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
+        y = self.df[self.target_list.get(0)].copy()
         
         if scale_choice == "StandardScaler":
+            print(0)
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
 
-            X = self.feature_scaler.fit_transform(X)
-            y = self.label_scaler.fit_transform(y.reshape(-1,1)).reshape(-1)
+            X.iloc[:] = self.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
         elif scale_choice == "MinMaxScaler":
+            print(1)
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             
-            X = self.feature_scaler.fit_transform(X)
-            y = self.label_scaler.fit_transform(y.reshape(-1,1)).reshape(-1)
+            X.iloc[:] = self.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
         if lookback_option == 1:
+            lookback = self.lookback_val_var.get()
+            X, y = self.getLookback(X, y, lookback)
             self.last = y[-lookback:]
+        else:
+            X = X.to_numpy()
+            y = y.to_numpy().reshape(-1)
 
         return X, y
 
     def createModel(self):
         clear_session()
         X, y = self.getData()
+        print(self.scale_var.get())
 
         layers = self.no_optimization_choice_var.get()
         
@@ -429,7 +430,7 @@ class MultiLayerPerceptron:
                 else:
                     model.add(Dense(neuron_number, activation=activation, kernel_initializer=GlorotUniform(seed=0)))
 
-            model.add(Dense(1, activation="relu", kernel_initializer=GlorotUniform(seed=0)))
+            model.add(Dense(1, activation=self.output_activation.get(), kernel_initializer=GlorotUniform(seed=0)))
             model.compile(optimizer=optimizers[self.hyperparameters[2].get()], loss=self.hyperparameters[3].get())
             return model
 
@@ -491,18 +492,21 @@ class MultiLayerPerceptron:
         self.y_test = y_test
         
         if lookback_option == 0:
+            if self.scale_var.get() != "None":
+                X_test = self.feature_scaler.transform(X_test)
             self.pred = self.model.predict(X_test).reshape(-1)
+            print("Predicted")
         else:
             pred = []
             last = self.last
             lookback = self.lookback_val_var.get()
             for i in range(num):
                 X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j]
                 to_pred = X_test.to_numpy().reshape(1,-1)
-                if self.scale_var.get() != "None":
-                    to_pred = self.feature_scaler.transform(to_pred).reshape(1,-1)
                 print(to_pred)
                 out = np.round(self.model.predict(to_pred))
                 print(out)
@@ -511,7 +515,9 @@ class MultiLayerPerceptron:
             self.pred = np.array(pred).reshape(-1)
 
         if self.scale_var.get() != "None":
+            print("Before:",self.pred)
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
+            print("After:", self.pred)
 
         losses = loss(y_test, self.pred)
         for i in range(6):
