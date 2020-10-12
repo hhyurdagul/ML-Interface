@@ -8,9 +8,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
-from sklearn.svm import SVR, NuSVR
 from joblib import dump, load
+from sklearn.svm import SVR, NuSVR
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
 
 from datetime import timedelta
 import os
@@ -175,6 +176,14 @@ class SupportVectorMachine:
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
+        # Customize Train Set
+        customize_train_set_frame = ttk.LabelFrame(self.root, text="Customize Train Set")
+        customize_train_set_frame.grid(column=0, row=2)
+
+        self.scale_var = tk.StringVar(value="None")
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=0)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=0, row=1)
+
         self.openEntries()
 
 
@@ -320,16 +329,46 @@ class SupportVectorMachine:
         
         self.vars_nums = to_open
 
-    def getLookback(self, lookback):
-        X = self.df[list(self.predictor_list.get(0, tk.END))]
-        y = self.df[self.target_list.get(0)]
-
+    def getLookback(self, X, y, lookback):
         for i in range(1, lookback+1):
             X[f"t-{i}"] = y.shift(i)
         X.dropna(inplace=True)
 
         return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
     
+    def getData(self):
+        lookback_option = self.lookback_option.get()
+        scale_choice = self.scale_var.get()
+
+        X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
+        y = self.df[self.target_list.get(0)].copy()
+        
+        if scale_choice == "StandardScaler":
+            print(0)
+            self.feature_scaler = StandardScaler()
+            self.label_scaler = StandardScaler()
+
+            X.iloc[:] = self.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
+        
+        elif scale_choice == "MinMaxScaler":
+            print(1)
+            self.feature_scaler = MinMaxScaler()
+            self.label_scaler = MinMaxScaler()
+            
+            X.iloc[:] = self.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
+        
+        if lookback_option == 1:
+            lookback = self.lookback_val_var.get()
+            X, y = self.getLookback(X, y, lookback)
+            self.last = y[-lookback:]
+        else:
+            X = X.to_numpy()
+            y = y.to_numpy().reshape(-1)
+
+        return X, y
+
     def createModel(self):
         gamma_choice = self.gamma_choice.get()
         kernels = ["linear", "rbf", "poly", "sigmoid"]
@@ -338,14 +377,7 @@ class SupportVectorMachine:
         do_forecast = self.do_forecast_option.get()
         val_option = self.validation_option.get()
         
-        lookback_option = self.lookback_option.get()
-        if lookback_option == 0:
-            X = self.df[list(self.predictor_list.get(0, tk.END))].to_numpy()
-            y = self.df[self.target_list.get(0)].to_numpy().reshape(-1)
-        else:
-            lookback = self.lookback_val_var.get()
-            X, y = self.getLookback(lookback)
-            self.last = y[-lookback:]
+        X, y = self.getData()
 
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
@@ -468,13 +500,18 @@ class SupportVectorMachine:
         self.y_test = y_test
         
         if lookback_option == 0:
+            if self.scale_var.get() != "None":
+                X_test = self.feature_scaler.transform(X_test)
             self.pred = self.model.predict(X_test)
+            print("Predicted")
         else:
             pred = []
             last = self.last
             lookback = self.lookback_val_var.get()
             for i in range(num):
                 X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j]
                 to_pred = X_test.to_numpy().reshape(1, -1)
@@ -484,6 +521,12 @@ class SupportVectorMachine:
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
             self.pred = np.array(pred).reshape(-1)
+
+        if self.scale_var.get() != "None":
+            print("Before:",self.pred)
+            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
+            print("After:", self.pred)
+
         
         losses = loss(y_test, self.pred)
         for i in range(6):

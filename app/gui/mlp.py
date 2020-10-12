@@ -194,6 +194,8 @@ class MultiLayerPerceptron:
         ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
         ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=5)
 
+
+        # Customize Train Set
         customize_train_set_frame = ttk.LabelFrame(self.root, text="Custome Train Set")
         customize_train_set_frame.grid(column=0, row=2)
 
