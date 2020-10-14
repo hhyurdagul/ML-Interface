@@ -188,10 +188,7 @@ class MultiLayerPerceptron:
         ttk.Label(hyperparameter_frame, text="Momentum").grid(column=2, row=2)
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[5]).grid(column=3, row=2)
         
-        self.train_loss = tk.Variable(value="")
         ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
-        ttk.Label(hyperparameter_frame, text="Train Loss").grid(column=1, row=5)
-        ttk.Entry(hyperparameter_frame, textvariable=self.train_loss).grid(column=2, row=5)
         ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=5)
 
 
@@ -247,6 +244,8 @@ class MultiLayerPerceptron:
         
     def fillInputList(self):
         self.input_list.delete(0, tk.END)
+        self.predictor_list.delete(0, tk.END)
+        self.target_list.delete(0, tk.END)
 
         for i in self.df.columns:
             self.input_list.insert(tk.END, i)
@@ -293,6 +292,15 @@ class MultiLayerPerceptron:
         except:
             pass
 
+    def popupmsg(self, msg):
+        popup = tk.Tk()
+        popup.wm_title("!")
+        label = ttk.Label(popup, text=msg)
+        label.pack(side="top", fill="x", pady=10)
+        B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
+        B1.pack()
+        popup.mainloop()
+
     def openLayers(self, var):
         for i in self.no_optimization:
             i[2]["state"] = tk.DISABLED
@@ -315,27 +323,27 @@ class MultiLayerPerceptron:
 
     def saveModel(self):
         path = filedialog.asksaveasfilename()
-        os.mkdir(path)
-        self.model.save(path+"/model.h5")
         params = {
-                "predictors": list(self.predictor_list.get(0, tk.END)),
-                "validation_option": self.validation_option.get(),
+                "predictor_names": self.predictor_names,
+                "label_name": self.label_name,
                 "do_forecast": self.do_forecast_option.get(),
+                "validation_option": self.validation_option.get(),
+                "random_percent": self.random_percent_var.get() if self.validation_option.get() == 1 else None,
+                "k_fold_cv": self.cross_val_var.get() if self.validation_option.get() == 2 else None,
+                "lookback_option": self.lookback_option.get(),
+                "lookback_value": self.lookback_val_var.get() if self.lookback_option.get() else None,
+                "scale_type": self.scale_var.get(),
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
+                "activations": [self.activation_var[i].get() for i in range(self.no_optimization_choice_var.get())],
                 "hyperparameters": [i.get() for i in self.hyperparameters],
-                "lookback_option": self.lookback_option.get(),
                 }
         
-        if self.validation_option.get() == 1:
-            params["random_percent"] = self.random_percent_var.get()
-        
-        elif self.validation_option.get() == 2:
-            params["k_fold_cv"] = self.cross_val_var.get()
-        
+        os.mkdir(path)
+        self.model.save(path+"/model.h5")
         if self.lookback_option.get() == 1:
-            params["lookback_value"] = self.lookback_val_var.get()
-        
+            with open(path+"/last_values.npy", 'wb') as outfile:
+                np.save(outfile, self.last)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -346,24 +354,30 @@ class MultiLayerPerceptron:
         params = json.load(infile)
         infile.close()
 
-        self.validation_option.set(params["validation_option"])
+        self.predictor_names = params["predictor_names"]
+        self.label_name = params["label_name"]
         self.do_forecast_option.set(params["do_forecast"])
-        self.no_optimization_choice_var.set(params["num_layers"])
-        try:
-            self.lookback_option.set(params["lookback_option"])
-            if params["lookback_option"] == 1:
-                self.lookback_val_var.set(params["lookback_value"])
-        except:
-            pass
-        for i in range(params["num_layers"]):
-            self.neuron_numbers_var[i].set(params["num_neurons"][i])
-        for i, j in enumerate(self.hyperparameters):
-            j.set(params["hyperparameters"][i])
+        self.validation_option.set(params["validation_option"])
         if params["validation_option"] == 1:
             self.random_percent_var.set(params["random_percent"])
-        if params["validation_option"] == 2:
+        elif params["validation_option"] == 2:
             self.cross_val_var.set(params["k_fold_cv"])
-        self.getData()
+        self.lookback_option.set(params["lookback_option"])
+        if params["lookback_option"] == 1:
+            self.lookback_val_var.set(params["lookback_value"])
+            last_values = open(path+"/last_values.npy", 'rb')
+            self.last = np.load(last_values)
+            last_values.close()
+        self.scale_var.set(params["scale_type"])
+        self.no_optimization_choice_var.set(params["num_layers"])
+        [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
+        [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
+        [self.hyperparameters[i].set(j) for i, j in enumerate(params["hyperparameters"])]
+        
+        self.openLayers(True)
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        self.popupmsg(msg)
+        #self.getData()
    
     def getLookback(self, X, y, lookback):
         for i in range(1, lookback+1):
@@ -376,8 +390,10 @@ class MultiLayerPerceptron:
         lookback_option = self.lookback_option.get()
         scale_choice = self.scale_var.get()
 
-        X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
-        y = self.df[self.target_list.get(0)].copy()
+        self.predictor_names = list(self.predictor_list.get(0, tk.END))
+        self.label_name = self.target_list.get(0)
+        X = self.df[self.predictor_names].copy()
+        y = self.df[self.label_name].copy()
         
         if scale_choice == "StandardScaler":
             print(0)
@@ -408,7 +424,6 @@ class MultiLayerPerceptron:
     def createModel(self):
         clear_session()
         X, y = self.getData()
-        print(self.scale_var.get())
 
         layers = self.no_optimization_choice_var.get()
         
@@ -489,8 +504,8 @@ class MultiLayerPerceptron:
 
     def forecast(self, num):
         lookback_option = self.lookback_option.get()
-        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))][:num].to_numpy()
-        y_test = self.test_df[self.target_list.get(0)][:num].to_numpy().reshape(-1)
+        X_test = self.test_df[self.predictor_names][:num].to_numpy()
+        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
         self.y_test = y_test
         
         if lookback_option == 0:
@@ -503,7 +518,7 @@ class MultiLayerPerceptron:
             last = self.last
             lookback = self.lookback_val_var.get()
             for i in range(num):
-                X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[i]
+                X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):

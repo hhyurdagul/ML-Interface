@@ -373,6 +373,7 @@ class TimeSeries:
         [self.hyperparameters[i].set(j) for (i,j) in params["hyperparameters"].items()]
         self.model_var.set(params["model"])
         self.train_loss.set(params["train_loss"])
+        self.openOptimizationLayers(True)
 
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         self.popupmsg(msg)
