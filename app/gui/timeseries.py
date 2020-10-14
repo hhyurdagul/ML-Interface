@@ -130,6 +130,7 @@ class TimeSeries:
         ttk.Label(model_without_optimization_frame, text="Number of Hidden Layer").grid(column=0, row=0)
         
         layer_count = 20
+        self.layer_count = layer_count
 
         self.neuron_numbers_var = [tk.IntVar(value="") for i in range(layer_count)]
         self.activation_var = [tk.StringVar(value="relu") for i in range(layer_count)]
@@ -285,6 +286,8 @@ class TimeSeries:
             self.df = pd.read_excel(path)
         
         self.input_list.delete(0, tk.END)
+        self.predictor_list.delete(0, tk.END)
+        self.target_list.delete(0, tk.END)
 
         for i in self.df.columns:
             self.input_list.insert(tk.END, i)
@@ -305,27 +308,33 @@ class TimeSeries:
 
     def saveModel(self):
         path = filedialog.asksaveasfilename()
-        os.mkdir(path)
-        self.model.save(path+"/model.h5")
         params = {
+                "predictor_names": self.predictor_names,
+                "label_name": self.label_name,
                 "train_size": self.train_size_var.get(),
                 "size_choice": self.size_choice_var.get(),
                 "scale_type": self.scale_var.get(),
                 "difference_choice": self.difference_choice_var.get(),
+                "interval": self.interval_var.get() if self.difference_choice_var.get() else None,
                 "second_difference_choice": self.s_difference_choice_var.get(),
+                "second_interval": self.s_interval_var.get() if self.s_difference_choice_var.get() else None,
                 "acf_lags": self.acf_lags.get(),
-                "lag_number": self.lag_entries[self.lag_option_var.get()].get(),
                 "lag_choice": self.lag_option_var.get(),
+                "lag_number": self.lag_entries[self.lag_option_var.get()].get(),
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
+                "activations": [self.activation_var[i].get() for i in range(self.no_optimization_choice_var.get())],
                 "hyperparameters": {i:j.get() for (i, j) in self.hyperparameters.items()},
                 "model": self.model_var.get(),
                 "train_loss": self.train_loss.get()
                 }
-        if self.difference_choice_var.get() == 1:
-            params["interval"] = self.interval_var.get()
-        if self.s_difference_choice_var.get() == 1:
-            params["second_interval"] = self.s_interval_var.get()
+
+        os.mkdir(path)
+        self.model.save(path+"/model.h5")
+        with open(path+"/lags.npy", 'wb') as outfile:
+            np.save(outfile, self.lags)
+        with open(path+"/last_values.npy", 'wb') as outfile:
+            np.save(outfile, self.last)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -335,20 +344,24 @@ class TimeSeries:
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()
+        last_values = open(path+"/last_values.npy", 'rb')
+        self.last = np.load(last_values)
+        last_values.close()
+        lags = open(path+"/lags.npy", 'rb')
+        self.lags = np.load(lags)
+        lags.close()
         
+        self.predictor_names = params["predictor_names"]
+        self.label_name = params["label_name"]
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])
         self.difference_choice_var.set(params["difference_choice"])
-        try:
-            self.s_difference_choice_var.set(params["second_difference_choice"])
-            if params["second_difference_choice"] == 1:
-                self.s_interval_var.set(params["second_interval"])
-        except:
-            pass
         if params["difference_choice"] == 1:
             self.interval_var.set(params["interval"])
-
+        self.s_difference_choice_var.set(params["second_difference_choice"])
+        if params["second_difference_choice"] == 1:
+            self.s_interval_var.set(params["second_interval"])
         self.acf_lags.set(params["acf_lags"])
         self.lag_option_var.set(params["lag_choice"])
         self.openEntries()
@@ -356,12 +369,16 @@ class TimeSeries:
         self.lag_entries[params["lag_choice"]].insert(0, params["lag_number"])
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
+        [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
         [self.hyperparameters[i].set(j) for (i,j) in params["hyperparameters"].items()]
         self.model_var.set(params["model"])
         self.train_loss.set(params["train_loss"])
 
-        features, label = self.getDataset()
-        self.createLag(features, label)
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        self.popupmsg(msg)
+
+        #features, label = self.getDataset()
+        #self.createLag(features, label)
 
     def addPredictor(self):
         try:
@@ -391,6 +408,14 @@ class TimeSeries:
         except:
             pass
 
+    def popupmsg(self, msg):
+        popup = tk.Tk()
+        popup.wm_title("!")
+        label = ttk.Label(popup, text=msg)
+        label.pack(side="top", fill="x", pady=10)
+        B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
+        B1.pack()
+        popup.mainloop()
 
     def openDifference(self):
         s = tk.NORMAL if self.difference_choice_var.get() else tk.DISABLED
@@ -403,7 +428,7 @@ class TimeSeries:
         top = tk.Toplevel()
         fig = plt.Figure((10, 8))
         
-        data = self.df[self.target_list.get(0)]
+        data = self.df[self.label_name]
 
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
@@ -419,8 +444,6 @@ class TimeSeries:
         else:
             plot_acf(data, ax=ax, lags=lags)
             plot_pacf(data, ax=ax1, lags=lags)
-        
-        
 
         canvas = FigureCanvasTkAgg(fig, top)
         canvas.draw()
@@ -477,9 +500,10 @@ class TimeSeries:
         size = self.train_size_var.get() if size_choice==1 else (self.train_size_var.get()/100) * len(self.df)
         size = int(size)
 
-        placeholder = [i for i in self.predictor_list.get(0, tk.END)]
-        features = self.df[placeholder].iloc[-size:].to_numpy()
-        label = self.df[[self.target_list.get(0)]].iloc[-size:].to_numpy()
+        self.predictor_names = [i for i in self.predictor_list.get(0, tk.END)]
+        self.label_name = self.target_list.get(0)
+        features = self.df[self.predictor_names].iloc[-size:].to_numpy()
+        label = self.df[[self.label_name]].iloc[-size:].to_numpy()
 
 
         if scale_choice == "StandardScaler":
@@ -523,7 +547,7 @@ class TimeSeries:
     def createLag(self, features, label):
         lag_type = self.lag_option_var.get()
         acf_lags = self.acf_lags.get()
-        acf_vals = acf(self.df[self.target_list.get(0)].values, nlags=acf_lags, fft=False)
+        acf_vals = acf(self.df[self.label_name].values, nlags=acf_lags, fft=False)
 
         if lag_type == 0:
             max_lag = int(self.lag_entries[0].get())
@@ -749,7 +773,7 @@ class TimeSeries:
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred)
         
-        self.forecast = self.test_df[[self.target_list.get(0)]]
+        self.forecast = self.test_df[[self.label_name]]
         self.forecast = np.asarray(self.forecast)[:num]
 
         seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1

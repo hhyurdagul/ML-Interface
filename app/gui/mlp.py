@@ -106,8 +106,8 @@ class MultiLayerPerceptron:
                     tk.Radiobutton(model_without_optimization_frame, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
                     ttk.Label(model_without_optimization_frame, text=no_optimization_names[i]).grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
-                    ttk.Label(model_without_optimization_frame, text="Optimization Function").grid(column=3, row=i+1, columnspan=2),
-                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid").grid(column=5, row=i+1)
+                    ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=3, row=i+1, columnspan=2),
+                    ttk.OptionMenu(model_without_optimization_frame, self.activation_var[i], "relu", "relu", "tanh", "sigmoid", "linear").grid(column=5, row=i+1)
                 ] for i in range(5)
         ]
 
