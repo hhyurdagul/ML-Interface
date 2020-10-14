@@ -1,3 +1,6 @@
+import tkinter as tk
+from tkinter import ttk
+
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer
 
@@ -55,3 +58,14 @@ def loss(y_true, y_pred, seasons=1):
         MASE = None
 
     return [NMSE, RMSE, MAE, MAPE, SMAPE, MASE]
+
+def popupmsg(msg):
+    popup = tk.Tk()
+    popup.wm_title("!")
+    label = ttk.Label(popup, text=msg)
+    label.pack(side="top", fill="x", pady=10)
+    B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
+    B1.pack()
+    popup.mainloop()
+
+ 

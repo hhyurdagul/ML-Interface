@@ -376,7 +376,7 @@ class TimeSeries:
         self.openOptimizationLayers(True)
 
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
-        self.popupmsg(msg)
+        popupmsg(msg)
 
         #features, label = self.getDataset()
         #self.createLag(features, label)
@@ -408,15 +408,6 @@ class TimeSeries:
             self.target_list.delete(self.target_list.curselection())
         except:
             pass
-
-    def popupmsg(self, msg):
-        popup = tk.Tk()
-        popup.wm_title("!")
-        label = ttk.Label(popup, text=msg)
-        label.pack(side="top", fill="x", pady=10)
-        B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
-        B1.pack()
-        popup.mainloop()
 
     def openDifference(self):
         s = tk.NORMAL if self.difference_choice_var.get() else tk.DISABLED

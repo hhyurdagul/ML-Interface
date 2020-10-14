@@ -246,11 +246,24 @@ class SupportVectorMachine:
     
     def saveModel(self):
         path = filedialog.asksaveasfilename()
+        params = self.model.get_params()
+        params["predictor_names"] = self.predictor_names
+        params["label_name"] = self.label_name
+        params["do_forecast"] = self.do_forecast_option.get()
+        params["validation_option"] = self.validation_option.get()
+        params["random_percent"] = self.random_percent_var.get() if self.validation_option.get() == 1 else None
+        params["k_fold_cv"] = self.cross_val_var.get() if self.validation_option.get() == 2 else None
+        params["lookback_option"] = self.lookback_option.get()
+        params["lookback_value"] = self.lookback_val_var.get() if self.lookback_option.get() else None
+        params["scale_type"] = self.scale_var.get()
+
         os.mkdir(path)
-        model_path = path + "/model.joblib"
-        dump(self.model, model_path)
+        dump(self.model, path+"/model.joblib")
+        if self.lookback_option.get() == 1:
+            with open(path+"/last_values.npy", 'wb') as outfile:
+                np.save(outfile, self.last)
         with open(path+"/model.json", 'w') as outfile:
-            json.dump(self.model.get_params(), outfile)
+            json.dump(params, outfile)
 
     def loadModel(self):
         path = filedialog.askdirectory()
@@ -258,6 +271,21 @@ class SupportVectorMachine:
         self.model = load(model_path)
         infile = open(path+"/model.json")
         params = json.load(infile)
+        self.predictor_names = params["predictor_names"]
+        self.label_name = params["label_name"]
+        self.do_forecast_option.set(params["do_forecast"])
+        self.validation_option.set(params["validation_option"])
+        if params["validation_option"] == 1:
+            self.random_percent_var.set(params["random_percent"])
+        elif params["validation_option"] == 2:
+            self.cross_val_var.set(params["k_fold_cv"])
+        self.lookback_option.set(params["lookback_option"]) 
+        if params["lookback_option"] == 1:
+            self.lookback_val_var.set(params["lookback_value"])
+            last_values = open(path+"/last_values.npy", 'rb')
+            self.last = np.load(last_values)
+            last_values.close()
+        self.scale_var.set(params["scale_type"])
         try:
             self.parameters[0].set(params["epsilon"])
             self.model_type_var.set(0)
@@ -274,11 +302,12 @@ class SupportVectorMachine:
             self.parameters[3].set(np.log2(params["gamma"]))
         self.parameters[4].set(params["coef0"])
         self.parameters[5].set(params["degree"])
-        
         kernel = 0 if params["kernel"] == "linear" else 1 if params["kernel"] == "rbf" else 2 if params["kernel"] == "poly" else 3
         self.kernel_type_var.set(kernel)
-        
+       
         self.openEntries()
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        popupmsg(msg)
 
     def openEntries(self):
         to_open = []
@@ -339,9 +368,11 @@ class SupportVectorMachine:
     def getData(self):
         lookback_option = self.lookback_option.get()
         scale_choice = self.scale_var.get()
-
-        X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
-        y = self.df[self.target_list.get(0)].copy()
+        
+        self.predictor_names = list(self.predictor_list.get(0, tk.END))
+        self.label_name = self.target_list.get(0)
+        X = self.df[self.predictor_names].copy()
+        y = self.df[self.label_name].copy()
         
         if scale_choice == "StandardScaler":
             print(0)
@@ -495,8 +526,8 @@ class SupportVectorMachine:
         
     def forecast(self, num):
         lookback_option = self.lookback_option.get()
-        X_test = self.test_df[list(self.predictor_list.get(0, tk.END))][:num].to_numpy()
-        y_test = self.test_df[self.target_list.get(0)][:num].to_numpy().reshape(-1)
+        X_test = self.test_df[self.predictor_names][:num].to_numpy()
+        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
         self.y_test = y_test
         
         if lookback_option == 0:
@@ -509,7 +540,7 @@ class SupportVectorMachine:
             last = self.last
             lookback = self.lookback_val_var.get()
             for i in range(num):
-                X_test = self.test_df[list(self.predictor_list.get(0, tk.END))].iloc[i]
+                X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):
