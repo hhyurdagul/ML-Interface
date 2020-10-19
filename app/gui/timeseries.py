@@ -421,17 +421,18 @@ class TimeSeries:
         fig = plt.Figure((10, 8))
         
         data = self.df[self.target_list.get(0)]
-        f_diff = self.interval_var.get()
-        s_diff = self.s_interval_var.get()
 
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
 
         if self.s_difference_choice_var.get():
+            f_diff = self.interval_var.get()
+            s_diff = self.s_interval_var.get()
             plot_acf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax, lags=lags)
             plot_pacf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax1, lags=lags)
         
         elif self.difference_choice_var.get():
+            f_diff = self.interval_var.get()
             plot_acf(data.diff(f_diff)[f_diff:], ax=ax, lags=lags)
             plot_pacf(data.diff(f_diff)[f_diff:], ax=ax1, lags=lags)
  
@@ -599,6 +600,7 @@ class TimeSeries:
                 activation_function = self.activation_var[i].get()
                 if model_choice == 0:
                     model.add(Dense(neuron_number, activation=activation_function, kernel_initializer=GlorotUniform(seed=0)))
+                    model.add(Dropout(0.2))
                 
                 elif model_choice == 1:
                     model.add(Conv1D(filters=neuron_number, kernel_size=2, activation=activation_function, kernel_initializer=GlorotUniform(seed=0)))

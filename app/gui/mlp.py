@@ -435,8 +435,10 @@ class MultiLayerPerceptron:
                 activation = self.activation_var[i].get()
                 if i == 0:
                     model.add(Dense(neuron_number, activation=activation, input_dim=X.shape[1], kernel_initializer=GlorotUniform(seed=0)))
+                    model.add(Dropout(0.2))
                 else:
                     model.add(Dense(neuron_number, activation=activation, kernel_initializer=GlorotUniform(seed=0)))
+                    model.add(Dropout(0.2))
 
             model.add(Dense(1, activation=self.output_activation.get(), kernel_initializer=GlorotUniform(seed=0)))
             model.compile(optimizer=optimizers[self.hyperparameters[2].get()], loss=self.hyperparameters[3].get())
