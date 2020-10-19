@@ -420,18 +420,20 @@ class TimeSeries:
         top = tk.Toplevel()
         fig = plt.Figure((10, 8))
         
-        data = self.df[self.label_name]
+        data = self.df[self.target_list.get(0)]
+        f_diff = self.interval_var.get()
+        s_diff = self.s_interval_var.get()
 
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
 
         if self.s_difference_choice_var.get():
-            plot_acf(data.diff(self.interval_var.get())[self.interval_var.get():].diff(self.s_interval_var.get())[self.s_interval_var.get():], ax=ax, lags=lags)
-            plot_pacf(data.diff(self.interval_var.get())[self.interval_var.get():].diff(self.s_interval_var.get())[self.s_interval_var.get():], ax=ax1, lags=lags)
+            plot_acf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax, lags=lags)
+            plot_pacf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax1, lags=lags)
         
         elif self.difference_choice_var.get():
-            plot_acf(data.diff(self.interval_var.get())[self.interval_var.get():], ax=ax, lags=lags)
-            plot_pacf(data.diff(self.interval_var.get())[self.interval_var.get():], ax=ax1, lags=lags)
+            plot_acf(data.diff(f_diff)[f_diff:], ax=ax, lags=lags)
+            plot_pacf(data.diff(f_diff)[f_diff:], ax=ax1, lags=lags)
  
         else:
             plot_acf(data, ax=ax, lags=lags)
