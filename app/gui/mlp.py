@@ -27,10 +27,10 @@ from kerastuner.tuners import RandomSearch
 # Seed
 from random import seed
 from numpy.random import seed as np_seed
-from tensorflow.random import set_seed
+from tensorflow import random
 seed(0)
 np_seed(0)
-set_seed(0)
+random.set_seed(0)
 
 from .helpers import *
 
