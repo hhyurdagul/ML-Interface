@@ -18,7 +18,7 @@ import json
 # Keras
 from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Input, Flatten, Dense
+from tensorflow.keras.layers import Input, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras.initializers import GlorotUniform
@@ -517,17 +517,13 @@ class MultiLayerPerceptron:
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j]
                 to_pred = X_test.to_numpy().reshape(1,-1)
-                print(to_pred)
                 out = np.round(self.model.predict(to_pred))
-                print(out)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
             self.pred = np.array(pred).reshape(-1)
 
         if self.scale_var.get() != "None":
-            print("Before:",self.pred)
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
-            print("After:", self.pred)
 
         losses = loss(y_test, self.pred)
         for i in range(6):
