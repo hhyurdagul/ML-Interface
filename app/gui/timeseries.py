@@ -9,6 +9,7 @@ from pandastable import Table
 import os
 from datetime import datetime
 import json
+from .helpers import prediction_history
 
 # Data
 import numpy as np

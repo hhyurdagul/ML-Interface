@@ -413,8 +413,8 @@ class SupportVectorMachine:
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
             nu = float(self.parameters[1].get())
-            C = float(self.parameters[2].get()) ** 2
-            gamma = np.exp(float(self.parameters[3].get())) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
+            C = 2 ** float(self.parameters[2].get())
+            gamma = 2 ** float(self.parameters[3].get()) if gamma_choice == 2 else "auto" if gamma_choice == 1 else "scale"
             coef0 = float(self.parameters[4].get())
             degree = float(self.parameters[5].get())
             
