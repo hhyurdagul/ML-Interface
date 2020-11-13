@@ -77,10 +77,6 @@ class MultiLayerPerceptron:
         tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=4, columnspan=2, sticky=tk.W)
         ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=2)
         ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=3)
-        self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="")
-        tk.Checkbutton(model_validation_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=5)
-        tk.Entry(model_validation_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=5)
 
         # Create Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
@@ -196,9 +192,21 @@ class MultiLayerPerceptron:
         customize_train_set_frame = ttk.LabelFrame(self.root, text="Custome Train Set")
         customize_train_set_frame.grid(column=0, row=2)
 
+        self.lookback_option = tk.IntVar(value=0)
+        self.lookback_val_var = tk.IntVar(value="")
+        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
+        tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=0)
+
+        self.seasonal_lookback_option = tk.IntVar(value=0)
+        self.seasonal_period_var = tk.IntVar(value="")
+        self.seasonal_val_var = tk.IntVar(value="")
+        tk.Checkbutton(customize_train_set_frame, text="Seasonal Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
+        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=8).grid(column=0, row=2)
+        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8).grid(column=1, row=2)
+
         self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=0)
-        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=0, row=1)
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -237,9 +245,9 @@ class MultiLayerPerceptron:
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path)
+            self.df = pd.read_csv(path, index_col=0)
         else:
-            self.df = pd.read_excel(path)
+            self.df = pd.read_excel(path, index_col=0)
         self.fillInputList()
         
     def fillInputList(self):
@@ -370,15 +378,38 @@ class MultiLayerPerceptron:
         popupmsg(msg)
         #self.getData()
    
-    def getLookback(self, X, y, lookback):
-        for i in range(1, lookback+1):
-            X[f"t-{i}"] = y.shift(i)
+    def getLookback(self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+        if sliding == 0:
+            for i in range(1, lookback+1):
+                X[f"t-{i}"] = y.shift(i)
+        elif sliding == 1:
+            for i in range(1, seasons+1):
+                X[f"t-{i*seasonal_lookback}"] = y.shift(i*seasonal_lookback)
+        elif sliding == 2:
+            for i in range(1, lookback+1):
+                X[f"t-{i}"] = y.shift(i)
+            for i in range(1, seasons+1):
+                X[f"t-{i*seasonal_lookback}"] = y.shift(i*seasonal_lookback)
+
         X.dropna(inplace=True)
+        a = X.to_numpy()
+        b = y.iloc[-len(a):].to_numpy().reshape(-1)
         
-        return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
+        if sliding == 0:
+            self.last = b[-lookback:]
+        elif sliding == 1:
+            self.seasonal_last = b[-seasonal_lookback*seasons:]
+        elif sliding == 2:
+            self.last = y[-(lookback+seasonal_lookback):-seasonal_lookback]
+            self.seasonal_last = b[-seasonal_lookback*seasons:]
+
+        return a, b
 
     def getData(self):
         lookback_option = self.lookback_option.get()
+        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        sliding = lookback_option + 2*seasonal_lookback_option - 1
+        self.sliding = sliding
         scale_choice = self.scale_var.get()
 
         self.predictor_names = list(self.predictor_list.get(0, tk.END))
@@ -387,7 +418,6 @@ class MultiLayerPerceptron:
         y = self.df[self.label_name].copy()
         
         if scale_choice == "StandardScaler":
-            print(0)
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
 
@@ -395,20 +425,24 @@ class MultiLayerPerceptron:
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
         elif scale_choice == "MinMaxScaler":
-            print(1)
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
-        
-        if lookback_option == 1:
+       
+        try:
             lookback = self.lookback_val_var.get()
-            X, y = self.getLookback(X, y, lookback)
-            self.last = y[-lookback:]
-        else:
-            X = X.to_numpy()
-            y = y.to_numpy().reshape(-1)
+        except:
+            lookback = 0
+        try:
+            seasonal_period = self.seasonal_period_var.get()
+            seasonal_lookback = self.seasonal_val_var.get()
+        except:
+            seasonal_period = 0
+            seasonal_lookback = 0
+            
+        X,y = self.getLookback(X, y, lookback, seasonal_period, seasonal_lookback, sliding)
 
         return X, y
 
@@ -495,21 +529,10 @@ class MultiLayerPerceptron:
 
         self.model.summary()
 
-    def forecast(self, num):
-        lookback_option = self.lookback_option.get()
-        X_test = self.test_df[self.predictor_names][:num].to_numpy()
-        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
-        self.y_test = y_test
-        
-        if lookback_option == 0:
-            if self.scale_var.get() != "None":
-                X_test = self.feature_scaler.transform(X_test)
-            self.pred = self.model.predict(X_test).reshape(-1)
-            print("Predicted")
-        else:
-            pred = []
+    def forecastLookback(self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+        pred = []
+        if sliding == 0:
             last = self.last
-            lookback = self.lookback_val_var.get()
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
@@ -517,11 +540,74 @@ class MultiLayerPerceptron:
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j]
                 to_pred = X_test.to_numpy().reshape(1,-1)
-                out = np.round(self.model.predict(to_pred))
+                out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
-            self.pred = np.array(pred).reshape(-1)
 
+        elif sliding == 1:
+            seasonal_last = self.seasonal_last
+            for i in range(num):
+                X_test = self.test_df[self.predictor_names].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                for j in range(1, seasons+1):
+                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback]
+                to_pred = X_test.to_numpy().reshape(1,-1)
+                out = self.model.predict(to_pred)
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                print("To_pred", to_pred)
+                print("Out", out)
+                print("Seasonal_last:", seasonal_last)
+                pred.append(out)
+
+        elif sliding == 2:
+            last = self.last
+            seasonal_last = self.seasonal_last
+            for i in range(num):
+                X_test = self.test_df[self.predictor_names].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                for j in range(1, lookback+1):
+                    X_test[f"t-{j}"] = last[-j]
+                for j in range(1, seasons+1):
+                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[-j*seasonal_lookback]
+                to_pred = X_test.to_numpy().reshape(1,-1)
+                out = self.model.predict(to_pred)
+                last = np.append(last, out)[-lookback:]
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                print("To_pred", to_pred)
+                print("Out", out)
+                print("Seasonal_last:", seasonal_last)
+                print("Last:", last)
+                pred.append(out)
+
+        return np.array(pred).reshape(-1)
+
+    def forecast(self, num):
+        lookback_option = self.lookback_option.get()
+        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        X_test = self.test_df[self.predictor_names][:num].to_numpy()
+        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
+        self.y_test = y_test
+        
+        if lookback_option == 0 and seasonal_lookback_option == 0:
+            if self.scale_var.get() != "None":
+                X_test = self.feature_scaler.transform(X_test)
+            self.pred = self.model.predict(X_test).reshape(-1)
+        else:
+            sliding = self.sliding
+            try:
+                lookback = self.lookback_val_var.get()
+            except:
+                lookback = 0
+            try:
+                seasonal_lookback = self.seasonal_val_var.get()
+                seasons = self.seasonal_period_var.get()
+            except:
+                seasonal_lookback = 0
+                seasons = 0 
+
+            self.pred = self.forecastLookback(num, lookback, seasons, seasonal_lookback, sliding)
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
 

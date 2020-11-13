@@ -38,7 +38,7 @@ np_seed(0)
 random.set_seed(0)
 
 # Helper
-from .helpers import loss
+from .helpers import loss, popupmsg
 
 class TimeSeries:
     def __init__(self):
@@ -282,10 +282,10 @@ class TimeSeries:
         file_path.set(path)
 
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path)
+            self.df = pd.read_csv(path, index_col=0)
         else:
-            self.df = pd.read_excel(path)
-        
+            self.df = pd.read_excel(path, index_col=0)
+
         self.input_list.delete(0, tk.END)
         self.predictor_list.delete(0, tk.END)
         self.target_list.delete(0, tk.END)
