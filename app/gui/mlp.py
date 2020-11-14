@@ -393,7 +393,6 @@ class MultiLayerPerceptron:
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
         [self.hyperparameters[i].set(j) for i, j in enumerate(params["hyperparameters"])]
         
-        tk.Tk.update(self.root)
         self.openLayers(True)
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
