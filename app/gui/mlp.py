@@ -331,6 +331,10 @@ class MultiLayerPerceptron:
                 "k_fold_cv": self.cross_val_var.get() if self.validation_option.get() == 2 else None,
                 "lookback_option": self.lookback_option.get(),
                 "lookback_value": self.lookback_val_var.get() if self.lookback_option.get() else None,
+                "seasonal_lookback_option": self.seasonal_lookback_option.get(),
+                "seasonal_period": self.seasonal_period_var.get() if self.seasonal_lookback_option.get() else None,
+                "seasonal_value": self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None,
+                "sliding": self.sliding,
                 "scale_type": self.scale_var.get(),
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
@@ -343,6 +347,9 @@ class MultiLayerPerceptron:
         if self.lookback_option.get() == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.last)
+        if self.seasonal_lookback_option.get() == 1:
+            with open(path+"/seasonal_last_values.npy", 'wb') as outfile:
+                np.save(outfile, self.seasonal_last)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -367,6 +374,17 @@ class MultiLayerPerceptron:
             last_values = open(path+"/last_values.npy", 'rb')
             self.last = np.load(last_values)
             last_values.close()
+        try:
+            self.sliding = params["sliding"]
+            self.seasonal_lookback_option.set(params["seasonal_lookback_option"])
+            if params["seasonal_lookback_option"] == 1:
+                self.seasonal_period_var.set(params["seasonal_period"])
+                self.seasonal_val_var.set(params["seasonal_value"])
+                seasonal_last_values = open(path+"/seasonal_last_values.npy", 'rb')
+                self.seasonal_last = np.load(seasonal_last_values)
+                seasonal_last_values.close()
+        except:
+            pass
         self.scale_var.set(params["scale_type"])
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
@@ -555,9 +573,6 @@ class MultiLayerPerceptron:
                 to_pred = X_test.to_numpy().reshape(1,-1)
                 out = self.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
-                print("To_pred", to_pred)
-                print("Out", out)
-                print("Seasonal_last:", seasonal_last)
                 pred.append(out)
 
         elif sliding == 2:
@@ -575,10 +590,6 @@ class MultiLayerPerceptron:
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 seasonal_last = np.append(seasonal_last, out)[1:]
-                print("To_pred", to_pred)
-                print("Out", out)
-                print("Seasonal_last:", seasonal_last)
-                print("Last:", last)
                 pred.append(out)
 
         return np.array(pred).reshape(-1)
