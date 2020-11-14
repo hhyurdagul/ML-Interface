@@ -369,11 +369,13 @@ class MultiLayerPerceptron:
         elif params["validation_option"] == 2:
             self.cross_val_var.set(params["k_fold_cv"])
         self.lookback_option.set(params["lookback_option"])
+        self.sliding=-1
         if params["lookback_option"] == 1:
             self.lookback_val_var.set(params["lookback_value"])
             last_values = open(path+"/last_values.npy", 'rb')
             self.last = np.load(last_values)
             last_values.close()
+            self.sliding=0
         try:
             self.sliding = params["sliding"]
             self.seasonal_lookback_option.set(params["seasonal_lookback_option"])
@@ -391,6 +393,7 @@ class MultiLayerPerceptron:
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
         [self.hyperparameters[i].set(j) for i, j in enumerate(params["hyperparameters"])]
         
+        tk.Tk.update(self.root)
         self.openLayers(True)
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
