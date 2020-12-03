@@ -1,4 +1,4 @@
-# Tkinter
+# Tutockinter
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -563,7 +563,7 @@ class TimeSeries:
         elif lag_type == 3:
             lag = self.lag_entries[3].get()
             numbers = np.array(acf_vals[1:])
-            self.lags = np.sort(np.argsort(numbers[numbers>float(lag)]))
+            self.lags = np.where(numbers>float(lag))[0]
             max_lag = max(self.lags) + 1
 
         X, y = self.getLags(features, label, max_lag)
