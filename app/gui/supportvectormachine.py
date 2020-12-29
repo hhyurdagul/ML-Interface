@@ -193,7 +193,10 @@ class SupportVectorMachine:
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
         else:
-            self.df = pd.read_excel(path)
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
     def fillInputList(self):
@@ -208,7 +211,10 @@ class SupportVectorMachine:
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path)
+            try:
+                self.test_df = pd.read_excel(path)
+            except:
+                self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         top = tk.Toplevel(self.root)
@@ -523,6 +529,8 @@ class SupportVectorMachine:
                     y = y[-size:]
                     regressor.fit(X, y)
                 self.model = regressor.best_estimator_
+            
+            popupmsg("Best Params: " + str(self.model.get_params()))
         
     def forecast(self, num):
         lookback_option = self.lookback_option.get()

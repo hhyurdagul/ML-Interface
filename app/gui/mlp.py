@@ -22,7 +22,7 @@ from tensorflow.keras.layers import Input, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras.initializers import GlorotUniform
-from kerastuner.tuners import RandomSearch
+
 
 # Seed
 from random import seed
@@ -247,7 +247,7 @@ class MultiLayerPerceptron:
         if path.endswith(".csv"):
             self.df = pd.read_csv(path, index_col=0)
         else:
-            self.df = pd.read_excel(path, index_col=0)
+            self.df = pd.read_excel(path, index_col=0, engine="openpyxl")
         self.fillInputList()
         
     def fillInputList(self):
@@ -264,7 +264,7 @@ class MultiLayerPerceptron:
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path)
+            self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         top = tk.Toplevel(self.root)
@@ -635,5 +635,4 @@ class MultiLayerPerceptron:
         plt.plot(pred)
         plt.legend(["test", "pred"], loc="upper left")
         plt.show()
-
 

@@ -284,7 +284,7 @@ class TimeSeries:
         if path.endswith(".csv"):
             self.df = pd.read_csv(path, index_col=0)
         else:
-            self.df = pd.read_excel(path, index_col=0)
+            self.df = pd.read_excel(path, index_col=0, engine="openpyxl")
 
         self.input_list.delete(0, tk.END)
         self.predictor_list.delete(0, tk.END)
@@ -297,9 +297,9 @@ class TimeSeries:
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path)
+            self.test_df = pd.read_csv(path, index_col=0)
         else:
-            self.test_df = pd.read_excel(path)
+            self.test_df = pd.read_excel(path, index_col=0, engine="openpyxl")
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
