@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-from datetime import timedelta
 import os
 import json
 
@@ -44,7 +43,7 @@ class MultiLayerPerceptron:
         file_path = tk.StringVar(value="")
         ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
         ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(get_train_set_frame, text="Read Csv", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
+        ttk.Button(get_train_set_frame, text="Read Data", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
@@ -241,13 +240,18 @@ class MultiLayerPerceptron:
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
+        self.df= pd.DataFrame()
+
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path, index_col=0)
+            self.df = pd.read_csv(path)
         else:
-            self.df = pd.read_excel(path, index_col=0, engine="openpyxl")
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
     def fillInputList(self):
@@ -264,7 +268,10 @@ class MultiLayerPerceptron:
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path, engine="openpyxl")
+            try:
+                self.test_df = pd.read_excel(path)
+            except:
+                self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         top = tk.Toplevel(self.root)
@@ -501,12 +508,8 @@ class MultiLayerPerceptron:
         do_forecast = self.do_forecast_option.get()
         val_option = self.validation_option.get()
 
-        if val_option == 0 or val_option == 1:
-            model = base_model()
-        elif val_option == 2 or val_option == 3:
-            model = KerasRegressor(build_fn=base_model, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
-
         if val_option == 0:
+            model = base_model()
             model.fit(X, y, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
             if do_forecast == 0:
                 pred = model.predict(X).reshape(-1)
@@ -518,6 +521,7 @@ class MultiLayerPerceptron:
             self.model = model
 
         elif val_option == 1:
+            model = base_model()
             if do_forecast == 0:
                 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
@@ -536,18 +540,18 @@ class MultiLayerPerceptron:
             self.model = model
 
         elif val_option == 2:
+            model = KerasRegressor(build_fn=base_model, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
             if do_forecast == 0:
                 cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
         
         elif val_option == 3:
+            model = KerasRegressor(build_fn=base_model, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
             if do_forecast == 0:
                 cvs = cross_validate(model, X, y, cv=X.shape[0]-1, scoring=skloss)
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
-
-        self.model.summary()
 
     def forecastLookback(self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
         pred = []

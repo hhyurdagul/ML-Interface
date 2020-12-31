@@ -1,4 +1,4 @@
-# Tutockinter
+# Tkinter
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -51,7 +51,7 @@ class TimeSeries:
         file_path = tk.StringVar(value="")
         ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
         ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(get_train_set_frame, text="Read Csv", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
+        ttk.Button(get_train_set_frame, text="Read Data", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
@@ -282,9 +282,12 @@ class TimeSeries:
         file_path.set(path)
 
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path, index_col=0)
+            self.df = pd.read_csv(path)
         else:
-            self.df = pd.read_excel(path, index_col=0, engine="openpyxl")
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
 
         self.input_list.delete(0, tk.END)
         self.predictor_list.delete(0, tk.END)
@@ -297,9 +300,12 @@ class TimeSeries:
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path, index_col=0)
+            self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path, index_col=0, engine="openpyxl")
+            try:
+                self.test_df = pd.read_excel(path)
+            except:
+                self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
