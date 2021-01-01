@@ -27,7 +27,6 @@ from tensorflow.keras.layers import Input, Flatten, Dropout, Dense
 from tensorflow.keras.layers import SimpleRNN, GRU, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.initializers import GlorotUniform, Orthogonal
-from kerastuner.tuners import RandomSearch
 
 # Seed
 from random import seed
@@ -656,101 +655,6 @@ class TimeSeries:
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
 
-        elif self.do_optimization:
-            layer = self.optimization_choice_var.get()
-
-            if model_choice == 0:
-                def build_model(hp):
-                    model = Sequential()
-                    model.add(Input(shape=shape))
-                    model.add(Flatten())
-                    for i in range(layer):
-                        n_min = self.neuron_min_number_var[i].get()
-                        n_max = self.neuron_max_number_var[i].get()
-                        step = int((n_max - n_min)/4)
-                        model.add(Dense(units=hp.Int('MLP_'+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu'))
-                    model.add(Dense(1))
-                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
-                    return model
-                
-                name = str(self.model_instance) + ". MLP"
-
-            elif model_choice == 1:
-                def build_model(hp):
-                    model = Sequential()
-                    model.add(Input(shape=shape))
-                    for i in range(layer):
-                        n_min = self.neuron_min_number_var[i].get()
-                        n_max = self.neuron_max_number_var[i].get()
-                        step = int((n_max-n_min)/4)
-                        model.add(Conv1D(filters=hp.Int("CNN_"+str(i), min_value=n_min, max_value=n_max, step=step), kernel_size=2, activation="relu", kernel_initializer=GlorotUniform(seed=0)))
-                        model.add(MaxPooling1D(pool_size=2))
-                    
-                    model.add(Flatten())
-                    model.add(Dense(32, kernel_initializer=GlorotUniform(seed=0)))
-                    model.add(Dense(1, kernel_initializer=GlorotUniform(seed=0)))
-                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
-                    return model
-                
-                name = str(self.model_instance) + ". CNN"
-
-            elif model_choice == 2:
-                def build_model(hp):
-                    model = Sequential()
-                    model.add(Input(shape=shape))
-                    for i in range(layer):
-                        n_min = self.neuron_min_number_var[i].get()
-                        n_max = self.neuron_max_number_var[i].get()
-                        step = int((n_max - n_min)/4)
-                        model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True, kernel_initializer=GlorotUniform(seed=0)))
-                        if i == layer-1:
-                            model.add(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False, kernel_initializer=GlorotUniform(seed=0)))
-                    
-                    model.add(Dense(1))
-                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
-                    return model
-                
-                name = str(self.model_instance) + ". LSTM"
-            
-            elif model_choice == 3:
-                def build_model(hp):
-                    model = Sequential()
-                    model.add(Input(shape=shape))
-                    for i in range(layer):
-                        n_min = self.neuron_min_number_var[i].get()
-                        n_max = self.neuron_max_number_var[i].get()
-                        step = int((n_max - n_min)/4)
-                        model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=True, kernel_initializer=GlorotUniform(seed=0))))
-                        if i == layer-1:
-                            model.add(Bidirectional(LSTM(units=hp.Int("LSTM_"+str(i), min_value=n_min, max_value=n_max, step=step), activation='relu', return_sequences=False, kernel_initializer=GlorotUniform(seed=0))))
-                    
-                    model.add(Dense(1, kernel_initializer=GlorotUniform(seed=0)))
-                    model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
-                    return model
-
-                name = str(self.model_instance) + ". Bi-LSTM"
-
-
-            tuner = RandomSearch(build_model, objective='loss', max_trials=25, executions_per_trial=2, directory=self.runtime, project_name=name)
-            
-            tuner.search(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get())
-            hps = tuner.get_best_hyperparameters(num_trials = 1)[0]
-            model = tuner.hypermodel.build(hps)
-            
-            history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1)
-            loss = history.history["loss"][-1]
-            self.train_loss.set(loss)
-            
-
-            for i in range(layer):
-                if model_choice == 0:
-                    self.best_model_neurons[i].set(model.get_layer(index=i+1).get_config()["units"])
-                elif model_choice == 1:
-                    self.best_model_neurons[i].set(model.get_layer(index=(2*i)).get_config()["filters"])
-                elif model_choice == 2:
-                    self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["units"])
-                elif model_choice == 3:
-                    self.best_model_neurons[i].set(model.get_layer(index=i).get_config()["layer"]["config"]["units"])
         model.summary()
         self.model = model
 
