@@ -427,7 +427,7 @@ class MultiLayerPerceptron:
         elif sliding == 1:
             self.seasonal_last = b[-seasonal_lookback*seasons:]
         elif sliding == 2:
-            self.last = y[-(lookback+seasonal_lookback):-seasonal_lookback]
+            self.last = b[-(lookback+seasonal_lookback):-seasonal_lookback]
             self.seasonal_last = b[-seasonal_lookback*seasons:]
 
         return a, b
