@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from pandastable import Table
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 import numpy as np
 import pandas as pd
@@ -11,9 +10,8 @@ import matplotlib.pyplot as plt
 from joblib import dump, load
 from sklearn.svm import SVR, NuSVR
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
 
-from datetime import timedelta
 import os
 import json
 
@@ -63,10 +61,26 @@ class SupportVectorMachine:
         tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=4, columnspan=2, sticky=tk.W)
         ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=2)
         ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=3)
+        
+        # Customize Train Set
+        customize_train_set_frame = ttk.LabelFrame(self.root, text="Customize Train Set")
+        customize_train_set_frame.grid(column=0, row=2)
+        
         self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="")
-        tk.Checkbutton(model_validation_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=5)
-        tk.Entry(model_validation_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=5)
+        self.lookback_val_var = tk.IntVar(value="") # type: ignore
+        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
+        tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=0)
+
+        self.seasonal_lookback_option = tk.IntVar(value=0)
+        self.seasonal_period_var = tk.IntVar(value="") # type: ignore
+        self.seasonal_val_var = tk.IntVar(value="") # type: ignore
+        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
+        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9).grid(column=0, row=2)
+        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8).grid(column=1, row=2)
+
+        self.scale_var = tk.StringVar(value="None")
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
@@ -97,13 +111,13 @@ class SupportVectorMachine:
         self.grid_option_var = tk.IntVar(value=0)
         tk.Checkbutton(parameter_optimization_frame, text="Do grid search for optimal parameters", offvalue=0, onvalue=1, variable=self.grid_option_var, command=self.openEntries).grid(column=0, row=0, columnspan=3)
 
-        self.interval_var = tk.IntVar(value="")
+        self.interval_var = tk.IntVar(value="") # type: ignore
         ttk.Label(parameter_optimization_frame, text="Interval:").grid(column=0, row=1)
         self.interval_entry = ttk.Entry(parameter_optimization_frame, textvariable=self.interval_var, width=8, state=tk.DISABLED)
         self.interval_entry.grid(column=1, row=1, pady=2)
 
         self.gs_cross_val_option = tk.IntVar(value=0)
-        self.gs_cross_val_var = tk.IntVar(value="")
+        self.gs_cross_val_var = tk.IntVar(value="") # type: ignore
         tk.Checkbutton(parameter_optimization_frame, text="Cross validate; folds:", offvalue=0, onvalue=1, variable=self.gs_cross_val_option, command=self.openEntries).grid(column=0, row=2)
         self.gs_cross_val_entry = tk.Entry(parameter_optimization_frame, textvariable=self.gs_cross_val_var, state=tk.DISABLED, width=8)
         self.gs_cross_val_entry.grid(column=1, row=2)
@@ -153,7 +167,7 @@ class SupportVectorMachine:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="")
+        forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
@@ -176,13 +190,6 @@ class SupportVectorMachine:
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
-        # Customize Train Set
-        customize_train_set_frame = ttk.LabelFrame(self.root, text="Customize Train Set")
-        customize_train_set_frame.grid(column=0, row=2)
-
-        self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=0)
-        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=0, row=1)
 
         self.openEntries()
 
@@ -191,7 +198,7 @@ class SupportVectorMachine:
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path)
+            self.df = pd.read_csv(path) # type: ignore
         else:
             try:
                 self.df = pd.read_excel(path)
@@ -202,14 +209,15 @@ class SupportVectorMachine:
     def fillInputList(self):
         self.input_list.delete(0, tk.END)
 
-        for i in self.df.columns:
+        self.df: pd.DataFrame
+        for i in self.df.columns.to_list():
             self.input_list.insert(tk.END, i)
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path)
+            self.test_df = pd.read_csv(path) # type: ignore
         else:
             try:
                 self.test_df = pd.read_excel(path)
@@ -261,6 +269,10 @@ class SupportVectorMachine:
         params["k_fold_cv"] = self.cross_val_var.get() if self.validation_option.get() == 2 else None
         params["lookback_option"] = self.lookback_option.get()
         params["lookback_value"] = self.lookback_val_var.get() if self.lookback_option.get() else None
+        params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
+        params["seasonal_period"] = self.seasonal_period_var.get() if self.seasonal_lookback_option.get() else None
+        params["seasonal_value"] = self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
+        params["sliding"] = self.sliding
         params["scale_type"] = self.scale_var.get()
 
         os.mkdir(path)
@@ -268,6 +280,9 @@ class SupportVectorMachine:
         if self.lookback_option.get() == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.last)
+        if self.seasonal_lookback_option.get() == 1:
+            with open(path+"/seasonal_last_values.npy", 'wb') as outfile:
+                np.save(outfile, self.seasonal_last)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -277,6 +292,7 @@ class SupportVectorMachine:
         self.model = load(model_path)
         infile = open(path+"/model.json")
         params = json.load(infile)
+
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
         self.do_forecast_option.set(params["do_forecast"])
@@ -286,11 +302,23 @@ class SupportVectorMachine:
         elif params["validation_option"] == 2:
             self.cross_val_var.set(params["k_fold_cv"])
         self.lookback_option.set(params["lookback_option"]) 
+        self.sliding=-1
         if params["lookback_option"] == 1:
             self.lookback_val_var.set(params["lookback_value"])
             last_values = open(path+"/last_values.npy", 'rb')
             self.last = np.load(last_values)
             last_values.close()
+        try:
+            self.sliding = params["sliding"]
+            self.seasonal_lookback_option.set(params["seasonal_lookback_option"]) 
+            if params["seasonal_lookback_option"] == 1:
+                self.seasonal_period_var.set(params["seasonal_period"])
+                self.seasonal_val_var.set(params["seasonal_value"])
+                seasonal_last_values = open(path+"/seasonal_last_values.npy", 'rb')
+                self.seasonal_last = np.load(seasonal_last_values)
+                seasonal_last_values.close()
+        except:
+            pass
         self.scale_var.set(params["scale_type"])
         try:
             self.parameters[0].set(params["epsilon"])
@@ -364,47 +392,76 @@ class SupportVectorMachine:
         
         self.vars_nums = to_open
 
-    def getLookback(self, X, y, lookback):
-        for i in range(1, lookback+1):
-            X[f"t-{i}"] = y.shift(i)
-        X.dropna(inplace=True)
+    def getLookback(self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+        if sliding == 0:
+            for i in range(1, lookback+1):
+                X[f"t-{i}"] = y.shift(i)
+        elif sliding == 1:
+            for i in range(1, seasons+1):
+                X[f"t-{i*seasonal_lookback}"] = y.shift(i*seasonal_lookback)
+        elif sliding == 2:
+            for i in range(1, lookback+1):
+                X[f"t-{i}"] = y.shift(i)
+            for i in range(1, seasons+1):
+                X[f"t-{i*seasonal_lookback}"] = y.shift(i*seasonal_lookback)
 
-        return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
-    
+        X.dropna(inplace=True)
+        a = X.to_numpy()
+        b = y.iloc[-len(a):].to_numpy().reshape(-1)
+        
+        if sliding == 0:
+            self.last = b[-lookback:]
+        elif sliding == 1:
+            self.seasonal_last = b[-seasonal_lookback*seasons:]
+        elif sliding == 2:
+            self.last = b[-(lookback+seasonal_lookback):-seasonal_lookback]
+            self.seasonal_last = b[-seasonal_lookback*seasons:]
+
+        return a, b
+
     def getData(self):
         lookback_option = self.lookback_option.get()
+        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        sliding = lookback_option + 2*seasonal_lookback_option - 1
+        self.sliding = sliding
         scale_choice = self.scale_var.get()
-        
+
         self.predictor_names = list(self.predictor_list.get(0, tk.END))
         self.label_name = self.target_list.get(0)
+
+        self.df: pd.DataFrame
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
         
         if scale_choice == "StandardScaler":
-            print(0)
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
-
+        
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
         elif scale_choice == "MinMaxScaler":
-            print(1)
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
-        if lookback_option == 1:
+        try:
             lookback = self.lookback_val_var.get()
-            X, y = self.getLookback(X, y, lookback)
-            self.last = y[-lookback:]
-        else:
-            X = X.to_numpy()
-            y = y.to_numpy().reshape(-1)
+        except:
+            lookback = 0
+        try:
+            seasonal_period = self.seasonal_period_var.get()
+            seasonal_lookback = self.seasonal_val_var.get()
+        except:
+            seasonal_period = 0
+            seasonal_lookback = 0
+            
+        X,y = self.getLookback(X, y, lookback, seasonal_period, seasonal_lookback, sliding)
 
         return X, y
+
 
     def createModel(self):
         gamma_choice = self.gamma_choice.get()
@@ -415,6 +472,8 @@ class SupportVectorMachine:
         val_option = self.validation_option.get()
         
         X, y = self.getData()
+        X: np.ndarray
+        y: np.ndarray
 
         if self.grid_option_var.get() == 0:
             epsilon = float(self.parameters[0].get())
@@ -433,18 +492,24 @@ class SupportVectorMachine:
                 model.fit(X, y)
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
+                    if self.scale_var.get() != "None":
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y, pred)[:-1]
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
-                self.model = model
+                self.model = model # type: ignore
             
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
+                    if self.scale_var.get() != "None":
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y_test, pred)[:-1]
                     self.y_test = y_test
                     self.pred = pred
@@ -455,7 +520,7 @@ class SupportVectorMachine:
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
-                self.model = model
+                self.model = model # type: ignore
 
             elif val_option == 2:
                 if do_forecast == 0:
@@ -506,6 +571,9 @@ class SupportVectorMachine:
                 regressor.fit(X, y)
                 if do_forecast == 0:
                     pred = regressor.predict(X)
+                    if self.scale_var.get() != "None":
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y, pred)[:-1]
                     self.y_test = y
                     self.pred = pred
@@ -518,6 +586,9 @@ class SupportVectorMachine:
                     X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
+                    if self.scale_var.get() != "None":
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y_test, pred)[:-1]
                     self.y_test = y_test
                     self.pred = pred
@@ -532,40 +603,82 @@ class SupportVectorMachine:
             
             popupmsg("Best Params: " + str(self.model.get_params()))
         
-    def forecast(self, num):
-        lookback_option = self.lookback_option.get()
-        X_test = self.test_df[self.predictor_names][:num].to_numpy()
-        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
-        self.y_test = y_test
-        
-        if lookback_option == 0:
-            if self.scale_var.get() != "None":
-                X_test = self.feature_scaler.transform(X_test)
-            self.pred = self.model.predict(X_test)
-            print("Predicted")
-        else:
-            pred = []
+    def forecastLookback(self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+        self.test_df: pd.DataFrame
+        pred = []
+        if sliding == 0:
             last = self.last
-            lookback = self.lookback_val_var.get()
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, lookback+1):
-                    X_test[f"t-{j}"] = last[-j]
-                to_pred = X_test.to_numpy().reshape(1, -1)
-                print(to_pred)
-                out = np.round(self.model.predict(to_pred))
-                print(out)
+                    X_test[f"t-{j}"] = last[-j] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
+                out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
-            self.pred = np.array(pred).reshape(-1)
+
+        elif sliding == 1:
+            seasonal_last = self.seasonal_last
+            for i in range(num):
+                X_test = self.test_df[self.predictor_names].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
+                for j in range(1, seasons+1):
+                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
+                out = self.model.predict(to_pred)
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                pred.append(out)
+
+        elif sliding == 2:
+            last = self.last
+            seasonal_last = self.seasonal_last
+            for i in range(num):
+                X_test = self.test_df[self.predictor_names].iloc[i]
+                if self.scale_var.get() != "None":
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
+                for j in range(1, lookback+1):
+                    X_test[f"t-{j}"] = last[-j] # type: ignore
+                for j in range(1, seasons+1):
+                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
+                out = self.model.predict(to_pred)
+                last = np.append(last, out)[-lookback:]
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                pred.append(out)
+
+        return np.array(pred).reshape(-1)
+
+    def forecast(self, num):
+        lookback_option = self.lookback_option.get()
+        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
+        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
+        self.y_test = y_test
+       
+        if lookback_option == 0 and seasonal_lookback_option == 0:
+            if self.scale_var.get() != "None":
+                X_test = self.feature_scaler.transform(X_test)
+            self.pred = self.model.predict(X_test).reshape(-1)
+        else:
+            sliding = self.sliding
+            try:
+                lookback = self.lookback_val_var.get()
+            except:
+                lookback = 0
+            try:
+                seasonal_lookback = self.seasonal_val_var.get()
+                seasons = self.seasonal_period_var.get()
+            except:
+                seasonal_lookback = 0
+                seasons = 0 
+
+            self.pred = self.forecastLookback(num, lookback, seasons, seasonal_lookback, sliding)
 
         if self.scale_var.get() != "None":
-            print("Before:",self.pred)
-            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
-            print("After:", self.pred)
-
+            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1) # type: ignore
         
         losses = loss(y_test, self.pred)
         for i in range(6):
@@ -578,5 +691,3 @@ class SupportVectorMachine:
         plt.plot(pred)
         plt.legend(["test", "pred"], loc="upper left")
         plt.show()
-
-

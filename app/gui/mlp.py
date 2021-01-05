@@ -2,13 +2,12 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from pandastable import Table
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, cross_validate
+from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 import os
@@ -17,7 +16,7 @@ import json
 # Keras
 from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Input, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras.initializers import GlorotUniform
@@ -25,7 +24,7 @@ from tensorflow.keras.initializers import GlorotUniform
 
 # Seed
 from random import seed
-from numpy.random import seed as np_seed
+from numpy.random import seed as np_seed # type: ignore
 from tensorflow import random
 seed(0)
 np_seed(0)
@@ -92,13 +91,13 @@ class MultiLayerPerceptron:
         layer_count = 20
 
         no_optimization_names = ["Neurons in First Layer", "Neurons in Second Layer", "Neurons in Third Layer", "Neurons in Fourth Layer", "Neurons in Fifth Layer"]
-        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(layer_count)]
-        self.activation_var = [tk.StringVar(value="relu") for i in range(layer_count)]
+        self.neuron_numbers_var = [tk.IntVar(value="") for _ in range(layer_count)] # type: ignore
+        self.activation_var = [tk.StringVar(value="relu") for _ in range(layer_count)]
         self.no_optimization_choice_var = tk.IntVar(value=0)
 
         self.no_optimization = [
                 [
-                    tk.Radiobutton(model_without_optimization_frame, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
+                    tk.Radiobutton(model_without_optimization_frame, text=str(i+1), value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
                     ttk.Label(model_without_optimization_frame, text=no_optimization_names[i]).grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                     ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=3, row=i+1, columnspan=2),
@@ -117,7 +116,7 @@ class MultiLayerPerceptron:
         for i in range(5, 20):
             self.no_optimization.append(
                     [
-                        tk.Radiobutton(top, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
+                        tk.Radiobutton(top, text=str(i+1), value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openLayers(True)).grid(column=i+1, row=0),
                         ttk.Label(top, text=f"Neurons in {i+1}. Layer:").grid(column=0, row=i+1-5, columnspan=4),
                         ttk.Entry(top, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                         ttk.Label(top, text="Activation Function").grid(column=9, row=i+1-5, columnspan=4),
@@ -142,7 +141,7 @@ class MultiLayerPerceptron:
 
         optimization_names = ["One Hidden Layer", "Two Hidden Layer", "Three Hidden Layer"]
         self.optimization_choice_var = tk.IntVar(value=0)
-        self.min_max_neuron_numbers = [[tk.IntVar(value=""), tk.IntVar(value="")] for i in range(3)]
+        self.min_max_neuron_numbers = [[tk.IntVar(value=""), tk.IntVar(value="")] for _ in range(3)] # type: ignore
 
         self.optimization = [
                 [
@@ -192,14 +191,14 @@ class MultiLayerPerceptron:
         customize_train_set_frame.grid(column=0, row=2)
 
         self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="")
+        self.lookback_val_var = tk.IntVar(value="")  # type: ignore
         tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
         tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=0)
 
         self.seasonal_lookback_option = tk.IntVar(value=0)
-        self.seasonal_period_var = tk.IntVar(value="")
-        self.seasonal_val_var = tk.IntVar(value="")
-        tk.Checkbutton(customize_train_set_frame, text="Seasonal Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
+        self.seasonal_period_var = tk.IntVar(value="") # type: ignore
+        self.seasonal_val_var = tk.IntVar(value="") # type: ignore
+        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
         tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=8).grid(column=0, row=2)
         tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8).grid(column=1, row=2)
 
@@ -215,7 +214,7 @@ class MultiLayerPerceptron:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="")
+        forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
@@ -246,12 +245,13 @@ class MultiLayerPerceptron:
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path)
+            self.df = pd.read_csv(path) # type: ignore
         else:
             try:
                 self.df = pd.read_excel(path)
             except:
                 self.df = pd.read_excel(path, engine="openpyxl")
+        self.df: pd.DataFrame
         self.fillInputList()
         
     def fillInputList(self):
@@ -259,14 +259,16 @@ class MultiLayerPerceptron:
         self.predictor_list.delete(0, tk.END)
         self.target_list.delete(0, tk.END)
 
-        for i in self.df.columns:
+        self.df: pd.DataFrame
+
+        for i in self.df.columns.tolist():
             self.input_list.insert(tk.END, i)
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
         file_path.set(path)
         if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path)
+            self.test_df = pd.read_csv(path) # type: ignore
         else:
             try:
                 self.test_df = pd.read_excel(path)
@@ -350,6 +352,7 @@ class MultiLayerPerceptron:
                 }
         
         os.mkdir(path)
+        self.model: Sequential
         self.model.save(path+"/model.h5")
         if self.lookback_option.get() == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
@@ -362,7 +365,7 @@ class MultiLayerPerceptron:
 
     def loadModel(self):
         path = filedialog.askdirectory()
-        self.model = load_model(path+"/model.h5")
+        self.model = load_model(path+"/model.h5") # type: ignore
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()
@@ -441,13 +444,15 @@ class MultiLayerPerceptron:
 
         self.predictor_names = list(self.predictor_list.get(0, tk.END))
         self.label_name = self.target_list.get(0)
+
+        self.df: pd.DataFrame
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
         
         if scale_choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
-
+        
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
@@ -457,7 +462,7 @@ class MultiLayerPerceptron:
             
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
-       
+        
         try:
             lookback = self.lookback_val_var.get()
         except:
@@ -476,6 +481,8 @@ class MultiLayerPerceptron:
     def createModel(self):
         clear_session()
         X, y = self.getData()
+        X: np.ndarray
+        y: np.ndarray
 
         layers = self.no_optimization_choice_var.get()
         
@@ -513,6 +520,9 @@ class MultiLayerPerceptron:
             model.fit(X, y, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
             if do_forecast == 0:
                 pred = model.predict(X).reshape(-1)
+                if self.scale_var.get() != "None":
+                    pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                    y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
                 losses = loss(y, pred)[:-1]
                 self.y_test = y
                 self.pred = pred
@@ -526,8 +536,11 @@ class MultiLayerPerceptron:
                 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                 model.fit(X_train, y_train, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
                 pred = model.predict(X_test).reshape(-1)
+                if self.scale_var.get() != "None":
+                    pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
+                    y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
                 losses = loss(y_test, pred)[:-1]
-                self.y_test = y_test.reshape(-1)
+                self.y_test = y_test
                 self.pred = pred
                 for i,j in enumerate(losses):
                     self.test_metrics_vars[i].set(j) 
@@ -536,7 +549,6 @@ class MultiLayerPerceptron:
                 X = X[-size:]
                 y = y[-size:]
                 model.fit(X, y, epochs=self.hyperparameters[0].get(), batch_size=self.hyperparameters[1].get())
-
             self.model = model
 
         elif val_option == 2:
@@ -554,16 +566,18 @@ class MultiLayerPerceptron:
                     self.test_metrics_vars[i].set(j.mean())
 
     def forecastLookback(self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+        self.test_df: pd.DataFrame
+        self.model: Sequential
         pred = []
         if sliding == 0:
             last = self.last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, lookback+1):
-                    X_test[f"t-{j}"] = last[-j]
-                to_pred = X_test.to_numpy().reshape(1,-1)
+                    X_test[f"t-{j}"] = last[-j] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
@@ -573,10 +587,10 @@ class MultiLayerPerceptron:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, seasons+1):
-                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback]
-                to_pred = X_test.to_numpy().reshape(1,-1)
+                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
                 out = self.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
                 pred.append(out)
@@ -587,12 +601,12 @@ class MultiLayerPerceptron:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1)
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, lookback+1):
-                    X_test[f"t-{j}"] = last[-j]
+                    X_test[f"t-{j}"] = last[-j] # type: ignore
                 for j in range(1, seasons+1):
-                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[-j*seasonal_lookback]
-                to_pred = X_test.to_numpy().reshape(1,-1)
+                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 seasonal_last = np.append(seasonal_last, out)[1:]
@@ -603,8 +617,8 @@ class MultiLayerPerceptron:
     def forecast(self, num):
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
-        X_test = self.test_df[self.predictor_names][:num].to_numpy()
-        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
+        X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
+        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
         self.y_test = y_test
         
         if lookback_option == 0 and seasonal_lookback_option == 0:
@@ -625,8 +639,9 @@ class MultiLayerPerceptron:
                 seasons = 0 
 
             self.pred = self.forecastLookback(num, lookback, seasons, seasonal_lookback, sliding)
+
         if self.scale_var.get() != "None":
-            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
+            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1) # type: ignore
 
         losses = loss(y_test, self.pred)
         for i in range(6):
