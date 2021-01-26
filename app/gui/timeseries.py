@@ -9,7 +9,6 @@ from pandastable import Table
 import os
 from datetime import datetime
 import json
-from .helpers import prediction_history
 
 # Data
 import numpy as np
@@ -71,7 +70,7 @@ class TimeSeries:
         customize_train_set_frame = ttk.Labelframe(self.root, text="Customize Train Set")
         customize_train_set_frame.grid(column=0, row=1)
 
-        self.train_size_var = tk.IntVar(value="")
+        self.train_size_var = tk.IntVar(value="") # type: ignore
         ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0)
         ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var).grid(column=1, row=0)
 
@@ -84,14 +83,14 @@ class TimeSeries:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
 
         self.difference_choice_var = tk.IntVar(value=0)
-        self.interval_var = tk.IntVar(value="")
+        self.interval_var = tk.IntVar(value="") # type: ignore
         tk.Checkbutton(customize_train_set_frame, text='Difference', variable=self.difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=3)
         ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
         self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
         self.interval_entry.grid(column=2, row=3)
  
         self.s_difference_choice_var = tk.IntVar(value=0)
-        self.s_interval_var = tk.IntVar(value="")
+        self.s_interval_var = tk.IntVar(value="") # type: ignore
         tk.Checkbutton(customize_train_set_frame, text='Second Difference', variable=self.s_difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=4)
         ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=4)
         self.s_interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.s_interval_var, state=tk.DISABLED)
@@ -106,13 +105,13 @@ class TimeSeries:
         ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
         ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(self.acf_lags.get())).grid(column=2, row=0)
 
-        self.lag_option_var = tk.IntVar(value="")
+        self.lag_option_var = tk.IntVar(value="") # type: ignore
         tk.Radiobutton(lag_options_frame, text="Use All Lags", value=0, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=1)
         tk.Radiobutton(lag_options_frame, text="Use Selected(1,3,..)", value=1, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=2)
         tk.Radiobutton(lag_options_frame, text="Use Best N", value=2, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=3)
         tk.Radiobutton(lag_options_frame, text="Use Correlation > n", value=3, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=4)
         
-        self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for i in range(4)]
+        self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for _ in range(4)]
         [self.lag_entries[i-1].grid(column=1, row=i) for i in range(1,5)]
 
         # Create Model
@@ -132,13 +131,13 @@ class TimeSeries:
         layer_count = 20
         self.layer_count = layer_count
 
-        self.neuron_numbers_var = [tk.IntVar(value="") for i in range(layer_count)]
-        self.activation_var = [tk.StringVar(value="relu") for i in range(layer_count)]
+        self.neuron_numbers_var = [tk.IntVar(value="") for _ in range(layer_count)] # type: ignore
+        self.activation_var = [tk.StringVar(value="relu") for _ in range(layer_count)]
         self.no_optimization_choice_var = tk.IntVar(value=0)
         
         self.no_optimization = [
                 [
-                    tk.Radiobutton(model_without_optimization_frame, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i+1, row=0),
+                    tk.Radiobutton(model_without_optimization_frame, text=str(i+1), value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i+1, row=0),
                     ttk.Label(model_without_optimization_frame, text=f"Neurons in {i+1}. Layer:").grid(column=0, row=i+1),
                     ttk.Entry(model_without_optimization_frame, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                     ttk.Label(model_without_optimization_frame, text="Activation Function").grid(column=3, row=i+1, columnspan=2),
@@ -157,7 +156,7 @@ class TimeSeries:
         for i in range(5, 20):
             self.no_optimization.append(
                     [
-                        tk.Radiobutton(top, text=i+1, value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i-5, row=0),
+                        tk.Radiobutton(top, text=str(i+1), value=i+1, variable=self.no_optimization_choice_var, command=lambda: self.openOptimizationLayers(True)).grid(column=i-5, row=0),
                         ttk.Label(top, text=f"Neurons in {i+1}. Layer:").grid(column=0, row=i+1-5, columnspan=4),
                         ttk.Entry(top, textvariable=self.neuron_numbers_var[i], state=tk.DISABLED),
                         ttk.Label(top, text="Activation Function").grid(column=9, row=i+1-5, columnspan=4),
@@ -183,8 +182,8 @@ class TimeSeries:
         optimization_names = {1:"One Hidden Layer", 2:"Two Hidden Layer", 3:"Three Hidden Layer"}
         self.optimization_choice_var = tk.IntVar(value=0)
 
-        self.neuron_min_number_var = [tk.IntVar(value="") for i in range(3)]
-        self.neuron_max_number_var = [tk.IntVar(value="") for i in range(3)]
+        self.neuron_min_number_var = [tk.IntVar(value="") for i in range(3)] # type: ignore
+        self.neuron_max_number_var = [tk.IntVar(value="") for i in range(3)] # type: ignore
 
         self.optimization = [
                 [
@@ -227,7 +226,7 @@ class TimeSeries:
 
         model_names = ["MLP Model", "CNN Model", "LSTM Model", "Bi-LSTM Model"]
         second_model_names = ["RNN Model", "GRU Model", "CNN-LSTM Model"]
-        self.model_var = tk.IntVar(value="")
+        self.model_var = tk.IntVar(value="") # type: ignore
         ttk.Label(hyperparameter_frame, text="Model Type").grid(column=0, row=3, columnspan=4)
         [tk.Radiobutton(hyperparameter_frame, text=model_names[i], value=i, variable=self.model_var).grid(column=i, row=4) for i in range(4)]
         [tk.Radiobutton(hyperparameter_frame, text=second_model_names[i], value=i+4, variable=self.model_var).grid(column=i, row=5) for i in range(3)]
@@ -239,7 +238,7 @@ class TimeSeries:
         ttk.Button(hyperparameter_frame, text="Save Model", command=self.saveModel).grid(column=3, row=6)
 
         ttk.Label(hyperparameter_frame, text="Best Model Neuron Numbers").grid(column=0, row=7)
-        self.best_model_neurons = [tk.IntVar(value="") for i in range(3)]
+        self.best_model_neurons = [tk.IntVar(value="") for _ in range(3)] # type: ignore
         [ttk.Entry(hyperparameter_frame, textvariable=self.best_model_neurons[i], width=5).grid(column=i+1, row=7) for i in range(3)]
        
         # Test Model
@@ -250,7 +249,7 @@ class TimeSeries:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="")
+        forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
@@ -270,11 +269,9 @@ class TimeSeries:
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE", "MASE"]
         self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
-        self.rounded_test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i], width=8).grid(column=1,row=i, padx=3)
-            ttk.Entry(test_model_metrics_frame, textvariable=self.rounded_test_metrics_vars[i], width=8).grid(column=2,row=i, padx=3)
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
@@ -292,7 +289,7 @@ class TimeSeries:
         self.predictor_list.delete(0, tk.END)
         self.target_list.delete(0, tk.END)
 
-        for i in self.df.columns:
+        for i in self.df.columns: # type: ignore
             self.input_list.insert(tk.END, i)
 
     def getTestSet(self, file_path):
@@ -308,7 +305,7 @@ class TimeSeries:
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.forecast[:,0], "Predict": self.pred[:,0], "Rounded Predict": self.rounded_pred[:,0]})
+        df = pd.DataFrame({"Test": self.forecast[:,0], "Predict": self.pred[:,0]}) # type: ignore
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
@@ -317,6 +314,8 @@ class TimeSeries:
         params = {
                 "predictor_names": self.predictor_names,
                 "label_name": self.label_name,
+                "is_round": self.is_round,
+                "is_negative": self.is_negative,
                 "train_size": self.train_size_var.get(),
                 "size_choice": self.size_choice_var.get(),
                 "scale_type": self.scale_var.get(),
@@ -336,7 +335,7 @@ class TimeSeries:
                 }
 
         os.mkdir(path)
-        self.model.save(path+"/model.h5")
+        self.model.save(path+"/model.h5") # type: ignore
         with open(path+"/lags.npy", 'wb') as outfile:
             np.save(outfile, self.lags)
         with open(path+"/last_values.npy", 'wb') as outfile:
@@ -359,6 +358,14 @@ class TimeSeries:
         
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
+        try:
+            self.is_round = params["is_round"]
+        except:
+            pass
+        try:
+            self.is_negative = params["is_negative"]
+        except:
+            pass
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])
@@ -494,6 +501,8 @@ class TimeSeries:
                     data[i] = data[i] + fill_values[(len(fill_values) - interval)+i]
 
     def getDataset(self):
+        self.is_round = False
+        self.is_negative = False
         scale_choice = self.scale_var.get()
         difference_choice = self.difference_choice_var.get()
         
@@ -503,9 +512,14 @@ class TimeSeries:
 
         self.predictor_names = [i for i in self.predictor_list.get(0, tk.END)]
         self.label_name = self.target_list.get(0)
-        features = self.df[self.predictor_names].iloc[-size:].to_numpy()
-        label = self.df[[self.label_name]].iloc[-size:].to_numpy()
+        features = self.df[self.predictor_names].iloc[-size:].copy().to_numpy()
+        label = self.df[[self.label_name]].iloc[-size:].copy().to_numpy()
+        
+        if label.dtype == int:
+            self.is_round = True
 
+        if any(label < 0):
+            self.is_negative = True
 
         if scale_choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -548,7 +562,7 @@ class TimeSeries:
     def createLag(self, features, label):
         lag_type = self.lag_option_var.get()
         acf_lags = self.acf_lags.get()
-        acf_vals = acf(self.df[self.label_name].values, nlags=acf_lags, fft=False)
+        acf_vals = acf(self.df[self.label_name].values, nlags=acf_lags, fft=False) # type: ignore
 
         if lag_type == 0:
             max_lag = int(self.lag_entries[0].get())
@@ -565,7 +579,8 @@ class TimeSeries:
             self.lags = np.sort(numbers)
             max_lag = max(self.lags) + 1
 
-        elif lag_type == 3:
+        # lag type == 3
+        else:
             lag = self.lag_entries[3].get()
             numbers = np.array(acf_vals[1:])
             self.lags = np.where(numbers>float(lag))[0]
@@ -684,14 +699,15 @@ class TimeSeries:
         self.forecast = np.asarray(self.forecast)[:num]
 
         seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
+        if not self.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.is_round:
+            self.pred = np.round(self.pred).astype(int)
         
-        self.rounded_pred = np.round(np.clip(a=self.pred, a_min=0.00001, a_max=None))
         losses = loss(self.forecast, self.pred, seasons)
-        rounded = loss(self.forecast, self.rounded_pred, seasons)
          
         for i in range(6):
             self.test_metrics_vars[i].set(losses[i])
-            self.rounded_test_metrics_vars[i].set(rounded[i])
 
     def vsGraph(self):
         plt.plot(self.forecast)

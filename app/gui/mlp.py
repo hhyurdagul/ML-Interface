@@ -239,7 +239,6 @@ class MultiLayerPerceptron:
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
-        self.df= pd.DataFrame()
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
@@ -334,6 +333,8 @@ class MultiLayerPerceptron:
         params = {
                 "predictor_names": self.predictor_names,
                 "label_name": self.label_name,
+                "is_round": self.is_round,
+                "is_negative": self.is_negative,
                 "do_forecast": self.do_forecast_option.get(),
                 "validation_option": self.validation_option.get(),
                 "random_percent": self.random_percent_var.get() if self.validation_option.get() == 1 else None,
@@ -372,6 +373,14 @@ class MultiLayerPerceptron:
 
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
+        try:
+            self.is_round = params["is_round"]
+        except:
+            pass
+        try:
+            self.is_negative = params["is_negative"]
+        except:
+            pass
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
         if params["validation_option"] == 1:
@@ -436,6 +445,8 @@ class MultiLayerPerceptron:
         return a, b
 
     def getData(self):
+        self.is_round = False
+        self.is_negative = False
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
         sliding = lookback_option + 2*seasonal_lookback_option - 1
@@ -448,6 +459,11 @@ class MultiLayerPerceptron:
         self.df: pd.DataFrame
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
+
+        if y.dtype == int:
+            self.is_round = True
+        if any(y < 0):
+            self.is_negative = True
         
         if scale_choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
@@ -642,6 +658,11 @@ class MultiLayerPerceptron:
 
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1) # type: ignore
+
+        if not self.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.is_round:
+            self.pred = np.round(self.pred).astype(int)
 
         losses = loss(y_test, self.pred)
         for i in range(6):

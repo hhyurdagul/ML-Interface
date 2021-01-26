@@ -3,18 +3,6 @@ from tkinter import ttk
 
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer
-from tensorflow.keras.callbacks import Callback
-
-class prediction_history(Callback):
-    def __init__(self, test):
-        self.preds = []
-        self.test = test.reshape(1,-1)
-    def on_epoch_end(self, epoch, logs=None):
-        a = self.model.predict(self.test)
-        self.preds.append(a)
-        print("hi")
-    def on_train_end(self, logs=None):
-        print("Preds history", self.preds)
 
 def NMSE(y_true, y_pred):
     return round((((y_true-y_pred)**2)/(y_true.mean()*y_pred.mean())).mean(), 2)
@@ -81,3 +69,12 @@ def popupmsg(msg):
     popup.mainloop()
 
  
+def waitmsg(msg, size=100):
+    popup = tk.Tk()
+    popup.wm_title("!")
+    ttk.Label(popup, text=msg).pack()
+    pb = ttk.Progressbar(popup, length=size, mode="indeterminate")
+    pb.pack()
+    pb.start()
+    popup.update()
+    return popup

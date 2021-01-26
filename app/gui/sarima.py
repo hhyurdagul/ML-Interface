@@ -230,9 +230,16 @@ class SARIMA:
                 i[1]["state"] = tk.DISABLED
 
     def createModel(self):
+        self.is_round = False
+        self.is_negative = False
         data = self.df[self.target_list.get(0)]
         size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
+
+        if y.dtype == int:
+            self.is_round = True
+        if any(y < 0):
+            self.is_negative = True
 
         pqd = tuple(i.get() for i in self.pdq_var)
         
@@ -245,8 +252,6 @@ class SARIMA:
             model = ARIMA(series, order=pqd)
             self.model = model.fit()
             self.end = len(series)-1
-        
-
     
     def forecast(self, num):
         
@@ -256,6 +261,11 @@ class SARIMA:
         
         self.pred.index = y_test.index
         self.y_test = y_test
+
+        if not self.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.is_round:
+            self.pred = np.round(self.pred).astype(int)
 
         losses = loss(y_test, self.pred)
 

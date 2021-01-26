@@ -3,16 +3,14 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from pandastable import Table
 
 # Data
 import pandas as pd
 import numpy as np
-from datetime import timedelta
 
 # Sklearn
-from sklearn.model_selection import cross_val_score, GridSearchCV, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from pyGRNN import GRNN
@@ -210,11 +208,18 @@ class GeneralRegressionNeuralNetwork:
         return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
 
     def getData(self):
+        self.is_round = False
+        self.is_negative = False
         lookback_option = self.lookback_option.get()
         scale_choice = self.scale_var.get()
 
         X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
         y = self.df[self.target_list.get(0)].copy()
+        
+        if y.dtype == int:
+            self.is_round = True
+        if any(y < 0):
+            self.is_negative = True
         
         if scale_choice == "StandardScaler":
             print(0)
@@ -364,6 +369,10 @@ class GeneralRegressionNeuralNetwork:
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1)
             print("After:", self.pred)
 
+        if not self.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.is_round:
+            self.pred = np.round(self.pred).astype(int)
         
         losses = loss(y_test, self.pred)
         for i in range(6):

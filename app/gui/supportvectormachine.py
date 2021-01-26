@@ -263,6 +263,8 @@ class SupportVectorMachine:
         params = self.model.get_params()
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
+        params["is_round"] = self.is_round
+        params["is_negative"] = self.is_negative
         params["do_forecast"] = self.do_forecast_option.get()
         params["validation_option"] = self.validation_option.get()
         params["random_percent"] = self.random_percent_var.get() if self.validation_option.get() == 1 else None
@@ -295,6 +297,14 @@ class SupportVectorMachine:
 
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
+        try:
+            self.is_round = params["is_round"]
+        except:
+            pass
+        try:
+            self.is_negative = params["is_negative"]
+        except:
+            pass
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
         if params["validation_option"] == 1:
@@ -420,6 +430,8 @@ class SupportVectorMachine:
         return a, b
 
     def getData(self):
+        self.is_round = False
+        self.is_negative = False
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
         sliding = lookback_option + 2*seasonal_lookback_option - 1
@@ -433,6 +445,11 @@ class SupportVectorMachine:
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
         
+        if y.dtype == int:
+            self.is_round = True
+        if any(y < 0):
+            self.is_negative = True
+
         if scale_choice == "StandardScaler":
             self.feature_scaler = StandardScaler()
             self.label_scaler = StandardScaler()
@@ -679,6 +696,11 @@ class SupportVectorMachine:
 
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1) # type: ignore
+
+        if not self.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.is_round:
+            self.pred = np.round(self.pred).astype(int)
         
         losses = loss(y_test, self.pred)
         for i in range(6):
