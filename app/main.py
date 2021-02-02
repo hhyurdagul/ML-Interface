@@ -10,6 +10,7 @@ from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.mlp import MultiLayerPerceptron
 from gui.sarima import SARIMA
 from gui.montecarlo import MonteCarlo
+from gui.movingaverage import MovingAverage
 
 class GUI:
     def __init__(self):
@@ -33,6 +34,9 @@ class GUI:
         
         monte = MonteCarlo()
         self.add(monte, "Monte Carlo")
+        
+        moving_average = MovingAverage()
+        self.add(moving_average, "Moving Average")
 
         self.parent.pack(expand=1, fill='both')
 

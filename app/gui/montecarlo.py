@@ -34,15 +34,23 @@ class MonteCarlo:
         self.col_var = tk.StringVar(value="Select Column")
         ttk.Button(train_frame, textvariable=self.col_var, command=self.selectColumn).grid(column=2, row=1)
        
-        self.train_size = tk.IntVar(value=4)
+        self.train_size = tk.IntVar(value=8)
         ttk.Label(train_frame, text="Train Count").grid(column=0, row=2)
         ttk.Entry(train_frame, textvariable=self.train_size).grid(column=1, row=2)
         
         self.iteration_size = tk.IntVar(value=100000)
         ttk.Label(train_frame, text="Iteration Count").grid(column=0, row=3)
         ttk.Entry(train_frame, textvariable=self.iteration_size).grid(column=1, row=3)
+        
+        self.period_size = tk.IntVar(value=24)
+        ttk.Label(train_frame, text="Period Size").grid(column=0, row=4)
+        ttk.Entry(train_frame, textvariable=self.period_size).grid(column=1, row=4)
+        
+        self.period_count = tk.IntVar(value=7)
+        ttk.Label(train_frame, text="Period Count").grid(column=0, row=5)
+        ttk.Entry(train_frame, textvariable=self.period_count).grid(column=1, row=5)
 
-        ttk.Button(train_frame, text="Create Model", command=self.createModel).grid(column=0, row=4)
+        ttk.Button(train_frame, text="Create Model", command=self.createModel).grid(column=0, row=6)
         
         value_frame = ttk.Labelframe(self.root, text="Create Values")
         value_frame.grid(column=1, row=0)
@@ -71,6 +79,7 @@ class MonteCarlo:
         ttk.Button(test_frame, text="Test Model", command=self.testModel).grid(column=0, row=1)
         ttk.Button(test_frame, text="Show Test", command=self.showTest).grid(column=1, row=1)
         ttk.Button(test_frame, text="Graph Test", command=self.graphTest).grid(column=2, row=1)
+        ttk.Button(test_frame, text="Show Maes", command=self.showMaes).grid(column=0, row=2)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
         self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
@@ -104,8 +113,9 @@ class MonteCarlo:
         self.col = a
     
     def showValues(self):
+        p = self.period_size.get()
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({j: self.pred[i*24:(i+1)*24] for i, j in enumerate(self.day_names)}) # type: ignore
+        df = pd.DataFrame({j: self.pred[i*p:(i+1)*p] for i, j in enumerate(self.day_names)}) # type: ignore
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
@@ -120,6 +130,15 @@ class MonteCarlo:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
+    def showMaes(self):
+        p = self.period_size.get()
+        c = self.period_count.get()
+        top = tk.Toplevel(self.root)
+        maes = [mae(self.y_test[i*p:(i+1)*p], self.pred[i*p:(i+1)*p]) for i in range(c)]
+        df = pd.DataFrame({"Maes":maes})
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+
     def graphTest(self):
         plt.plot(self.y_test) 
         plt.plot(self.pred)
@@ -127,17 +146,19 @@ class MonteCarlo:
         plt.show()
 
     def createModel(self):
-        period = 168
-        freq_period = 24
+        period_count = self.period_count.get()
+        period_size = self.period_size.get()
+        period = period_count * period_size
+        self.period = period
         train = self.df[self.col].iloc[:-self.train_size.get()*period].copy() # type: ignore
         test = self.df[self.col].iloc[-self.train_size.get()*period:].copy() # type: ignore
 
-        for i in range(len(train)//24):
-            s = np.sum(train[i*24:(i+1)*24]) / 100
-            train.iloc[i*24:(i+1)*24] = np.round(train.iloc[i*24:(i+1)*24]/s, 3)
+        for i in range(len(train)//period_size):
+            s = np.sum(train[i*period_size:(i+1)*period_size]) / 100
+            train.iloc[i*period_size:(i+1)*period_size] = np.round(train.iloc[i*period_size:(i+1)*period_size]/s, 3)
         
         arr = np.array([train.iloc[i::period].values for i in range(period)])
-        arrs = np.array([arr[i*freq_period:(i+1)*freq_period] for i in range(7)])
+        arrs = np.array([arr[i*period_size:(i+1)*period_size] for i in range(period_count)])
 
         us, stds, randoms = [], [], []
         for i in arrs:
@@ -166,9 +187,9 @@ class MonteCarlo:
 
         for i in range(self.train_size.get()):
             best_maes = []
-            to_test = test.iloc[i*168:(i+1)*168]
-            for j in range(7):
-                idx = to_test.iloc[j*24:(j+1)*24]
+            to_test = test.iloc[i*period:(i+1)*period]
+            for j in range(period_count):
+                idx = to_test.iloc[j*period_size:(j+1)*period_size]
                 s = idx.sum()
                 z = np.broadcast_arrays(idx.values, results[j].T)[0]
                 best = np.argmin(mae(z.T, np.round(results[j] * np.sum(z[0]) / 100), multioutput="raw_values"))
@@ -185,7 +206,7 @@ class MonteCarlo:
         self.pred = np.array(l)
 
     def testModel(self):
-        self.y_test = self.test_df[self.col].iloc[:168].values # type: ignore
+        self.y_test = self.test_df[self.col].iloc[:self.period].values # type: ignore
         losses = loss(self.y_test, self.pred)
         for i in range(6):
             self.test_metrics_vars[i].set(losses[i])
