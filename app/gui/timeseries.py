@@ -9,6 +9,8 @@ from pandastable import Table
 import os
 from datetime import datetime
 import json
+from pickle import dump as pickle_dump
+from pickle import load as pickle_load
 
 # Data
 import numpy as np
@@ -336,6 +338,11 @@ class TimeSeries:
 
         os.mkdir(path)
         self.model.save(path+"/model.h5") # type: ignore
+        if self.scale_var.get() != "None":
+            with open(path+"/feature_scaler.pkl", "wb") as f:
+                pickle_dump(self.feature_scaler, f)
+            with open(path+"/label_scaler.pkl", "wb") as f:
+                pickle_dump(self.label_scaler, f)
         with open(path+"/lags.npy", 'wb') as outfile:
             np.save(outfile, self.lags)
         with open(path+"/last_values.npy", 'wb') as outfile:
@@ -369,6 +376,14 @@ class TimeSeries:
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])
+        if params["scale_type"] != "None":
+            try:
+                with open(path+"/feature_scaler.pkl", "rb") as f:
+                    self.feature_scaler = pickle_load(f)
+                with open(path+"/label_scaler.pkl", "rb") as f:
+                    self.label_scaler = pickle_load(f)
+            except:
+                pass
         self.difference_choice_var.set(params["difference_choice"])
         if params["difference_choice"] == 1:
             self.interval_var.set(params["interval"])

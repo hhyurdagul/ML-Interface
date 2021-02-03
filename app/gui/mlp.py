@@ -12,6 +12,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 import os
 import json
+from pickle import dump as pickle_dump
+from pickle import load as pickle_load
 
 # Keras
 from tensorflow.keras.backend import clear_session
@@ -355,6 +357,11 @@ class MultiLayerPerceptron:
         os.mkdir(path)
         self.model: Sequential
         self.model.save(path+"/model.h5")
+        if self.scale_var.get() != "None":
+            with open(path+"/feature_scaler.pkl", "wb") as f:
+                pickle_dump(self.feature_scaler, f)
+            with open(path+"/label_scaler.pkl", "wb") as f:
+                pickle_dump(self.label_scaler, f)
         if self.lookback_option.get() == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.last)
@@ -407,6 +414,14 @@ class MultiLayerPerceptron:
         except:
             pass
         self.scale_var.set(params["scale_type"])
+        if params["scale_type"] != "None":
+            try:
+                with open(path+"/feature_scaler.pkl", "rb") as f:
+                    self.feature_scaler = pickle_load(f)
+                with open(path+"/label_scaler.pkl", "rb") as f:
+                    self.label_scaler = pickle_load(f)
+            except:
+                pass
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]

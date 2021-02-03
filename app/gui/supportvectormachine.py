@@ -14,6 +14,8 @@ from sklearn.model_selection import GridSearchCV, train_test_split, cross_valida
 
 import os
 import json
+from pickle import dump as pickle_dump
+from pickle import load as pickle_load
 
 from .helpers import *
 
@@ -279,6 +281,11 @@ class SupportVectorMachine:
 
         os.mkdir(path)
         dump(self.model, path+"/model.joblib")
+        if self.scale_var.get() != "None":
+            with open(path+"/feature_scaler.pkl", "wb") as f:
+                pickle_dump(self.feature_scaler, f)
+            with open(path+"/label_scaler.pkl", "wb") as f:
+                pickle_dump(self.label_scaler, f)
         if self.lookback_option.get() == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.last)
@@ -330,6 +337,14 @@ class SupportVectorMachine:
         except:
             pass
         self.scale_var.set(params["scale_type"])
+        if params["scale_type"] != "None":
+            try:
+                with open(path+"/feature_scaler.pkl", "rb") as f:
+                    self.feature_scaler = pickle_load(f)
+                with open(path+"/label_scaler.pkl", "rb") as f:
+                    self.label_scaler = pickle_load(f)
+            except:
+                pass
         try:
             self.parameters[0].set(params["epsilon"])
             self.model_type_var.set(0)
