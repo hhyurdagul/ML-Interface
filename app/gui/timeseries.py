@@ -361,11 +361,11 @@ class TimeSeries:
         try:
             self.is_round = params["is_round"]
         except:
-            pass
+            self.is_round = False
         try:
-            self.is_negative = params["is_negative"]
+            self.is_negative = False
         except:
-            pass
+            self.is_negative = params["is_negative"]
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])

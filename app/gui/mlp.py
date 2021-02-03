@@ -376,11 +376,11 @@ class MultiLayerPerceptron:
         try:
             self.is_round = params["is_round"]
         except:
-            pass
+            self.is_round = False
         try:
             self.is_negative = params["is_negative"]
         except:
-            pass
+            self.is_negative = 0
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
         if params["validation_option"] == 1:
