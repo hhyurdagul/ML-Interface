@@ -33,12 +33,16 @@ class GeneralRegressionNeuralNetwork:
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
+        self.input_list.bind("<Double-Button-1>", self.addPredictor)
+        self.input_list.bind("<Double-Button-3>", self.addTarget)
 
         self.predictor_list = tk.Listbox(get_train_set_frame)
         self.predictor_list.grid(column=1, row=1)
+        self.predictor_list.bind("<Double-Button-1>", self.ejectPredictor)
 
         self.target_list = tk.Listbox(get_train_set_frame)
         self.target_list.grid(column=2, row=1)
+        self.target_list.bind("<Double-Button-1>", self.ejectTarget)
 
         ttk.Button(get_train_set_frame, text="Add Predictor", command=self.addPredictor).grid(column=1, row=2)
         ttk.Button(get_train_set_frame, text="Eject Predictor", command=self.ejectPredictor).grid(column=1, row=3)
@@ -164,7 +168,7 @@ class GeneralRegressionNeuralNetwork:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
-    def addPredictor(self):
+    def addPredictor(self, event=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
@@ -172,13 +176,13 @@ class GeneralRegressionNeuralNetwork:
         except:
             pass
 
-    def ejectPredictor(self):
+    def ejectPredictor(self, event=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except:
             pass
     
-    def addTarget(self):
+    def addTarget(self, event=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -186,7 +190,7 @@ class GeneralRegressionNeuralNetwork:
         except:
             pass
 
-    def ejectTarget(self):
+    def ejectTarget(self, event=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except:
