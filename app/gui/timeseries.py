@@ -255,9 +255,9 @@ class TimeSeries:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="") # type: ignore
+        self.forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showTestSet).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
@@ -265,11 +265,13 @@ class TimeSeries:
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.testModel(forecast_num.get())).grid(column=0, row=2)
+        ttk.Button(test_model_main_frame, text="Forecast", command=self.testModel).grid(column=0, row=2)
         ttk.Button(test_model_main_frame, text="Actual vs Forecasted Graph", command=self.vsGraph).grid(column=1, row=2)
         ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=4)
 
         ## Test Model Metrics
+        self.test_data_valid = False
+        self.forecast_done = False
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
@@ -308,10 +310,16 @@ class TimeSeries:
                 self.test_df = pd.read_excel(path)
             except:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
+        self.test_data_valid = True
+        if self.forecast_done:
+            self.testModel()
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.forecast[:,0], "Predict": self.pred[:,0]}) # type: ignore
+        d = {"Predict": self.pred[:,0]}
+        if self.test_data_valid:
+            d["Test"] = self.y_test[:,0]
+        df = pd.DataFrame(d)
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
@@ -692,7 +700,8 @@ class TimeSeries:
         model.summary()
         self.model = model
 
-    def testModel(self, num):
+    def testModel(self):
+        num = self.forecast_num.get()
         input_value = self.last
         steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
@@ -714,24 +723,26 @@ class TimeSeries:
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred)
         
-        self.forecast = self.test_df[[self.label_name]]
-        self.forecast = np.asarray(self.forecast)[:num]
-
-        seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
         if self.is_round:
             self.pred = np.round(self.pred).astype(int)
         
-        losses = loss(self.forecast, self.pred, seasons)
-         
-        for i in range(6):
-            self.test_metrics_vars[i].set(losses[i])
+        if self.test_data_valid:
+            self.y_test = self.test_df[[self.label_name]]
+            self.y_test = np.asarray(self.y_test)[:num]
+
+            seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
+            losses = loss(self.y_test, self.pred, seasons)
+            for i in range(6):
+                self.test_metrics_vars[i].set(losses[i])
+        self.forecast_done = True
 
     def vsGraph(self):
-        plt.plot(self.forecast)
-        plt.plot(self.pred)
-        plt.legend(["Test", "Predict"], loc="upper left")
+        if self.test_data_valid:
+            plt.plot(self.y_test, label="Test")
+        plt.plot(self.pred, label="Predict")
+        plt.legend(loc="upper left")
         plt.show()
 
 
