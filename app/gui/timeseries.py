@@ -350,15 +350,25 @@ class TimeSeries:
 
         os.mkdir(path)
         self.model.save(path+"/model.h5") # type: ignore
+
         if self.scale_var.get() != "None":
             with open(path+"/feature_scaler.pkl", "wb") as f:
                 pickle_dump(self.feature_scaler, f)
             with open(path+"/label_scaler.pkl", "wb") as f:
                 pickle_dump(self.label_scaler, f)
+
+        if self.difference_choice_var.get():
+            with open(path+"/fill.npy", "wb") as outfile:
+                np.save(outfile, self.fill_values)
+        if self.s_difference_choice_var.get():
+            with open(path+"/s_fill.npy", "wb") as outfile:
+                np.save(outfile, self.s_fill_values)
+
         with open(path+"/lags.npy", 'wb') as outfile:
             np.save(outfile, self.lags)
         with open(path+"/last_values.npy", 'wb') as outfile:
             np.save(outfile, self.last)
+
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
 
@@ -399,9 +409,19 @@ class TimeSeries:
         self.difference_choice_var.set(params["difference_choice"])
         if params["difference_choice"] == 1:
             self.interval_var.set(params["interval"])
+            try:
+                with open(path+"/fill.npy", "rb") as f:
+                    self.fill_values = np.load(f)
+            except:
+                pass
         self.s_difference_choice_var.set(params["second_difference_choice"])
         if params["second_difference_choice"] == 1:
             self.s_interval_var.set(params["second_interval"])
+            try:
+                with open(path+"/s_fill.npy", "rb") as f:
+                    self.s_fill_values = np.load(f)
+            except:
+                pass
         self.acf_lags.set(params["acf_lags"])
         self.lag_option_var.set(params["lag_choice"])
         self.openEntries()
@@ -464,6 +484,9 @@ class TimeSeries:
 
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
+
+        print(self.difference_choice_var.get())
+        print(self.s_difference_choice_var.get())
 
         if self.s_difference_choice_var.get():
             f_diff = self.interval_var.get()
