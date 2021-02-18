@@ -316,9 +316,9 @@ class TimeSeries:
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
-        d = {"Predict": self.pred[:,0]}
         if self.test_data_valid:
             d["Test"] = self.y_test[:,0]
+        d = {"Predict": self.pred[:,0]}
         df = pd.DataFrame(d)
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
@@ -390,7 +390,7 @@ class TimeSeries:
         try:
             self.is_round = params["is_round"]
         except:
-            self.is_round = False
+            self.is_round = True
         try:
             self.is_negative = False
         except:
@@ -565,7 +565,7 @@ class TimeSeries:
         features = self.df[self.predictor_names].iloc[-size:].copy().to_numpy()
         label = self.df[[self.label_name]].iloc[-size:].copy().to_numpy()
         
-        if label.dtype == int:
+        if label.dtype == int or label.dtype == np.int or y.dtype == np.int64:
             self.is_round = True
 
         if any(label < 0):

@@ -387,11 +387,11 @@ class MultiLayerPerceptron:
         try:
             self.is_round = params["is_round"]
         except:
-            self.is_round = False
+            self.is_round = True
         try:
             self.is_negative = params["is_negative"]
         except:
-            self.is_negative = 0
+            self.is_negative = False
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
         if params["validation_option"] == 1:
@@ -479,7 +479,7 @@ class MultiLayerPerceptron:
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
 
-        if y.dtype == int:
+        if y.dtype == int or y.dtype == np.int or y.dtype == np.int64:
             self.is_round = True
         if any(y < 0):
             self.is_negative = True

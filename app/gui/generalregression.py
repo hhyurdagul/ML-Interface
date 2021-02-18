@@ -220,7 +220,7 @@ class GeneralRegressionNeuralNetwork:
         X = self.df[list(self.predictor_list.get(0, tk.END))].copy()
         y = self.df[self.target_list.get(0)].copy()
         
-        if y.dtype == int:
+        if y.dtype == int or y.dtype == np.int or y.dtype == np.int64:
             self.is_round = True
         if any(y < 0):
             self.is_negative = True
