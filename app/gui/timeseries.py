@@ -319,7 +319,7 @@ class TimeSeries:
         d = {}
         if self.test_data_valid:
             d["Test"] = self.y_test[:,0]
-        d = {"Predict": self.pred[:,0]}
+        d["Predict"] = self.pred[:,0]
         df = pd.DataFrame(d)
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
