@@ -316,6 +316,7 @@ class TimeSeries:
 
     def showTestSet(self):
         top = tk.Toplevel(self.root)
+        d = {}
         if self.test_data_valid:
             d["Test"] = self.y_test[:,0]
         d = {"Predict": self.pred[:,0]}
