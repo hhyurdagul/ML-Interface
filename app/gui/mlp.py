@@ -355,6 +355,7 @@ class MultiLayerPerceptron:
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
                 "activations": [self.activation_var[i].get() for i in range(self.no_optimization_choice_var.get())],
+                "output_activation": self.output_activation.get(),
                 "hyperparameters": [i.get() for i in self.hyperparameters],
                 }
         
@@ -429,6 +430,10 @@ class MultiLayerPerceptron:
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
+        try:
+            self.output_activation.set(params["output_activation"])
+        except:
+            self.output_activation.set("relu")
         [self.hyperparameters[i].set(j) for i, j in enumerate(params["hyperparameters"])]
         
         self.openLayers(True)

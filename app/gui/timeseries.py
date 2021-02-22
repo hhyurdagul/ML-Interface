@@ -344,6 +344,7 @@ class TimeSeries:
                 "num_layers": self.no_optimization_choice_var.get(),
                 "num_neurons": [self.neuron_numbers_var[i].get() for i in range(self.no_optimization_choice_var.get())],
                 "activations": [self.activation_var[i].get() for i in range(self.no_optimization_choice_var.get())],
+                "output_activation": self.output_activation.get(),
                 "hyperparameters": {i:j.get() for (i, j) in self.hyperparameters.items()},
                 "model": self.model_var.get(),
                 "train_loss": self.train_loss.get()
@@ -431,6 +432,10 @@ class TimeSeries:
         self.no_optimization_choice_var.set(params["num_layers"])
         [self.neuron_numbers_var[i].set(j) for i,j in enumerate(params["num_neurons"])]
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
+        try:
+            self.output_activation.set(params["output_activation"])
+        except:
+            self.output_activation.set("relu")
         [self.hyperparameters[i].set(j) for (i,j) in params["hyperparameters"].items()]
         self.model_var.set(params["model"])
         self.train_loss.set(params["train_loss"])
