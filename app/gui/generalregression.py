@@ -4,8 +4,6 @@ from tkinter import ttk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
 from pandastable import Table
-from matplotlib import use as mat_backend
-mat_backend("TkAgg")
 
 # Data
 import pandas as pd

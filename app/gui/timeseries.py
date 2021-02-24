@@ -4,8 +4,6 @@ from tkinter import ttk
 from tkinter import filedialog
 from pandastable import Table
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib import use as mat_backend
-mat_backend("TkAgg")
 
 # Default
 import os

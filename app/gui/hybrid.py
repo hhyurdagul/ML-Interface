@@ -1,8 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-from matplotlib import use as mat_backend
-mat_backend("TkAgg")
 
 import numpy as np
 import pandas as pd
