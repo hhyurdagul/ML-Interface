@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from matplotlib import use as mat_backend
+mat_backend("TkAgg")
 
 import numpy as np
 import pandas as pd
@@ -18,7 +20,7 @@ class MovingAverage:
 
         file_path = tk.StringVar(value="")
         ttk.Label(train_frame, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(train_frame, textvariable=file_path).grid(column=0, row=0)
+        ttk.Entry(train_frame, textvariable=file_path).grid(column=1, row=0)
         ttk.Button(train_frame, text="Read Train Data", command=lambda: self.readTrainData(file_path)).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(train_frame)
@@ -26,11 +28,11 @@ class MovingAverage:
         self.col_var = tk.StringVar(value="Select Column")
         ttk.Button(train_frame, textvariable=self.col_var, command=self.selectColumn).grid(column=2, row=1)
 
-        self.train_size = tk.IntVar(value=8)
+        self.train_size = tk.IntVar(value=10)
         ttk.Label(train_frame, text="Train Count").grid(column=0, row=2)
         ttk.Entry(train_frame, textvariable=self.train_size).grid(column=1, row=2)
         
-        self.period_size = tk.IntVar(value=24)
+        self.period_size = tk.IntVar(value=48)
         ttk.Label(train_frame, text="Period Size").grid(column=0, row=4)
         ttk.Entry(train_frame, textvariable=self.period_size).grid(column=1, row=4)
         

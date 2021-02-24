@@ -11,6 +11,7 @@ from gui.mlp import MultiLayerPerceptron
 from gui.sarima import SARIMA
 from gui.montecarlo import MonteCarlo
 from gui.movingaverage import MovingAverage
+from gui.hybrid import Hybrid
 
 class GUI:
     def __init__(self):
@@ -20,14 +21,14 @@ class GUI:
         time_series = TimeSeries()
         self.add(time_series, "Time Series")
         
+        mlp = MultiLayerPerceptron()
+        self.add(mlp, "Mlp")
+
         svm = SupportVectorMachine()
         self.add(svm, "Support Vector Machine")
       
         grnn = GeneralRegressionNeuralNetwork()
         self.add(grnn, "GRNN")
-
-        mlp = MultiLayerPerceptron()
-        self.add(mlp, "Mlp")
         
         sarima = SARIMA()
         self.add(sarima, "SARIMA")
@@ -37,6 +38,9 @@ class GUI:
         
         moving_average = MovingAverage()
         self.add(moving_average, "Moving Average")
+
+        hybrid = Hybrid()
+        self.add(hybrid, "Hybrid")
 
         self.parent.pack(expand=1, fill='both')
 

@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from pandastable import Table
+from matplotlib import use as mat_backend
+mat_backend("TkAgg")
 
 import numpy as np
 import pandas as pd
@@ -14,6 +16,8 @@ from sklearn.model_selection import GridSearchCV, train_test_split, cross_valida
 
 import os
 import json
+from shutil import copyfile
+from docx import Document
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
@@ -133,7 +137,7 @@ class SupportVectorMachine:
         model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
         
         parameter_names = ["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]
-        self.parameters = [tk.Variable(value="0.10"), tk.Variable(value="0.50"), tk.Variable(value="1.00"), tk.Variable(value="0.10"), tk.Variable(value="0.00"), tk.Variable(value="3.00")]
+        self.parameters = [tk.Variable(value="0.1"), tk.Variable(value="0.5"), tk.Variable(value="1"), tk.Variable(value="1"), tk.Variable(value="0"), tk.Variable(value="3")]
         self.optimization_parameters = [[tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()]]
         
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
@@ -195,7 +199,12 @@ class SupportVectorMachine:
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
+        
+        table_frame = ttk.LabelFrame(self.root, text="Table Operations")
+        table_frame.grid(column=1, row=2)
 
+        ttk.Button(table_frame, text="Create Table", command=self.createTable).grid(column=0, row=0)
+        ttk.Button(table_frame, text="Add to Table", command=self.addToTable).grid(column=1, row=0)
 
         self.openEntries()
 
@@ -263,6 +272,55 @@ class SupportVectorMachine:
             self.target_list.delete(self.target_list.curselection())
         except:
             pass
+
+    def createTable(self):
+        old = os.path.join(os.path.abspath("."), "Table Templates/SVM.docx")
+        path = filedialog.asksaveasfilename()+".docx"
+        copyfile(old, path)
+        document = Document(path)
+        self.document_path = path
+        self.document = document
+
+    def addToTable(self):
+        table = self.document.tables[0]
+        table_style = table.style
+        style = table.cell(0, 0).paragraphs[-1].style
+
+        cells = table.add_row().cells
+        cells[0].text = "%"+str(self.random_percent_var.get()) if self.validation_option.get() == 1 else "%100"
+        cells[1].text = str(self.lookback_val_var.get()) if self.lookback_option.get() else "-"
+        cells[2].text = str(self.seasonal_period_var.get())+ "-" + str(self.seasonal_val_var.get()) if self.seasonal_lookback_option.get() else "-"
+        cells[3].text = "Nu" if self.model_type_var.get() else "Epsilon"
+        cells[4].text = "Min-Max" if self.scale_var.get() == "MinMaxScaler" else "Standart" if self.scale_var.get() == "StandardScaler" else "Yok"
+        cells[5].text = ["Doğrusal", "RBF", "Polinom", "Sigmoid"][self.kernel_type_var.get()]
+        t_ep = "{:.2e}".format(float(self.parameters[0].get()))
+        cells[6].text = t_ep[0] + "*10"
+        c = cells[6].paragraphs[0]
+        s = c.add_run(t_ep[-1])
+        s.font.superscript = True
+        cells[7].text = "2"
+        c = cells[7].paragraphs[0]
+        s = c.add_run(str(float(self.parameters[2].get()))[:-2])
+        s.font.superscript = True
+        if self.gamma_choice.get() == 2:
+            cells[8].text = "2"
+            c = cells[8].paragraphs[0]
+            s = c.add_run(str(self.parameters[3].get()))
+            s.font.superscript = True
+        else:
+            cells[8].text = "-"
+        if self.kernel_type_var.get() == 2:
+            cells[9].text = self.parameters[-1].get()
+        else:
+            cells[9].text = "-"
+        cells[10].text = "Değer" if self.gamma_choice.get() == 2 else "Otomatik" if self.gamma_choice.get() == 1 else "Ölçeklendirilmiş"
+        cells[11].text = self.test_metrics_vars[2].get()
+
+        for i in cells:
+            for j in i.paragraphs:
+                j.style = style
+        table.style = table_style
+        self.document.save(self.document_path)
     
     def saveModel(self):
         path = filedialog.asksaveasfilename()
