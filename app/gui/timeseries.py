@@ -31,7 +31,7 @@ from tensorflow.keras.initializers import GlorotUniform, Orthogonal
 
 # Seed
 from random import seed
-from numpy.random import seed as np_seed
+from numpy.random import seed as np_seed # type: ignore
 from tensorflow import random
 seed(0)
 np_seed(0)
@@ -77,48 +77,46 @@ class TimeSeries:
         customize_train_set_frame.grid(column=0, row=1)
 
         self.train_size_var = tk.IntVar(value="") # type: ignore
-        ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0)
-        ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var).grid(column=1, row=0)
+        ttk.Label(customize_train_set_frame, text="# of Rows in Train Set").grid(column=0, row=0, columnspan=2, sticky=tk.W)
+        ttk.Entry(customize_train_set_frame, textvariable=self.train_size_var, width=8).grid(column=2, row=0, sticky=tk.E)
 
         self.size_choice_var = tk.IntVar(value=0)
-        tk.Radiobutton(customize_train_set_frame, text="As Percent", value=0, variable=self.size_choice_var).grid(column=0, row=1)
-        tk.Radiobutton(customize_train_set_frame, text="As Number", value=1, variable=self.size_choice_var).grid(column=1, row=1)
+        tk.Radiobutton(customize_train_set_frame, text="As Percent", value=0, variable=self.size_choice_var).grid(column=0, row=1, sticky=tk.W)
+        tk.Radiobutton(customize_train_set_frame, text="As Number", value=1, variable=self.size_choice_var).grid(column=1, row=1, sticky=tk.W)
 
         self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2)
-        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2)
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=2, sticky=tk.W)
+        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=2, columnspan=2)
 
         self.difference_choice_var = tk.IntVar(value=0)
         self.interval_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text='Difference', variable=self.difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=3)
-        ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=3)
-        self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED)
-        self.interval_entry.grid(column=2, row=3)
+        tk.Checkbutton(customize_train_set_frame, text='Difference Interval', variable=self.difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=3, columnspan=2, sticky=tk.W)
+        self.interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.interval_var, state=tk.DISABLED, width=8)
+        self.interval_entry.grid(column=2, row=3, sticky=tk.E)
  
         self.s_difference_choice_var = tk.IntVar(value=0)
         self.s_interval_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text='Second Difference', variable=self.s_difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=4)
-        ttk.Label(customize_train_set_frame, text="Interval").grid(column=1, row=4)
-        self.s_interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.s_interval_var, state=tk.DISABLED)
-        self.s_interval_entry.grid(column=2, row=4)
+        tk.Checkbutton(customize_train_set_frame, text='Second Difference Interval', variable=self.s_difference_choice_var, offvalue=0, onvalue=1, command=self.openDifference).grid(column=0, row=4, columnspan=2, sticky=tk.W)
+        self.s_interval_entry = ttk.Entry(customize_train_set_frame, textvariable=self.s_interval_var, state=tk.DISABLED, width=8)
+        self.s_interval_entry.grid(column=2, row=4, sticky=tk.E)
 
         # Lag Options
         lag_options_frame = ttk.Labelframe(self.root, text="Lag Options")
         lag_options_frame.grid(column=0, row=2)
 
         self.acf_lags = tk.IntVar(value=40)
-        ttk.Label(lag_options_frame, text="Number of Lags").grid(column=0, row=0)
-        ttk.Entry(lag_options_frame, textvariable=self.acf_lags).grid(column=1, row=0)
-        ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(self.acf_lags.get())).grid(column=2, row=0)
+        ttk.Label(lag_options_frame, text="Upper Lag Limit").grid(column=0, row=0, sticky=tk.W)
+        ttk.Entry(lag_options_frame, textvariable=self.acf_lags, width=8).grid(column=1, row=0, sticky=tk.W)
+        ttk.Button(lag_options_frame, text="Show ACF", command=lambda: self.showACF(self.acf_lags.get())).grid(column=2, row=0, sticky=tk.W)
 
         self.lag_option_var = tk.IntVar(value="") # type: ignore
-        tk.Radiobutton(lag_options_frame, text="Use All Lags", value=0, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=1)
-        tk.Radiobutton(lag_options_frame, text="Use Selected(1,3,..)", value=1, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=2)
-        tk.Radiobutton(lag_options_frame, text="Use Best N", value=2, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=3)
-        tk.Radiobutton(lag_options_frame, text="Use Correlation > n", value=3, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=4)
+        tk.Radiobutton(lag_options_frame, text="Use All Lags", value=0, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=1, sticky=tk.W)
+        tk.Radiobutton(lag_options_frame, text="Use Selected(1,3,..)", value=1, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=2, sticky=tk.W)
+        tk.Radiobutton(lag_options_frame, text="Use Best N", value=2, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=3, sticky=tk.W)
+        tk.Radiobutton(lag_options_frame, text="Use Correlation > n (Between 0-1)", value=3, variable=self.lag_option_var, command=self.openEntries).grid(column=0, row=4, sticky=tk.W)
         
         self.lag_entries = [ttk.Entry(lag_options_frame, state=tk.DISABLED) for _ in range(4)]
-        [self.lag_entries[i-1].grid(column=1, row=i) for i in range(1,5)]
+        [self.lag_entries[i-1].grid(column=1, row=i, columnspan=2) for i in range(1,5)]
 
         # Create Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
@@ -156,6 +154,7 @@ class TimeSeries:
         ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=7)
 
         top_level = tk.Toplevel(self.root)
+        top_level.protocol("WM_DELETE_WINDOW", top_level.withdraw)
         top = ttk.Frame(top_level)
         top.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
@@ -188,8 +187,8 @@ class TimeSeries:
         optimization_names = {1:"One Hidden Layer", 2:"Two Hidden Layer", 3:"Three Hidden Layer"}
         self.optimization_choice_var = tk.IntVar(value=0)
 
-        self.neuron_min_number_var = [tk.IntVar(value="") for i in range(3)] # type: ignore
-        self.neuron_max_number_var = [tk.IntVar(value="") for i in range(3)] # type: ignore
+        self.neuron_min_number_var = [tk.IntVar(value="") for _ in range(3)] # type: ignore
+        self.neuron_max_number_var = [tk.IntVar(value="") for _ in range(3)] # type: ignore
 
         self.optimization = [
                 [
@@ -227,12 +226,12 @@ class TimeSeries:
         ttk.Label(hyperparameter_frame, text="Learning Rate").grid(column=0, row=2)
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Learning_Rate"]).grid(column=1, row=2)
 
-        ttk.Label(hyperparameter_frame, text="Momentum").grid(column=2, row=2)
+        ttk.Label(hyperparameter_frame, text="Momentum (Between 0-1)").grid(column=2, row=2)
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Momentum"]).grid(column=3, row=2)
 
         model_names = ["MLP Model", "CNN Model", "LSTM Model", "Bi-LSTM Model"]
         second_model_names = ["RNN Model", "GRU Model", "CNN-LSTM Model"]
-        self.model_var = tk.IntVar(value="") # type: ignore
+        self.model_var = tk.IntVar(value=0)
         ttk.Label(hyperparameter_frame, text="Model Type").grid(column=0, row=3, columnspan=4)
         [tk.Radiobutton(hyperparameter_frame, text=model_names[i], value=i, variable=self.model_var).grid(column=i, row=4) for i in range(4)]
         [tk.Radiobutton(hyperparameter_frame, text=second_model_names[i], value=i+4, variable=self.model_var).grid(column=i, row=5) for i in range(3)]
@@ -283,10 +282,12 @@ class TimeSeries:
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
 
         if path.endswith(".csv"):
-            self.df = pd.read_csv(path)
+            self.df = pd.read_csv(path) # type: ignore
         else:
             try:
                 self.df = pd.read_excel(path)
@@ -302,6 +303,8 @@ class TimeSeries:
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
@@ -315,18 +318,26 @@ class TimeSeries:
             self.testModel()
 
     def showTestSet(self):
-        top = tk.Toplevel(self.root)
         d = {}
         if self.test_data_valid:
+            self.y_test: np.ndarray
             d["Test"] = self.y_test[:,0]
-        d["Predict"] = self.pred[:,0]
+        self.pred: np.ndarray
+        try:
+            d["Predict"] = self.pred[:,0]
+        except:
+            return
         df = pd.DataFrame(d)
+        top = tk.Toplevel(self.root)
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
     def saveModel(self):
         path = filedialog.asksaveasfilename()
-        params = {
+        if not path:
+            return
+        try:
+            params = {
                 "predictor_names": self.predictor_names,
                 "label_name": self.label_name,
                 "is_round": self.is_round,
@@ -349,6 +360,9 @@ class TimeSeries:
                 "model": self.model_var.get(),
                 "train_loss": self.train_loss.get()
                 }
+        except:
+            popupmsg("Model is not created")
+            return
 
         os.mkdir(path)
         self.model.save(path+"/model.h5") # type: ignore
@@ -376,7 +390,12 @@ class TimeSeries:
 
     def loadModel(self):
         path = filedialog.askdirectory()
-        self.model = load_model(path+"/model.h5")
+        if not path:
+            return
+        try:
+            self.model = load_model(path+"/model.h5")
+        except:
+            popupmsg("There is no model file at the path")
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()
@@ -450,7 +469,7 @@ class TimeSeries:
     def addPredictor(self, event=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
-            if a not in self.predictor_list.get(0,tk.END):
+            if self.predictor_list.size() < 1:
                 self.predictor_list.insert(tk.END, a)
         except:
             pass
@@ -483,9 +502,13 @@ class TimeSeries:
         self.s_interval_entry["state"] = s_s
 
     def showACF(self, lags):
+        if not self.target_list.get(0):
+            popupmsg("Select a target")
+            return
         top = tk.Toplevel()
         fig = plt.Figure((10, 8))
         
+        self.df: pd.DataFrame
         data = self.df[self.target_list.get(0)]
 
         ax = fig.add_subplot(211)
@@ -497,8 +520,10 @@ class TimeSeries:
         if self.s_difference_choice_var.get():
             f_diff = self.interval_var.get()
             s_diff = self.s_interval_var.get()
-            plot_acf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax, lags=lags)
-            plot_pacf(data.diff(f_diff)[f_diff:].diff(s_diff)[s_diff:], ax=ax1, lags=lags)
+            first_diff: pd.Series
+            first_diff = data.diff(f_diff)[f_diff:] # type: ignore
+            plot_acf(first_diff.diff(s_diff)[s_diff:], ax=ax, lags=lags)
+            plot_pacf(first_diff.diff(s_diff)[s_diff:], ax=ax1, lags=lags)
         
         elif self.difference_choice_var.get():
             f_diff = self.interval_var.get()
@@ -546,6 +571,88 @@ class TimeSeries:
             self.no_optimization_choice_var.set(0)
             self.do_optimization = True
 
+    def checkErrors(self):
+        try:
+            msg = "Read a data first"
+            self.df.head(1)
+            
+            msg = "Select a predictor"
+            if not self.predictor_list.get(0):
+                raise Exception
+            
+            msg = "Select a target"
+            if not self.target_list.get(0):
+                raise Exception
+            
+            msg = "Enter a valid train size"
+            if self.train_size_var.get() <= 0:
+                raise Exception
+            
+            msg = "Enter a valid difference interval"
+            if self.difference_choice_var.get():
+                self.interval_var.get()
+            
+            msg = "Enter a valid second difference interval"
+            if self.s_difference_choice_var.get():
+                self.s_interval_var.get()
+
+            msg = "Enter a lag number bigger than 1"
+            if self.acf_lags.get() <= 1:
+                raise Exception
+
+            msg = "Select a valid lag choice"
+            self.lag_option_var.get()
+            
+            msg = "Enter a valid lag number"
+            if not self.lag_entries[self.lag_option_var.get()].get():
+                raise Exception
+
+            msg = "Lag size cannot be bigger than the data size"
+            if self.lag_option_var.get() == 0 and int(self.lag_entries[0].get()) > len(self.df):
+                raise Exception
+            elif self.lag_option_var.get() == 2 and int(self.lag_entries[2].get()) > len(self.df):
+                raise Exception
+            
+            msg = "Acf cannot be bigger than 1 nor less than 0"
+            if self.lag_option_var.get() == 3 and float(self.lag_entries[3].get()) >= 1 or float(self.lag_entries[3].get()) <= 0:
+                raise Exception
+ 
+            msg = "Select a valid layer number"
+            if not self.no_optimization_choice_var.get():
+                raise Exception
+
+            msg = "Enter a valid neuron number"
+            neuron_empty = False
+            for i in range(self.no_optimization_choice_var.get()):
+                try:
+                    self.neuron_numbers_var[i].get()
+                except:
+                    neuron_empty = True
+            if neuron_empty:
+                raise Exception
+            
+            msg = "Enter a valid Epoch size"
+            if self.hyperparameters["Epoch"].get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid Batch size"
+            if self.hyperparameters["Batch_Size"].get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid Learning Rate"
+            if self.hyperparameters["Learning_Rate"].get() <= 0:
+                raise Exception
+            
+            msg = "Enter a valid Momentum value"
+            if self.hyperparameters["Optimizer"].get() != "Adam" and self.hyperparameters["Momentum"].get() <= 0:
+                raise Exception
+
+            return False
+            
+        except:
+            popupmsg(msg) # type: ignore
+            return True
+
     def difference(self, data, diff, interval=None, fill_values=None):
         if diff:
             return np.array([data[i] - data[i-interval] for i in range(interval, len(data))])
@@ -566,9 +673,9 @@ class TimeSeries:
         size = self.train_size_var.get() if size_choice==1 else (self.train_size_var.get()/100) * len(self.df)
         size = int(size)
 
-        self.predictor_names = [i for i in self.predictor_list.get(0, tk.END)]
+        self.predictor_names = self.predictor_list.get(0)
         self.label_name = self.target_list.get(0)
-        features = self.df[self.predictor_names].iloc[-size:].copy().to_numpy()
+        features = self.df[[self.predictor_names]].iloc[-size:].copy().to_numpy()
         label = self.df[[self.label_name]].iloc[-size:].copy().to_numpy()
         
         if label.dtype == int or label.dtype == np.int or label.dtype == np.int64:
@@ -648,13 +755,16 @@ class TimeSeries:
     def createModel(self):
         self.model_instance += 1
         clear_session()
+        if self.checkErrors():
+            return
 
         features, label = self.getDataset()
         X_train, y_train = self.createLag(features, label)
         X_train = X_train[:, self.lags]
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
-        momentum = float(self.hyperparameters["Momentum"].get())
+        if self.hyperparameters["Optimizer"] != "Adam":
+            momentum = float(self.hyperparameters["Momentum"].get())
         optimizers = {
                 "Adam": Adam(learning_rate=learning_rate),
                 "SGD": SGD(learning_rate=learning_rate, momentum=momentum),
@@ -730,7 +840,12 @@ class TimeSeries:
         self.model = model
 
     def testModel(self):
-        num = self.forecast_num.get()
+        try:
+            num = self.forecast_num.get()
+        except:
+            popupmsg("Enter a valid Forecast value")
+            return
+
         input_value = self.last
         steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
@@ -770,7 +885,10 @@ class TimeSeries:
     def vsGraph(self):
         if self.test_data_valid:
             plt.plot(self.y_test, label="Test")
-        plt.plot(self.pred, label="Predict")
+        try:
+            plt.plot(self.pred, label="Predict")
+        except:
+            return
         plt.legend(loc="upper left")
         plt.show()
 

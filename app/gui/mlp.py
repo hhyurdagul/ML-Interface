@@ -70,17 +70,21 @@ class MultiLayerPerceptron:
         model_validation_frame.grid(column=0, row=1)
         
         self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=0, columnspan=2)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option, command=self.openOtherEntries).grid(column=0, row=0, columnspan=2)
 
         self.validation_option = tk.IntVar(value=0)
         self.random_percent_var = tk.IntVar(value=70)
         self.cross_val_var = tk.IntVar(value=5)
-        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=1, columnspan=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option).grid(column=0, row=3, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=4, columnspan=2, sticky=tk.W)
-        ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=2)
-        ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=3)
+        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option, command=self.openOtherEntries).grid(column=0, row=1, columnspan=2, sticky=tk.W)
+        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option, command=self.openOtherEntries).grid(column=0, row=2, sticky=tk.W)
+        self.cv_entry_1 = tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option, command=self.openOtherEntries, state=tk.DISABLED)
+        self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
+        self.cv_entry_2 = tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option, command=self.openOtherEntries, state=tk.DISABLED)
+        self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
+        self.random_percent_entry = ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8, state=tk.DISABLED)
+        self.random_percent_entry.grid(column=1, row=2)
+        self.cv_value_entry = ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8, state=tk.DISABLED)
+        self.cv_value_entry.grid(column=1, row=3)
 
         # Create Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
@@ -116,6 +120,7 @@ class MultiLayerPerceptron:
         ttk.OptionMenu(model_without_optimization_frame, self.output_activation, "relu", "relu", "tanh", "sigmoid", "linear").grid(column=2, row=7)
     
         top_level = tk.Toplevel(self.root)
+        top_level.protocol("WM_DELETE_WINDOW", top_level.withdraw)
         top = ttk.Frame(top_level)
         top.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
@@ -185,7 +190,7 @@ class MultiLayerPerceptron:
         ttk.Label(hyperparameter_frame, text="Learning Rate").grid(column=0, row=2)
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[4]).grid(column=1, row=2)
 
-        ttk.Label(hyperparameter_frame, text="Momentum").grid(column=2, row=2)
+        ttk.Label(hyperparameter_frame, text="Momentum (Between 0-1)").grid(column=2, row=2)
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters[5]).grid(column=3, row=2)
         
         ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
@@ -198,15 +203,18 @@ class MultiLayerPerceptron:
 
         self.lookback_option = tk.IntVar(value=0)
         self.lookback_val_var = tk.IntVar(value="")  # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
-        tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=0)
+        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option, command=self.openOtherEntries).grid(column=0, row=0)
+        self.lookback_entry = ttk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8, state=tk.DISABLED)
+        self.lookback_entry.grid(column=1, row=0)
 
         self.seasonal_lookback_option = tk.IntVar(value=0)
         self.seasonal_period_var = tk.IntVar(value="") # type: ignore
         self.seasonal_val_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
-        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=8).grid(column=0, row=2)
-        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8).grid(column=1, row=2)
+        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option, command=self.openOtherEntries).grid(column=0, row=1)
+        self.seasonal_lookback_entry_1 = ttk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=8, state=tk.DISABLED)
+        self.seasonal_lookback_entry_1.grid(column=0, row=2)
+        self.seasonal_lookback_entry_2 = ttk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8, state=tk.DISABLED)
+        self.seasonal_lookback_entry_2.grid(column=1, row=2)
 
         self.scale_var = tk.StringVar(value="None")
         ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
@@ -220,9 +228,9 @@ class MultiLayerPerceptron:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="") # type: ignore
+        self.forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
@@ -230,7 +238,7 @@ class MultiLayerPerceptron:
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.forecast(forecast_num.get())).grid(column=2, row=3)
+        ttk.Button(test_model_main_frame, text="Test Model", command=self.forecast).grid(column=2, row=3)
         ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
 
         ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=3)
@@ -248,6 +256,8 @@ class MultiLayerPerceptron:
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path) # type: ignore
@@ -271,6 +281,8 @@ class MultiLayerPerceptron:
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path) # type: ignore
@@ -281,8 +293,11 @@ class MultiLayerPerceptron:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
+        try:
+            df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+        except:
+            return
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
@@ -334,9 +349,38 @@ class MultiLayerPerceptron:
             self.no_optimization_choice_var.set(0)
             self.do_optimization = True
 
+    def openOtherEntries(self):
+        if self.do_forecast_option.get():
+            self.cv_entry_1["state"] = tk.NORMAL
+            self.cv_entry_2["state"] = tk.NORMAL
+        else:
+            self.cv_entry_1["state"] = tk.DISABLED
+            self.cv_entry_2["state"] = tk.DISABLED
+        if self.validation_option.get() == 1:
+            self.random_percent_entry["state"] = tk.NORMAL
+        else:
+            self.random_percent_entry["state"] = tk.DISABLED
+        if self.validation_option.get() == 2:
+            self.cv_value_entry["state"] = tk.NORMAL
+        else:
+            self.cv_value_entry["state"] = tk.DISABLED
+        if self.lookback_option.get():
+            self.lookback_entry["state"] = tk.NORMAL
+        else:
+            self.lookback_entry["state"] = tk.DISABLED
+        if self.seasonal_lookback_option.get():
+            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
+            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
+        else:
+            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
+            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
+
     def saveModel(self):
         path = filedialog.asksaveasfilename()
-        params = {
+        if not path:
+            return
+        try:
+            params = {
                 "predictor_names": self.predictor_names,
                 "label_name": self.label_name,
                 "is_round": self.is_round,
@@ -358,6 +402,9 @@ class MultiLayerPerceptron:
                 "output_activation": self.output_activation.get(),
                 "hyperparameters": [i.get() for i in self.hyperparameters],
                 }
+        except:
+            popupmsg("Model is not created")
+            return
         
         os.mkdir(path)
         self.model: Sequential
@@ -378,7 +425,12 @@ class MultiLayerPerceptron:
 
     def loadModel(self):
         path = filedialog.askdirectory()
-        self.model = load_model(path+"/model.h5") # type: ignore
+        if not path:
+            return
+        try:
+            self.model = load_model(path+"/model.h5") # type: ignore
+        except:
+            popupmsg("There is no model file at the path")
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()
@@ -440,6 +492,76 @@ class MultiLayerPerceptron:
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
         #self.getData()
+
+    def checkErrors(self):
+        try:
+            msg = "Read a data frist"
+            self.df.head(1)
+
+            msg = "Select predictors"
+            if not self.predictor_list.get(0):
+                raise Exception
+            
+            msg = "Select a target"
+            if not self.target_list.get(0):
+                raise Exception
+
+            msg = "Target and predictor have same variable"
+            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
+                raise Exception
+
+            msg = "Enter a valid percent value"
+            if self.random_percent_var.get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid K-fold value (Above 2)"
+            if self.validation_option.get() == 2 and self.cross_val_var.get() <= 1:
+                raise Exception
+
+            msg = "Enter a valid lookback value"
+            if self.lookback_option.get():
+                self.lookback_val_var.get()
+            
+            msg = "Enter valid periodic lookback values"
+            if self.seasonal_lookback_option.get():
+                self.seasonal_val_var.get()
+                self.seasonal_period_var.get()
+
+            msg = "Select a valid layer number"
+            if not self.no_optimization_choice_var.get():
+                raise Exception
+
+            msg = "Enter a valid neuron number"
+            neuron_empty = False
+            for i in range(self.no_optimization_choice_var.get()):
+                try:
+                    self.neuron_numbers_var[i].get()
+                except:
+                    neuron_empty = True
+            if neuron_empty:
+                raise Exception
+
+            msg = "Enter a valid Epoch size"
+            if self.hyperparameters[0].get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid Batch size"
+            if self.hyperparameters[1].get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid Learning Rate"
+            if self.hyperparameters[-2].get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid Momentum value"
+            if self.hyperparameters[2].get() != "Adam" and self.hyperparameters[-1].get() <= 0:
+                raise Exception
+
+            return False
+        except:
+            popupmsg(msg) # type: ignore
+            return True
+            
    
     def getLookback(self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
         if sliding == 0:
@@ -520,6 +642,8 @@ class MultiLayerPerceptron:
 
     def createModel(self):
         clear_session()
+        if self.checkErrors():
+            return
         X, y = self.getData()
         X: np.ndarray
         y: np.ndarray
@@ -527,7 +651,8 @@ class MultiLayerPerceptron:
         layers = self.no_optimization_choice_var.get()
         
         learning_rate = self.hyperparameters[4].get()
-        momentum = self.hyperparameters[5].get()
+        if self.hyperparameters[2] != "Adam":
+            momentum = self.hyperparameters[5].get()
 
         optimizers = {
                 "Adam": Adam(learning_rate=learning_rate),
@@ -654,12 +779,21 @@ class MultiLayerPerceptron:
 
         return np.array(pred).reshape(-1)
 
-    def forecast(self, num):
+    def forecast(self):
+        try:
+            num = self.forecast_num.get()
+        except:
+            popupmsg("Enter a valid Forecast value")
+            return
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
-        X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
-        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
-        self.y_test = y_test
+        try:
+            X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
+            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
+            self.y_test = y_test
+        except:
+            popupmsg("Enter a test data")
+            return
         
         if lookback_option == 0 and seasonal_lookback_option == 0:
             if self.scale_var.get() != "None":
@@ -693,7 +827,10 @@ class MultiLayerPerceptron:
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
-        y_test = self.y_test
+        try:
+            y_test = self.y_test
+        except:
+            return
         pred = self.pred
         plt.plot(y_test)
         plt.plot(pred)
