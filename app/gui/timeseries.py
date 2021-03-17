@@ -614,7 +614,7 @@ class TimeSeries:
                 raise Exception
             
             msg = "Acf cannot be bigger than 1 nor less than 0"
-            if self.lag_option_var.get() == 3 and float(self.lag_entries[3].get()) >= 1 or float(self.lag_entries[3].get()) <= 0:
+            if self.lag_option_var.get() == 3 and (float(self.lag_entries[3].get()) >= 1 or float(self.lag_entries[3].get()) <= 0):
                 raise Exception
  
             msg = "Select a valid layer number"
