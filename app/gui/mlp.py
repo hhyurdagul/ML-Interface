@@ -350,7 +350,7 @@ class MultiLayerPerceptron:
             self.do_optimization = True
 
     def openOtherEntries(self):
-        if self.do_forecast_option.get():
+        if not self.do_forecast_option.get():
             self.cv_entry_1["state"] = tk.NORMAL
             self.cv_entry_2["state"] = tk.NORMAL
         else:
@@ -489,6 +489,7 @@ class MultiLayerPerceptron:
         [self.hyperparameters[i].set(j) for i, j in enumerate(params["hyperparameters"])]
         
         self.openLayers(True)
+        self.openOtherEntries()
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
         #self.getData()
@@ -554,7 +555,7 @@ class MultiLayerPerceptron:
                 raise Exception
 
             msg = "Enter a valid Momentum value"
-            if self.hyperparameters[2].get() != "Adam" and self.hyperparameters[-1].get() <= 0:
+            if self.hyperparameters[2].get() != "Adam" and float(self.hyperparameters[-1].get()) < 0:
                 raise Exception
 
             return False

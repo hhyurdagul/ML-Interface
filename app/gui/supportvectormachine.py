@@ -63,10 +63,14 @@ class SupportVectorMachine:
         self.cross_val_var = tk.IntVar(value=5)
         tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=1, columnspan=2, sticky=tk.W)
         tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option).grid(column=0, row=3, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option).grid(column=0, row=4, columnspan=2, sticky=tk.W)
-        ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8).grid(column=1, row=2)
-        ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8).grid(column=1, row=3)
+        self.cv_entry_1 = tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option)
+        self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
+        self.cv_entry_2 = tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option)
+        self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
+        self.random_percent_entry = ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8)
+        self.random_percent_entry.grid(column=1, row=2)
+        self.cv_value_entry = ttk.Entry(model_validation_frame, textvariable=self.cross_val_var, width=8)
+        self.cv_value_entry.grid(column=1, row=3)
         
         # Customize Train Set
         customize_train_set_frame = ttk.LabelFrame(self.root, text="Customize Train Set")
@@ -75,14 +79,17 @@ class SupportVectorMachine:
         self.lookback_option = tk.IntVar(value=0)
         self.lookback_val_var = tk.IntVar(value="") # type: ignore
         tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
-        tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8).grid(column=1, row=0)
+        self.lookback_entry = tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8)
+        self.lookback_entry.grid(column=1, row=0)
 
         self.seasonal_lookback_option = tk.IntVar(value=0)
         self.seasonal_period_var = tk.IntVar(value="") # type: ignore
         self.seasonal_val_var = tk.IntVar(value="") # type: ignore
         tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
-        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9).grid(column=0, row=2)
-        tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8).grid(column=1, row=2)
+        self.seasonal_lookback_entry_1 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9)
+        self.seasonal_lookback_entry_1.grid(column=0, row=2)
+        self.seasonal_lookback_entry_2 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8)
+        self.seasonal_lookback_entry_2.grid(column=1, row=2)
 
         self.scale_var = tk.StringVar(value="None")
         ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
@@ -137,7 +144,7 @@ class SupportVectorMachine:
         self.optimization_parameters = [[tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()], [tk.Variable(), tk.Variable()]]
         
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
-        ttk.Label(model_parameters_frame, text="------ Search Range ------").grid(column=2, row=0, columnspan=2)
+        ttk.Label(model_parameters_frame, text="----- Search Range -----").grid(column=2, row=0, columnspan=2)
 
         self.model_parameters_frame_options = [
             [
@@ -149,11 +156,11 @@ class SupportVectorMachine:
         ]
 
         for i, j in enumerate(self.model_parameters_frame_options):
-            j[1].grid(column=1, row=i+1, padx=2, pady=2)
+            j[1].grid(column=1, row=i+1, padx=2, pady=2, sticky=tk.W)
             j[2].grid(column=2, row=i+1, padx=2, pady=2)
             j[3].grid(column=3, row=i+1, padx=2, pady=2)
 
-        ttk.Label(model_parameters_frame, text="Gamma:").grid(column=0, row=7)
+        ttk.Label(model_parameters_frame, text="Gamma:").grid(column=0, row=7, sticky=tk.W)
         self.gamma_choice = tk.IntVar(value=0)
         self.gamma_radios = [tk.Radiobutton(model_parameters_frame, text=j, value=i, variable=self.gamma_choice, state=tk.DISABLED, command=self.openEntries) for i, j in enumerate(["Scale", "Auto", "Value"])]
         
@@ -173,9 +180,9 @@ class SupportVectorMachine:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        forecast_num = tk.IntVar(value="") # type: ignore
+        self.forecast_num = tk.IntVar(value="") # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=forecast_num).grid(column=1, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
@@ -183,7 +190,7 @@ class SupportVectorMachine:
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.forecast(forecast_num.get())).grid(column=2, row=3)
+        ttk.Button(test_model_main_frame, text="Test Model", command=self.forecast).grid(column=2, row=3)
         ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
@@ -201,6 +208,8 @@ class SupportVectorMachine:
 
     def readCsv(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path) # type: ignore
@@ -220,6 +229,8 @@ class SupportVectorMachine:
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        if not path:
+            return
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path) # type: ignore
@@ -230,8 +241,11 @@ class SupportVectorMachine:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
+        try:
+            df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+        except:
+            return
         top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
@@ -265,7 +279,13 @@ class SupportVectorMachine:
 
     def saveModel(self):
         path = filedialog.asksaveasfilename()
-        params = self.model.get_params()
+        if not path:
+            return
+        try:
+            params = self.model.get_params()
+        except:
+            popupmsg("Model is not created")
+            return
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
         params["is_round"] = self.is_round
@@ -300,7 +320,13 @@ class SupportVectorMachine:
 
     def loadModel(self):
         path = filedialog.askdirectory()
-        model_path = path + "/model.joblib"
+        if not path:
+            return
+        try:
+            model_path = path + "/model.joblib"
+        except:
+            popupmsg("There is no model file at the path")
+            return
         self.model = load(model_path)
         infile = open(path+"/model.json")
         params = json.load(infile)
@@ -368,6 +394,7 @@ class SupportVectorMachine:
         self.kernel_type_var.set(kernel)
        
         self.openEntries()
+        self.openOtherEntries()
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
@@ -390,7 +417,7 @@ class SupportVectorMachine:
             if self.gamma_choice.get() == 2:
                 to_open.append(3)
         
-        if self.gs_cross_val_option.get() == 1:
+        if self.grid_option_var.get() and self.gs_cross_val_option.get():
             self.gs_cross_val_entry["state"] = tk.NORMAL
 
         if self.kernel_type_var.get() == 2:
@@ -403,9 +430,7 @@ class SupportVectorMachine:
         to_open.append(2)
 
         to_open.sort()
-        
         opt = self.grid_option_var.get()
-
         self.open(to_open, opt)
 
     def open(self, to_open, opt=0):
@@ -419,6 +444,87 @@ class SupportVectorMachine:
                 self.model_parameters_frame_options[i][1]["state"] = tk.NORMAL
         
         self.vars_nums = to_open
+    
+    def openOtherEntries(self):
+        if not self.do_forecast_option.get():
+            self.cv_entry_1["state"] = tk.NORMAL
+            self.cv_entry_2["state"] = tk.NORMAL
+        else:
+            self.cv_entry_1["state"] = tk.DISABLED
+            self.cv_entry_2["state"] = tk.DISABLED
+        if self.validation_option.get() == 1:
+            self.random_percent_entry["state"] = tk.NORMAL
+        else:
+            self.random_percent_entry["state"] = tk.DISABLED
+        if self.validation_option.get() == 2:
+            self.cv_value_entry["state"] = tk.NORMAL
+        else:
+            self.cv_value_entry["state"] = tk.DISABLED
+        if self.lookback_option.get():
+            self.lookback_entry["state"] = tk.NORMAL
+        else:
+            self.lookback_entry["state"] = tk.DISABLED
+        if self.seasonal_lookback_option.get():
+            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
+            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
+        else:
+            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
+            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
+
+    def checkErrors(self):
+        try:
+            msg = "Read a data first"
+            self.df.head(1)
+
+            msg = "Select predictors"
+            if not self.predictor_list.get(0):
+                raise Exception
+            
+            msg = "Select a target"
+            if not self.target_list.get(0):
+                raise Exception
+
+            msg = "Target and predictor have same variable"
+            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
+                raise Exception
+
+            msg = "Enter a valid percent value"
+            if self.random_percent_var.get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid K-fold value (Above 2)"
+            if self.validation_option.get() == 2 and self.cross_val_var.get() <= 1:
+                raise Exception
+
+            msg = "Enter a valid lookback value"
+            if self.lookback_option.get():
+                self.lookback_val_var.get()
+            
+            msg = "Enter valid periodic lookback values"
+            if self.seasonal_lookback_option.get():
+                self.seasonal_val_var.get()
+                self.seasonal_period_var.get()
+
+            msg = "Enter a valid Interval for grid search"
+            if self.grid_option_var.get() and self.interval_var.get() < 1:
+                raise Exception
+        
+            msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
+            if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
+                raise Exception
+
+            for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
+                if self.model_parameters_frame_options[i][1]["state"] != tk.DISABLED and not self.parameters[i].get():
+                    msg = "Enter a valid " + j +  " value"
+                    raise Exception
+                
+                if self.model_parameters_frame_options[i][2]["state"] != tk.DISABLED and (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
+                    msg = "Enter a valid " + j +  " value in grid search area"
+                    raise Exception
+
+        except:
+            popupmsg(msg)
+            return True
 
     def getLookback(self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
         if sliding == 0:
@@ -499,6 +605,8 @@ class SupportVectorMachine:
 
 
     def createModel(self):
+        if self.checkErrors():
+            return
         gamma_choice = self.gamma_choice.get()
         kernels = ["linear", "rbf", "poly", "sigmoid"]
         kernel = kernels[self.kernel_type_var.get()]
@@ -686,12 +794,21 @@ class SupportVectorMachine:
 
         return np.array(pred).reshape(-1)
 
-    def forecast(self, num):
+    def forecast(self):
+        try:
+            num = self.forecast_num.get()
+        except:
+            popupmsg("Enter a valid forecast value")
+            return
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
-        X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
-        y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
-        self.y_test = y_test
+        try:
+            X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
+            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
+            self.y_test = y_test
+        except:
+            popupmsg("Read a test data")
+            return
        
         if lookback_option == 0 and seasonal_lookback_option == 0:
             if self.scale_var.get() != "None":
@@ -726,7 +843,10 @@ class SupportVectorMachine:
 
     def vsGraph(self):
         y_test = self.y_test
-        pred = self.pred
+        try:
+            pred = self.pred
+        except:
+            return
         plt.plot(y_test)
         plt.plot(pred)
         plt.legend(["test", "pred"], loc="upper left")

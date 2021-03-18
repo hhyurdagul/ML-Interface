@@ -644,7 +644,7 @@ class TimeSeries:
                 raise Exception
             
             msg = "Enter a valid Momentum value"
-            if self.hyperparameters["Optimizer"].get() != "Adam" and (self.hyperparameters["Momentum"].get() <= 0):
+            if self.hyperparameters["Optimizer"].get() != "Adam" and float(self.hyperparameters["Momentum"].get()) < 0:
                 raise Exception
 
             return False
