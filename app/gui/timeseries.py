@@ -640,11 +640,11 @@ class TimeSeries:
                 raise Exception
 
             msg = "Enter a valid Learning Rate"
-            if self.hyperparameters["Learning_Rate"].get() <= 0:
+            if float(self.hyperparameters["Learning_Rate"].get()) <= 0:
                 raise Exception
             
             msg = "Enter a valid Momentum value"
-            if self.hyperparameters["Optimizer"].get() != "Adam" and self.hyperparameters["Momentum"].get() <= 0:
+            if self.hyperparameters["Optimizer"].get() != "Adam" and (self.hyperparameters["Momentum"].get() <= 0):
                 raise Exception
 
             return False
