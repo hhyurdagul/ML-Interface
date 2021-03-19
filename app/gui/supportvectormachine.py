@@ -514,6 +514,7 @@ class SupportVectorMachine:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
+            """
             for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
                 if self.model_parameters_frame_options[i][1]["state"] != "disabled" and not self.parameters[i].get():
                     msg = "Enter a valid " + j +  " value"
@@ -524,6 +525,7 @@ class SupportVectorMachine:
                         if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
                             msg = "Enter a valid " + j +  " value in grid search area"
                             raise Exception
+            """
 
         except:
             popupmsg(msg)
