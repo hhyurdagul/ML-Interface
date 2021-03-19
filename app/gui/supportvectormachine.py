@@ -78,17 +78,17 @@ class SupportVectorMachine:
         
         self.lookback_option = tk.IntVar(value=0)
         self.lookback_val_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option).grid(column=0, row=0)
-        self.lookback_entry = tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8)
+        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option, command=self.openOtherEntries).grid(column=0, row=0)
+        self.lookback_entry = tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8, state=tk.DISABLED)
         self.lookback_entry.grid(column=1, row=0)
 
         self.seasonal_lookback_option = tk.IntVar(value=0)
         self.seasonal_period_var = tk.IntVar(value="") # type: ignore
         self.seasonal_val_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option).grid(column=0, row=1)
-        self.seasonal_lookback_entry_1 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9)
+        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option, command=self.openOtherEntries).grid(column=0, row=1)
+        self.seasonal_lookback_entry_1 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9, state=tk.DISABLED)
         self.seasonal_lookback_entry_1.grid(column=0, row=2)
-        self.seasonal_lookback_entry_2 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8)
+        self.seasonal_lookback_entry_2 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8, state=tk.DISABLED)
         self.seasonal_lookback_entry_2.grid(column=1, row=2)
 
         self.scale_var = tk.StringVar(value="None")
@@ -518,9 +518,10 @@ class SupportVectorMachine:
                     msg = "Enter a valid " + j +  " value"
                     raise Exception
                 
-                if self.model_parameters_frame_options[i][2]["state"] != tk.DISABLED and (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-                    msg = "Enter a valid " + j +  " value in grid search area"
-                    raise Exception
+                if self.grid_option_var.get():
+                    if (self.model_parameters_frame_options[i][2]["state"] != tk.DISABLED):
+                        msg = "Enter a valid " + j +  " value in grid search area"
+                        raise Exception
 
         except:
             popupmsg(msg)
