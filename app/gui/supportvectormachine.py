@@ -56,16 +56,16 @@ class SupportVectorMachine:
         model_validation_frame.grid(column=0, row=1)
 
         self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option).grid(column=0, row=0, columnspan=2)
+        tk.Checkbutton(model_validation_frame, text="Do Forecast", offvalue=0, onvalue=1, variable=self.do_forecast_option, command=self.openOtherEntries).grid(column=0, row=0, columnspan=2)
         
         self.validation_option = tk.IntVar(value=0)
         self.random_percent_var = tk.IntVar(value=70)
         self.cross_val_var = tk.IntVar(value=5)
-        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option).grid(column=0, row=1, columnspan=2, sticky=tk.W)
-        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option).grid(column=0, row=2, sticky=tk.W)
-        self.cv_entry_1 = tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option)
+        tk.Radiobutton(model_validation_frame, text="No validation, use all data rows", value=0, variable=self.validation_option, command=self.openOtherEntries).grid(column=0, row=1, columnspan=2, sticky=tk.W)
+        tk.Radiobutton(model_validation_frame, text="Random percent", value=1, variable=self.validation_option, command=self.openOtherEntries).grid(column=0, row=2, sticky=tk.W)
+        self.cv_entry_1 = tk.Radiobutton(model_validation_frame, text="K-fold cross-validation", value=2, variable=self.validation_option, command=self.openOtherEntries)
         self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
-        self.cv_entry_2 = tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option)
+        self.cv_entry_2 = tk.Radiobutton(model_validation_frame, text="Leave one out cross-validation", value=3, variable=self.validation_option, command=self.openOtherEntries)
         self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
         self.random_percent_entry = ttk.Entry(model_validation_frame, textvariable=self.random_percent_var, width=8)
         self.random_percent_entry.grid(column=1, row=2)
@@ -204,6 +204,7 @@ class SupportVectorMachine:
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
         self.openEntries()
+        self.openOtherEntries()
 
 
     def readCsv(self, file_path):
