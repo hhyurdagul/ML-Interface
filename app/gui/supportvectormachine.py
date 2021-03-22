@@ -799,6 +799,12 @@ class SupportVectorMachine:
 
     def forecast(self):
         try:
+            self.predictor_names
+        except:
+            popupmsg("Create/Load a model first")
+            return
+
+        try:
             num = self.forecast_num.get()
         except:
             popupmsg("Enter a valid forecast value")

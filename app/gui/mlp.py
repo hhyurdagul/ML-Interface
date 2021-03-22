@@ -782,12 +782,19 @@ class MultiLayerPerceptron:
 
     def forecast(self):
         try:
+            self.predictor_names
+        except:
+            popupmsg("Create/Load a model first")
+            return
+        try:
             num = self.forecast_num.get()
         except:
             popupmsg("Enter a valid Forecast value")
             return
+
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
+
         try:
             X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
