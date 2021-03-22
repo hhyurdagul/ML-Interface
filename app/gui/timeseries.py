@@ -513,7 +513,7 @@ class TimeSeries:
 
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
-
+        """
         if self.s_difference_choice_var.get() and self.difference_choice_var.get():
             f_diff = self.interval_var.get()
             s_diff = self.s_interval_var.get()
@@ -535,7 +535,10 @@ class TimeSeries:
         else:
             plot_acf(data, ax=ax, lags=lags)
             plot_pacf(data, ax=ax1, lags=lags)
-
+        """
+        plot_acf(data, ax=ax, lags=lags)
+        plot_pacf(data, ax=ax1, lags=lags)
+        
         canvas = FigureCanvasTkAgg(fig, top)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
