@@ -514,16 +514,18 @@ class TimeSeries:
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
 
-        print(self.difference_choice_var.get())
-        print(self.s_difference_choice_var.get())
-
-        if self.s_difference_choice_var.get():
+        if self.s_difference_choice_var.get() and self.difference_choice_var.get():
             f_diff = self.interval_var.get()
             s_diff = self.s_interval_var.get()
             first_diff: pd.Series
             first_diff = data.diff(f_diff)[f_diff:] # type: ignore
             plot_acf(first_diff.diff(s_diff)[s_diff:], ax=ax, lags=lags)
             plot_pacf(first_diff.diff(s_diff)[s_diff:], ax=ax1, lags=lags)
+
+        elif self.s_difference_choice_var.get():
+            f_diff = self.s_interval_var.get()
+            plot_acf(data.diff(f_diff)[f_diff:], ax=ax, lags=lags)
+            plot_pacf(data.diff(f_diff)[f_diff:], ax=ax1, lags=lags)
         
         elif self.difference_choice_var.get():
             f_diff = self.interval_var.get()
@@ -873,6 +875,7 @@ class TimeSeries:
             self.pred = np.round(self.pred).astype(int)
         
         if self.test_data_valid:
+            self.y_test: pd.DataFrame
             self.y_test = self.test_df[[self.label_name]]
             self.y_test = np.asarray(self.y_test)[:num]
 
@@ -891,5 +894,3 @@ class TimeSeries:
             return
         plt.legend(loc="upper left")
         plt.show()
-
-
