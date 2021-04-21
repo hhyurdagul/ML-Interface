@@ -396,6 +396,7 @@ class TimeSeries:
             self.model = load_model(path+"/model.h5")
         except:
             popupmsg("There is no model file at the path")
+            return
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()

@@ -14,6 +14,8 @@ import os
 import json
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
+from ReliefF import ReliefF
+from pymrmre import mrmr
 
 # Keras
 from tensorflow.keras.backend import clear_session
@@ -64,7 +66,15 @@ class MultiLayerPerceptron:
 
         ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(column=2, row=2)
         ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
-       
+
+        self.feature_selection_number_var = tk.IntVar(value="") # type: ignore
+        self.feature_selection_choice_var = tk.IntVar(value=0) # type: ignore
+        ttk.Label(get_train_set_frame, text="# of features").grid(column=0, row=2)
+        ttk.Entry(get_train_set_frame, textvariable=self.feature_selection_number_var, width=8).grid(column=0, row=3)
+        ttk.Button(get_train_set_frame, text="Feature Selection", command=self.featureSelection).grid(column=0 ,row=4)
+        tk.Radiobutton(get_train_set_frame, text="ReliefF Algoritm", value=1, variable=self.feature_selection_choice_var).grid(column=1 ,row=4)
+        tk.Radiobutton(get_train_set_frame, text="MRMR Algoritm", value=2, variable=self.feature_selection_choice_var).grid(column=2 ,row=4)
+
         # Model testing and validation
         model_validation_frame = ttk.Labelframe(self.root, text="Model testing and validation")
         model_validation_frame.grid(column=0, row=1)
@@ -329,6 +339,33 @@ class MultiLayerPerceptron:
         except:
             pass
 
+    def featureSelection(self):
+        choice = self.feature_selection_choice_var.get()
+        number = self.feature_selection_number_var.get()
+        feature_names = list(self.predictor_list.get(0, tk.END))
+        label_name = [self.target_list.get(0)]
+        X, y = self.df[feature_names], self.df[label_name]
+        length = len(feature_names)
+        
+        if number > length:
+            popupmsg("Number can not be higher than the predictor count")
+            return
+
+        if choice == 1:
+            rf = ReliefF(n_neighbors=len(y)//5, n_features_to_keep=length)
+            f = rf.fit_transform(X.values, y.values.reshape(-1))
+            l = X.columns[rf.top_features].tolist()[:number]
+        elif choice == 2:
+            sol = mrmr.mrmr_ensemble(features=X.astype("double"), targets=y, solution_length=length)
+            l = sol[0][0][:number]
+        else:
+            popupmsg("Please select a valid algorithm")
+            return
+
+        self.predictor_list.delete(0, tk.END)
+        for i in l:
+            self.predictor_list.insert(tk.END, i)
+
     def openLayers(self, var):
         for i in self.no_optimization:
             i[2]["state"] = tk.DISABLED
@@ -431,6 +468,7 @@ class MultiLayerPerceptron:
             self.model = load_model(path+"/model.h5") # type: ignore
         except:
             popupmsg("There is no model file at the path")
+            return
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()

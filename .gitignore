@@ -1,6 +1,7 @@
-data/
+other/
 .vim/
 app/.vscode
 app/gui/.empty
 app/gui/__pycache__/
+app/__pycache__/
 
