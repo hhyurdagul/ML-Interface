@@ -396,7 +396,6 @@ class TimeSeries:
             self.model = load_model(path+"/model.h5")
         except:
             popupmsg("There is no model file at the path")
-            return
         infile = open(path+"/model.json")
         params = json.load(infile)
         infile.close()
@@ -602,7 +601,7 @@ class TimeSeries:
             if self.s_difference_choice_var.get():
                 self.s_interval_var.get()
 
-            msg = "Enter a lag limit bigger than 1"
+            msg = "Enter a lag number bigger than 1"
             if self.acf_lags.get() <= 1:
                 raise Exception
 
@@ -753,11 +752,7 @@ class TimeSeries:
             lag = self.lag_entries[3].get()
             numbers = np.array(acf_vals[1:])
             self.lags = np.where(numbers>float(lag))[0]
-            try:
-                max_lag = max(self.lags) + 1
-            except:
-                popupmsg("There is no lag point bigger than "+str(lag))
-                return 
+            max_lag = max(self.lags) + 1
 
         X, y = self.getLags(features, label, max_lag)
         return X, y 
@@ -769,10 +764,7 @@ class TimeSeries:
             return
 
         features, label = self.getDataset()
-        try:
-            X_train, y_train = self.createLag(features, label)
-        except:
-            return
+        X_train, y_train = self.createLag(features, label)
         X_train = X_train[:, self.lags]
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
@@ -854,17 +846,12 @@ class TimeSeries:
 
     def testModel(self):
         try:
-            input_value = self.last
-        except:
-            popupmsg("Create/Load a model first")
-            return
-
-        try:
             num = self.forecast_num.get()
         except:
             popupmsg("Enter a valid Forecast value")
             return
 
+        input_value = self.last
         steps, features = input_value.shape[0], input_value.shape[1]
         shape = (1,steps,features)
         pred = []
@@ -893,9 +880,6 @@ class TimeSeries:
         if self.test_data_valid:
             self.y_test: pd.DataFrame
             self.y_test = self.test_df[[self.label_name]]
-            if num > self.y_test.shape[0]:
-                popupmsg("Forecast number is bigger than test data (Max: " + str(self.y_test.shape[0]) + ")")
-                return
             self.y_test = np.asarray(self.y_test)[:num]
 
             seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1

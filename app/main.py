@@ -12,7 +12,6 @@ from gui.sarima import SARIMA
 from gui.montecarlo import MonteCarlo
 from gui.movingaverage import MovingAverage
 from gui.hybrid import Hybrid
-from gui.featureselection import FeatureSelection
 
 class GUI:
     def __init__(self):
@@ -42,9 +41,6 @@ class GUI:
 
         hybrid = Hybrid()
         self.add(hybrid, "Hybrid")
-        
-        fs = FeatureSelection()
-        self.add(fs, "Feature Selection")
 
         self.parent.pack(expand=1, fill='both')
 
