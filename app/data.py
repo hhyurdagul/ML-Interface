@@ -17,11 +17,6 @@ holiday_dates = [
                  {"month":10, "day":29}
 ]
 
-def isHoliday(d):
-    for i in holiday_dates:
-        if(i["day"] == d.day) and (i["month"] == d.month):
-            return 1
-    return 0
 
 def isWeekend(d):
     return 1 if d.weekday() == 5 or d.weekday() == 6 else 0
