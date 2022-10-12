@@ -9,6 +9,7 @@ from gui.supportvectormachine import SupportVectorMachine
 from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.mlp import MultiLayerPerceptron
 from gui.sarima import SARIMA
+from gui.feature_selection import FS
 from gui.montecarlo import MonteCarlo
 from gui.movingaverage import MovingAverage
 from gui.hybrid import Hybrid
@@ -33,6 +34,9 @@ class GUI:
         sarima = SARIMA()
         self.add(sarima, "SARIMA")
         
+        fs = FS()
+        self.add(fs, "Feature Selection")
+
         monte = MonteCarlo()
         self.add(monte, "Monte Carlo")
         
