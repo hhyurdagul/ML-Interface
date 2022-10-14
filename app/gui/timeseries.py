@@ -683,7 +683,7 @@ class TimeSeries:
         features = self.df[[self.predictor_names]].iloc[-size:].copy().to_numpy()
         label = self.df[[self.label_name]].iloc[-size:].copy().to_numpy()
         
-        if label.dtype == int or label.dtype == np.int or label.dtype == np.int64:
+        if label.dtype == int or label.dtype == np.intc or label.dtype == np.int64:
             self.is_round = True
 
         if any(label < 0):

@@ -572,7 +572,7 @@ class SupportVectorMachine:
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
         
-        if y.dtype == int or y.dtype == np.int or y.dtype == np.int64:
+        if y.dtype == int or y.dtype == np.intc or y.dtype == np.int64:
             self.is_round = True
         if any(y < 0):
             self.is_negative = True

@@ -5,10 +5,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from gui.timeseries import TimeSeries
-from gui.supportvectormachine import SupportVectorMachine
-from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.mlp import MultiLayerPerceptron
+from gui.supportvectormachine import SupportVectorMachine
+from gui.random_forest import RandomForest
+from gui.xg import XGB
+from gui.ridge import Ridge
+from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.sarima import SARIMA
+from gui.elm import ELM
 from gui.feature_selection import FS
 from gui.montecarlo import MonteCarlo
 from gui.movingaverage import MovingAverage
@@ -23,16 +27,28 @@ class GUI:
         self.add(time_series, "Time Series")
         
         mlp = MultiLayerPerceptron()
-        self.add(mlp, "Mlp")
-
+        self.add(mlp, "MLP")
+        
         svm = SupportVectorMachine()
-        self.add(svm, "Support Vector Machine")
-      
+        self.add(svm, "SVM")
+
+        rf = RandomForest()
+        self.add(rf, "Random Forest")
+
+        xgb = XGB()
+        self.add(xgb, "XGBoost")
+        
+        ridge = Ridge()
+        self.add(ridge, "Ridge Regression")
+
         grnn = GeneralRegressionNeuralNetwork()
         self.add(grnn, "GRNN")
         
         sarima = SARIMA()
         self.add(sarima, "SARIMA")
+        
+        elm = ELM()
+        self.add(elm, "ELM")
         
         fs = FS()
         self.add(fs, "Feature Selection")

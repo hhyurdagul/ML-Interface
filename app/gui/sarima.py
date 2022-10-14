@@ -240,7 +240,7 @@ class SARIMA:
         size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
 
-        if series.dtype == int or series.dtype == np.int or y.dtype == np.int64:
+        if series.dtype == int or series.dtype == np.intc or y.dtype == np.int64:
             self.is_round = True
         if any(series < 0):
             self.is_negative = True
