@@ -3,11 +3,11 @@ from tkinter import ttk
 from tkinter import filedialog
 from pandastable import Table
 
-import numpy as np
 import pandas as pd
 
 from mrmr import mrmr_regression
-from sklearn.feature_selection import f_regression
+from sklearn.feature_selection import f_regression, SequentialFeatureSelector
+from sklearn.linear_model import LinearRegression
 
 class FS:
     def __init__(self):
@@ -50,6 +50,8 @@ class FS:
         ttk.Entry(feature_selection_frame, textvariable=feature_count).grid(column=1, row=0)
         ttk.Button(feature_selection_frame, text="mRMR", command=lambda: self.mrmr_select(feature_count)).grid(column=0, row=1)
         ttk.Button(feature_selection_frame, text="F-Regression", command=lambda: self.f_regression_select(feature_count)).grid(column=1, row=1)
+        ttk.Button(feature_selection_frame, text="Forward Sequential Selector", command=lambda: self.forward_sequential_select(feature_count)).grid(column=0, row=2)
+        ttk.Button(feature_selection_frame, text="Backward Sequential Selector", command=lambda: self.backward_sequential_select(feature_count)).grid(column=1, row=2)
 
     def mrmr_select(self, K):
         X = self.df[list(self.predictor_list.get(0, tk.END))]
@@ -65,6 +67,28 @@ class FS:
         y = self.df[self.target_list.get(0)]
         selected_features, _ = f_regression(X=X, y=y)
         selected_features = X.columns[selected_features.argsort()[::-1]].values[:K.get()]
+        top = tk.Toplevel(self.root)
+        df = pd.DataFrame(index=range(len(selected_features)), data=selected_features)
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+    
+    def forward_sequential_select(self, K):
+        X = self.df[list(self.predictor_list.get(0, tk.END))]
+        y = self.df[self.target_list.get(0)]
+        selector = SequentialFeatureSelector(estimator=LinearRegression(), n_features_to_select=K.get(), direction="forward")
+        selected_indices = selector.fit(X, y).get_support(True)
+        selected_features = X.columns[selected_indices]
+        top = tk.Toplevel(self.root)
+        df = pd.DataFrame(index=range(len(selected_features)), data=selected_features)
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+    
+    def backward_sequential_select(self, K):
+        X = self.df[list(self.predictor_list.get(0, tk.END))]
+        y = self.df[self.target_list.get(0)]
+        selector = SequentialFeatureSelector(estimator=LinearRegression(), n_features_to_select=K.get(), direction="backward")
+        selected_indices = selector.fit(X, y).get_support(True)
+        selected_features = X.columns[selected_indices]
         top = tk.Toplevel(self.root)
         df = pd.DataFrame(index=range(len(selected_features)), data=selected_features)
         pt = Table(top, dataframe=df, editable=False)
