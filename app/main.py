@@ -8,6 +8,7 @@ from gui.timeseries import TimeSeries
 from gui.mlp import MultiLayerPerceptron
 from gui.supportvectormachine import SupportVectorMachine
 from gui.random_forest import RandomForest
+from gui.lgbm import LGBM
 from gui.xg import XGB
 from gui.ridge import Ridge
 from gui.generalregression import GeneralRegressionNeuralNetwork
@@ -36,6 +37,9 @@ class GUI:
         rf = RandomForest()
         self.add(rf, "Random Forest")
 
+        lgbm = LGBM()
+        self.add(lgbm, "LightGBM")
+        
         xgb = XGB()
         self.add(xgb, "XGBoost")
         
