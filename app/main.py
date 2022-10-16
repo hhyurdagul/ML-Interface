@@ -11,6 +11,7 @@ from gui.random_forest import RandomForest
 from gui.xg import XGB
 from gui.ridge import Ridge
 from gui.generalregression import GeneralRegressionNeuralNetwork
+from gui.random_walk import RandomWalk
 from gui.sarima import SARIMA
 from gui.elm import ELM
 from gui.feature_selection import FS
@@ -49,6 +50,9 @@ class GUI:
         
         elm = ELM()
         self.add(elm, "ELM")
+        
+        rw = RandomWalk()
+        self.add(rw, "Random Walk")
         
         fs = FS()
         self.add(fs, "Feature Selection")

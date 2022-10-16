@@ -8,12 +8,28 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+import random
 from .helpers import *
 
-class SARIMA:
+class RandomWalkRegressor:
+    def __init__(self, series, epsilon, seasonal_value=1):
+        self.series = series
+        self.epsilon = epsilon
+        self.seasonal_value = seasonal_value
+
+    def predict(self, n):
+        pred = self.series[-self.seasonal_value:].tolist()
+        for i in range(n):
+            direction = random.choice([self.epsilon, -self.epsilon])
+            val = pred[i] + direction
+            pred.append(val)
+
+        return np.array(pred[self.seasonal_value:])
+
+
+class RandomWalk:
     def __init__(self):
         self.root = ttk.Frame()
         
@@ -61,47 +77,24 @@ class SARIMA:
         ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
         ttk.Entry(graph_frame, textvariable=lags).grid(column=1, row=2)
 
-        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(0, lags.get())).grid(column=0, row=3)
-        ttk.Button(graph_frame, text="First Difference ACF", command=lambda: self.showAcf(1, lags.get())).grid(column=1, row=3)
-        
-        self.season_number_var = tk.IntVar(value="")
-        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(column=0, row=4)
-        ttk.Button(graph_frame, text="Seasonal Difference ACF", command=lambda: self.showAcf(2, lags.get())).grid(column=1, row=4)
-
-        ttk.Button(graph_frame, text="Both Difference ACF", command=lambda: self.showAcf(3, lags.get())).grid(column=0, row=5, columnspan=2)
+        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(lags.get())).grid(column=0, row=3)
 
         # Crete Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
 
-        ## Model Without Optimization
-        model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
-        model_without_optimization_frame.grid(column=0, row=0)
+        self.epsilon_var = tk.DoubleVar(value=10)
+        ttk.Label(create_model_frame, text="Epsilon Value: ").grid(column=0, row=0)
+        ttk.Entry(create_model_frame, textvariable=self.epsilon_var, width=12).grid(column=1, row=0)
 
-        self.pdq_var = [tk.IntVar(value="") for _ in range(3)]
-        [
-            [
-                ttk.Label(model_without_optimization_frame, text=j).grid(column=0, row=i+1),
-                ttk.Entry(model_without_optimization_frame, textvariable=self.pdq_var[i], width=8).grid(column=1, row=i+1)
-            ] for i, j in enumerate(['p', 'd', 'q'])
-        ]
-        
-        self.seasonality_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_without_optimization_frame, text="Seasonality", offvalue=0, onvalue=1, variable=self.seasonality_option, command=self.openSeasons).grid(column=0, row=0, columnspan=2)
-        
-        self.PQDM_var = [tk.IntVar(value="") for _ in range(4)]
-        
-        self.seasonals = [
-            [
-                ttk.Label(model_without_optimization_frame, text=j).grid(column=2, row=i+1),
-                ttk.Entry(model_without_optimization_frame, textvariable=self.PQDM_var[i], width=8, state=tk.DISABLED)
-            ] for i, j in enumerate(['P', 'D', 'Q', 's'])
-        ]
-        
-        for i, j in enumerate(self.seasonals):
-            j[1].grid(column=3, row=i+1)
+        self.seasonal_option = tk.IntVar(value=0)
+        tk.Checkbutton(create_model_frame, text="Seasonal", offvalue=0, onvalue=1 ,variable=self.seasonal_option, command=self.openEntries).grid(column=0, row=1, columnspan=2)
+        self.seasonal_value = tk.IntVar(value=12)
+        ttk.Label(create_model_frame, text="Seasonal Value", width=12).grid(column=0, row=2)
+        self.seasonal_value_entry = ttk.Entry(create_model_frame, textvariable=self.seasonal_value, width=12, state=tk.DISABLED)
+        self.seasonal_value_entry.grid(column=1, row=2)
 
-        ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=1)
+        ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=5, columnspan=2)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -204,8 +197,15 @@ class SARIMA:
             self.target_list.delete(self.target_list.curselection())
         except:
             pass
+    
+    def openEntries(self):
+        if self.seasonal_option.get() == 1:
+            op = tk.NORMAL
+        else:
+            op = tk.DISABLED
+        self.seasonal_value_entry["state"] = op
 
-    def showAcf(self, choice, lags):
+    def showAcf(self, lags):
         top = tk.Toplevel()
         fig = plt.Figure((20,15))
 
@@ -216,20 +216,8 @@ class SARIMA:
         ax = fig.add_subplot(211)
         ax1 = fig.add_subplot(212)
 
-        if choice == 0:
-            plot_acf(data, ax=ax, lags=lags)
-            plot_pacf(data, ax=ax1, lags=lags)
-        elif choice == 1:
-            plot_acf(data.diff()[1:], ax=ax, lags=lags)
-            plot_pacf(data.diff()[1:], ax=ax1, lags=lags)
-        elif choice == 2:
-            s = self.season_number_var.get()
-            plot_acf(data.diff(s)[s:], ax=ax, lags=lags)
-            plot_pacf(data.diff(s)[s:], ax=ax1, lags=lags)
-        elif choice == 3:
-            s = self.season_number_var.get()
-            plot_acf(data.diff()[1:].diff(s)[s:], ax=ax, lags=lags)
-            plot_pacf(data.diff()[1:].diff(s)[s:], ax=ax1, lags=lags)
+        plot_acf(data, ax=ax, lags=lags)
+        plot_pacf(data, ax=ax1, lags=lags)
 
         canvas = FigureCanvasTkAgg(fig, top)
         canvas.draw()
@@ -238,13 +226,6 @@ class SARIMA:
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-    def openSeasons(self):
-        if self.seasonality_option.get() == 1:
-            for i in self.seasonals:
-                i[1]["state"] = tk.NORMAL
-        else:
-            for i in self.seasonals:
-                i[1]["state"] = tk.DISABLED
 
     def createModel(self):
         self.is_round = False
@@ -258,31 +239,23 @@ class SARIMA:
         if any(series < 0):
             self.is_negative = True
 
-        pqd = tuple(i.get() for i in self.pdq_var)
-        
-        if self.seasonality_option.get() == 1:
-            PQDM = tuple(i.get() for i in self.PQDM_var)
-            model = ARIMA(series, order=pqd, seasonal_order=PQDM)
-            self.model = model.fit()
-            self.end = len(series)
-        else:
-            model = ARIMA(series, order=pqd)
-            self.model = model.fit()
-            self.end = len(series)-1
-    
+
+        seasonal_value = self.seasonal_value.get() if self.seasonal_option.get() else 1
+        self.model = RandomWalkRegressor(series, self.epsilon_var.get(), seasonal_value)
+
     def forecast(self, num):
-        self.pred = self.model.predict(start=self.end+1, end=self.end+num)
+        self.pred = self.model.predict(num)
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
         if self.is_round:
             self.pred = np.round(self.pred).astype(int)
-
+        
         if self.test_data_valid:
             y_test = self.test_df[self.target_list.get(0)][:num]
-            self.pred.index = y_test.index
             self.y_test = y_test
             losses = loss(y_test, self.pred)
+
             for i in range(6):
                 self.test_metrics_vars[i].set(losses[i])
 
@@ -295,4 +268,3 @@ class SARIMA:
             return
         plt.legend(loc="upper left")
         plt.show()
-
