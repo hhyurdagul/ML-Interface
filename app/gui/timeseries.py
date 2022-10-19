@@ -38,7 +38,7 @@ np_seed(0)
 random.set_seed(0)
 
 # Helper
-from .helpers import loss, popupmsg
+from .helpers import loss, popupmsg, cartesian
 
 class TimeSeries:
     def __init__(self):
@@ -378,7 +378,7 @@ class TimeSeries:
                 np.save(outfile, self.fill_values)
         if self.s_difference_choice_var.get():
             with open(path+"/s_fill.npy", "wb") as outfile:
-                np.save(outfile, self.s_fill_values)
+                np.save(outfile, self.s_fill_values) # type: ignore
 
         with open(path+"/lags.npy", 'wb') as outfile:
             np.save(outfile, self.lags)
@@ -466,7 +466,7 @@ class TimeSeries:
         #features, label = self.getDataset()
         #self.createLag(features, label)
 
-    def addPredictor(self, event=None):
+    def addPredictor(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.predictor_list.size() < 1:
@@ -474,13 +474,13 @@ class TimeSeries:
         except:
             pass
 
-    def ejectPredictor(self, event=None):
+    def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except:
             pass
     
-    def addTarget(self, event=None):
+    def addTarget(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -488,7 +488,7 @@ class TimeSeries:
         except:
             pass
 
-    def ejectTarget(self, event=None):
+    def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except:
@@ -743,14 +743,14 @@ class TimeSeries:
 
         elif lag_type == 2:
             lag = self.lag_entries[2].get()
-            numbers = np.argsort(acf_vals[1:])[-int(lag):]
+            numbers = np.argsort(acf_vals[1:])[-int(lag):] # type: ignore
             self.lags = np.sort(numbers)
             max_lag = max(self.lags) + 1
 
         # lag type == 3
         else:
             lag = self.lag_entries[3].get()
-            numbers = np.array(acf_vals[1:])
+            numbers = np.array(acf_vals[1:]) # type: ignore
             self.lags = np.where(numbers>float(lag))[0]
             max_lag = max(self.lags) + 1
 
@@ -764,22 +764,27 @@ class TimeSeries:
             return
 
         features, label = self.getDataset()
-        X_train, y_train = self.createLag(features, label)
-        X_train = X_train[:, self.lags]
+        X, y = self.createLag(features, label)
+        X = X[:, self.lags]
 
         learning_rate = float(self.hyperparameters["Learning_Rate"].get())
         if self.hyperparameters["Optimizer"] != "Adam":
             momentum = float(self.hyperparameters["Momentum"].get())
+        else:
+            momentum = 0.0
+
         optimizers = {
                 "Adam": Adam(learning_rate=learning_rate),
                 "SGD": SGD(learning_rate=learning_rate, momentum=momentum),
                 "RMSprop": RMSprop(learning_rate=learning_rate, momentum=momentum)
                 }
 
-        shape = (X_train.shape[1], X_train.shape[2])
+        shape = (X.shape[1], X.shape[2])
         model_choice = self.model_var.get()
 
         if not self.do_optimization:
+            X_train = X
+            y_train = y
             model = Sequential()
             model.add(Input(shape=shape))
             
@@ -821,8 +826,9 @@ class TimeSeries:
                     else:
                         model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
-                
-                elif model_choice == 5:
+
+                #elif model_choice == 5:
+                else: 
                     if i == layers-1:
                         model.add(GRU(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
@@ -840,9 +846,108 @@ class TimeSeries:
             history = model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1, shuffle=False)
             loss = history.history["loss"][-1]
             self.train_loss.set(loss)
+            self.model = model
 
-        model.summary()
-        self.model = model
+        else:
+            X_train, X_test = X[:-60], X[-60:]
+            y_train, y_test = y[:-60], y[-60:]
+            
+            def eval(model):
+                model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+                model.fit(X_train, y_train, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=0, shuffle=False)
+                return model.evaluate(X_test, y_test)
+
+            best_score = np.inf
+            best_neurons = [0]
+            best_model = None
+            layers = self.optimization_choice_var.get()
+            mins = self.neuron_min_number_var
+            maxs = self.neuron_max_number_var
+            range1 = np.unique(np.linspace(mins[0].get(), maxs[0].get(), 10, dtype=np.uint16))
+            
+            if layers == 1:
+                clear_session()
+                for k, i in enumerate(range1):
+                    print(f"{k+1}.Model initialized")
+                    if model_choice == 0:
+                        model = Sequential([Input(shape=shape), Flatten(), Dense(i, activation="relu"), Dense(1, activation="relu")])
+                    elif model_choice == 1:
+                        model = Sequential([Input(shape=shape), Conv1D(i, activation="relu"), Flatten(), Dense(1, activation="relu")])
+                    elif model_choice == 2:
+                        model = Sequential([Input(shape=shape), LSTM(i, activation="relu"), Dense(1, activation="relu")])
+                    elif model_choice == 3:
+                        model = Sequential([Input(shape=shape), Bidirectional(LSTM(i, activation="relu")), Dense(1, activation="relu")])
+                    elif model_choice == 4:
+                        model = Sequential([Input(shape=shape), SimpleRNN(i, activation="relu"), Dense(1, activation="relu")])
+                    else:
+                        model = Sequential([Input(shape=shape), GRU(i, activation="relu"), Dense(1, activation="relu")])
+
+                    score = eval(model)
+                    print("Score: "+ str(score))
+                    if best_score >= score:
+                        best_neurons = [i]
+                        best_score = score
+                        print("Best Score: "+ str(score))
+                        best_model = model
+            else:
+                clear_session()
+                range2 = np.unique(np.linspace(mins[1].get(), maxs[1].get(), 10, dtype=np.uint16))
+                if layers == 2:
+                    arr = cartesian(range1, range2)
+                    for k, i in enumerate(arr):
+                        print(f"{k+1}.Model initialized")
+                        if model_choice == 0:
+                            model = Sequential([Input(shape=shape), Flatten(), Dense(i[0], activation="relu"), Dense(i[1], activation="relu"), Dense(1, activation="relu")])
+                        elif model_choice == 1:
+                            model = Sequential([Input(shape=shape), Conv1D(i[0], activation="relu"), Conv1D(i[1], activation="relu"), Flatten(), Dense(1, activation="relu")])
+                        elif model_choice == 2:
+                            model = Sequential([Input(shape=shape), LSTM(i[0], activation="relu", return_sequences=True), LSTM(i[1], activation="relu"), Dense(1, activation="relu")])
+                        elif model_choice == 3:
+                            model = Sequential([Input(shape=shape), Bidirectional(LSTM(i[0], activation="relu", return_sequences=True)), Bidirectional(LSTM(i[1], activation="relu")), Dense(1, activation="relu")])
+                        elif model_choice == 4:
+                            model = Sequential([Input(shape=shape), SimpleRNN(i[0], activation="relu", return_sequences=True), SimpleRNN(i[1], activation="relu"), Dense(1, activation="relu")])
+                        else:
+                            model = Sequential([Input(shape=shape), GRU(i[0], activation="relu", return_sequences=True), GRU(i[1], activation="relu"), Dense(1, activation="relu")])
+
+                        score = eval(model)
+                        if best_score >= score:
+                            best_neurons = i
+                            best_score = score
+                            best_model = model
+                else: 
+                    range3 = np.unique(np.linspace(mins[2].get(), maxs[2].get(), 10, dtype=np.uint16))
+                    arr = cartesian(range1, range2, range3)
+                    for k, i in enumerate(arr):
+                        print(f"{k+1}.Model initialized")
+                        if model_choice == 0:
+                            model = Sequential([Input(shape=shape), Flatten(), Dense(i[0], activation="relu"), Dense(i[1], activation="relu"), Dense(i[2], activation="relu"), Dense(1, activation="relu")])
+                        elif model_choice == 1:
+                            model = Sequential([Input(shape=shape), Conv1D(i[0], activation="relu"), Conv1D(i[1], activation="relu"), Conv1D(i[2], activation="relu"), Flatten(), Dense(1, activation="relu")])
+                        elif model_choice == 2:
+                            model = Sequential([Input(shape=shape), LSTM(i[0], activation="relu", return_sequences=True), LSTM(i[1], activation="relu", return_sequences=True), LSTM(i[2], activation="relu"), Dense(1, activation="relu")])
+                        elif model_choice == 3:
+                            model = Sequential([Input(shape=shape), Bidirectional(LSTM(i[0], activation="relu", return_sequences=True)), Bidirectional(LSTM(i[1], activation="relu", return_sequences=True)), Bidirectional(LSTM(i[2], activation="relu")), Dense(1, activation="relu")])
+                        elif model_choice == 4:
+                            model = Sequential([Input(shape=shape), SimpleRNN(i[0], activation="relu", return_sequences=True), SimpleRNN(i[1], activation="relu", return_sequences=True), SimpleRNN(i[2], activation="relu"), Dense(1, activation="relu")])
+                        else:
+                            model = Sequential([Input(shape=shape), GRU(i[0], activation="relu", return_sequences=True), GRU(i[1], activation="relu", return_sequences=True), GRU(i[2], activation="relu"), Dense(1, activation="relu")])
+                        score = eval(model)
+                        if best_score >= score:
+                            best_neurons = i
+                            best_score = score
+                            best_model = model
+
+            for i in self.best_model_neurons:
+                i.set("") # type: ignore
+            for i, j in enumerate(best_neurons):
+                self.best_model_neurons[i].set(j)
+            
+            best_model.compile(optimizer = optimizers[self.hyperparameters["Optimizer"].get()], loss=self.hyperparameters["Loss_Function"].get())
+            
+            history = best_model.fit(X, y, epochs=self.hyperparameters["Epoch"].get(), batch_size=self.hyperparameters["Batch_Size"].get(), verbose=1, shuffle=False)
+            loss = history.history["loss"][-1]
+            self.train_loss.set(loss)
+            self.model = best_model
 
     def testModel(self):
         try:
@@ -878,9 +983,9 @@ class TimeSeries:
             self.pred = np.round(self.pred).astype(int)
         
         if self.test_data_valid:
-            self.y_test: pd.DataFrame
             self.y_test = self.test_df[[self.label_name]]
             self.y_test = np.asarray(self.y_test)[:num]
+            self.y_test: np.ndarray
 
             seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
             losses = loss(self.y_test, self.pred, seasons)

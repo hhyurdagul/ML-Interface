@@ -78,3 +78,11 @@ def waitmsg(msg, size=100):
     pb.start()
     popup.update()
     return popup
+
+def cartesian(*arrays):
+    mesh = np.meshgrid(*arrays)
+    dim = len(mesh)
+    elements = mesh[0].size
+    flat = np.concatenate(mesh).ravel()
+    return np.reshape(flat, (dim, elements)).T
+
