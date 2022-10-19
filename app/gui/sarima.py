@@ -24,7 +24,7 @@ class SARIMA:
         file_path = tk.StringVar(value="")
         ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
         ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(get_train_set_frame, text="Read Csv", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
+        ttk.Button(get_train_set_frame, text="Read Data", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
@@ -142,7 +142,10 @@ class SARIMA:
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
         else:
-            self.df = pd.read_excel(path)
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
     def fillInputList(self):
@@ -157,7 +160,10 @@ class SARIMA:
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path)
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
         self.test_data_valid = True
         if self.forecast_done:
             self.forecast(self.forecast_num.get())

@@ -145,7 +145,10 @@ class GeneralRegressionNeuralNetwork:
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
         else:
-            self.df = pd.read_excel(path)
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
     def fillInputList(self):
@@ -160,7 +163,10 @@ class GeneralRegressionNeuralNetwork:
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
         else:
-            self.test_df = pd.read_excel(path)
+            try:
+                self.df = pd.read_excel(path)
+            except:
+                self.df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         top = tk.Toplevel(self.root)
