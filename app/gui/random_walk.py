@@ -10,17 +10,27 @@ import matplotlib.pyplot as plt
 
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+import os
+import json
 import random
 from .helpers import *
 
 class RandomWalkRegressor:
-    def __init__(self, series, epsilon, seasonal_value=1):
-        self.series = series
+    def __init__(self, epsilon, seasonal_value=1):
+        self.seed = random.randint(0, 100)
         self.epsilon = epsilon
         self.seasonal_value = seasonal_value
 
+    def get_params(self):
+        return {"seed": self.seed, "epsilon": self.epsilon, "seasonal_value": self.seasonal_value}
+
+    def set_series(self, series):
+        self.series = series
+        self.last = self.series[-self.seasonal_value:].values
+
     def predict(self, n):
-        pred = self.series[-self.seasonal_value:].tolist()
+        random.seed(self.seed)
+        pred = self.last.tolist()
         for i in range(n):
             direction = random.choice([self.epsilon, -self.epsilon])
             val = pred[i] + direction
@@ -94,7 +104,8 @@ class RandomWalk:
         self.seasonal_value_entry = ttk.Entry(create_model_frame, textvariable=self.seasonal_value, width=12, state=tk.DISABLED)
         self.seasonal_value_entry.grid(column=1, row=2)
 
-        ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=5, columnspan=2)
+        ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=5)
+        ttk.Button(create_model_frame, text="Save Model", command=self.saveModel).grid(column=2, row=5)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -114,7 +125,8 @@ class RandomWalk:
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.forecast(self.forecast_num.get())).grid(column=2, row=3)
+        ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=3)
+        ttk.Button(test_model_main_frame, text="Forecast", command=lambda: self.forecast(self.forecast_num.get())).grid(column=2, row=3)
         ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
@@ -124,7 +136,7 @@ class RandomWalk:
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
+        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
@@ -204,6 +216,58 @@ class RandomWalk:
         except:
             pass
     
+    def saveModel(self):
+        path = filedialog.asksaveasfilename()
+        if not path:
+            return
+        try:
+            params = self.model.get_params()
+        except:
+            popupmsg("Model is not created")
+            return
+        params["predictor_names"] = self.predictor_names
+        params["label_name"] = self.label_name
+        params["is_round"] = self.is_round
+        params["is_negative"] = self.is_negative
+        params["seasonal_option"] = self.seasonal_option.get()
+
+        os.mkdir(path)
+        with open(path+"/model.json", 'w') as outfile:
+            json.dump(params, outfile)
+        os.mkdir(path)
+        with open(path+"/last.npy", 'wb') as outfile:
+            np.save(outfile, self.model.last)
+
+    def loadModel(self):
+        path = filedialog.askdirectory()
+        if not path:
+            return
+        try:
+            infile = open(path+"/model.json")
+        except:
+            popupmsg("There is no model file at the path")
+            return
+        params = json.load(infile)
+
+        self.predictor_names = params["predictor_names"]
+        self.label_name = params["label_name"]
+        self.is_round = params["is_round"]
+        self.is_round = True
+        self.is_negative = params["is_negative"]
+        
+        self.seasonal_option.set(params["seasonal_option"])
+        self.seasonal_value.set(params["seasonal_value"])
+        self.epsilon_var.set(params["epsilon"])
+
+        self.model = RandomWalkRegressor(params["epsilon"], params["seasonal_value"])
+
+        with open(path+"/last.npy", 'rb') as outfile:
+            self.model.last = np.load(outfile)
+
+        self.openEntries()
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        popupmsg(msg)
+    
     def openEntries(self):
         if self.seasonal_option.get() == 1:
             op = tk.NORMAL
@@ -232,11 +296,12 @@ class RandomWalk:
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-
     def createModel(self):
         self.is_round = False
         self.is_negative = False
-        data = self.df[self.target_list.get(0)]
+        self.predictor_names = self.target_list.get(0)
+        self.target_name = self.target_list.get(0)
+        data = self.df[self.target_name]
         size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
 
@@ -245,9 +310,9 @@ class RandomWalk:
         if any(series < 0):
             self.is_negative = True
 
-
         seasonal_value = self.seasonal_value.get() if self.seasonal_option.get() else 1
-        self.model = RandomWalkRegressor(series, self.epsilon_var.get(), seasonal_value)
+        self.model = RandomWalkRegressor(self.epsilon_var.get(), seasonal_value)
+        self.model.set_series(series)
 
     def forecast(self, num):
         self.pred = self.model.predict(num)

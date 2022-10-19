@@ -57,7 +57,7 @@ def loss(y_true, y_pred, seasons=1):
     except:
         MASE = None
 
-    return [NMSE, RMSE, MAE, MAPE, SMAPE, MASE]
+    return [NMSE, RMSE, MAE, MAPE, SMAPE]
 
 def popupmsg(msg):
     popup = tk.Tk()

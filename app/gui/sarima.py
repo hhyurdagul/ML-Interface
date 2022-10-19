@@ -8,9 +8,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA, ARIMAResults
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+import os
+import json
 from .helpers import *
 
 class SARIMA:
@@ -53,9 +55,9 @@ class SARIMA:
         ttk.Label(graph_frame, text="Train Size").grid(column=0, row=0)
         ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1, row=0)
 
-        self.train_choice = tk.IntVar(value=0)
-        tk.Radiobutton(graph_frame, text="As Percent", variable=self.train_choice, value=0).grid(column=0, row=1)
-        tk.Radiobutton(graph_frame, text="As Number", variable=self.train_choice, value=1).grid(column=1, row=1)
+        self.train_size_choice = tk.IntVar(value=0)
+        tk.Radiobutton(graph_frame, text="As Percent", variable=self.train_size_choice, value=0).grid(column=0, row=1)
+        tk.Radiobutton(graph_frame, text="As Number", variable=self.train_size_choice, value=1).grid(column=1, row=1)
 
         lags = tk.IntVar(value=40)
         ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
@@ -89,12 +91,12 @@ class SARIMA:
         self.seasonality_option = tk.IntVar(value=0)
         tk.Checkbutton(model_without_optimization_frame, text="Seasonality", offvalue=0, onvalue=1, variable=self.seasonality_option, command=self.openSeasons).grid(column=0, row=0, columnspan=2)
         
-        self.PQDM_var = [tk.IntVar(value="") for _ in range(4)]
+        self.PDQM_var = [tk.IntVar(value="") for _ in range(4)]
         
         self.seasonals = [
             [
                 ttk.Label(model_without_optimization_frame, text=j).grid(column=2, row=i+1),
-                ttk.Entry(model_without_optimization_frame, textvariable=self.PQDM_var[i], width=8, state=tk.DISABLED)
+                ttk.Entry(model_without_optimization_frame, textvariable=self.PDQM_var[i], width=8, state=tk.DISABLED)
             ] for i, j in enumerate(['P', 'D', 'Q', 's'])
         ]
         
@@ -131,7 +133,7 @@ class SARIMA:
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
+        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
@@ -210,13 +212,85 @@ class SARIMA:
             self.target_list.delete(self.target_list.curselection())
         except:
             pass
+    
+    def saveModel(self):
+        path = filedialog.asksaveasfilename()
+        if not path:
+            return
+        params = {
+            "p": self.pdq_var[0].get(),
+            "d": self.pdq_var[1].get(),
+            "q": self.pdq_var[2].get()
+        }
+
+        if self.seasonality_option.get():
+            params["P"] = self.PDQM_var[0].get()
+            params["D"] = self.PDQM_var[1].get()
+            params["Q"] = self.PDQM_var[2].get()
+            params["s"] = self.PDQM_var[3].get()
+
+        params["predictor_names"] = self.predictor_names
+        params["label_name"] = self.label_name
+        params["is_round"] = self.is_round
+        params["is_negative"] = self.is_negative
+        params["train_size"] = self.train_size.get()
+        params["train_size_choice"] = self.train_size_choice.get()
+        params["seasonality_option"] = self.seasonality_option.get()
+        os.mkdir(path)
+
+        with open(path+"/model", 'wb') as model_path:
+            self.model.save(model_path)
+        with open(path+"/model.json", 'w') as outfile:
+            json.dump(params, outfile)
+
+    def loadModel(self):
+        path = filedialog.askdirectory()
+        if not path:
+            return
+        try:
+            model_path = path + "/model"
+        except:
+            popupmsg("There is no model file at the path")
+            return
+        with open(path+"/model", 'rb') as model_path:
+            self.model = ARIMAResults.load(model_path)
+        infile = open(path+"/model.json")
+        params = json.load(infile)
+
+        self.pdq_var[0].set(self.model.model_orders["ar"])
+        self.pdq_var[2].set(self.model.model_orders["ma"])
+        self.pdq_var[1].set(params["d"])
+
+        self.seasonality_option.set(params["seasonality_option"])
+        if self.seasonality_option.get():
+            self.PDQM_var[0].set(params["P"])
+            self.PDQM_var[1].set(params["D"])
+            self.PDQM_var[2].set(params["Q"])
+            self.PDQM_var[3].set(params["s"])
+        
+        self.predictor_names = params["predictor_names"]
+        self.label_name = params["label_name"]
+        try:
+            self.is_round = params["is_round"]
+        except:
+            self.is_round = True
+        try:
+            self.is_negative = params["is_negative"]
+        except:
+            self.is_negative = False
+        
+        self.train_size.set(params["train_size"])
+        self.train_size_choice.set(params["train_size_choice"])
+
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        popupmsg(msg)
 
     def showAcf(self, choice, lags):
         top = tk.Toplevel()
         fig = plt.Figure((20,15))
 
         data = self.df[self.target_list.get(0)]
-        size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        size = int(self.train_size.get()) if self.train_size_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         data = data.iloc[-size:]
 
         ax = fig.add_subplot(211)
@@ -256,7 +330,7 @@ class SARIMA:
         self.is_round = False
         self.is_negative = False
         data = self.df[self.target_list.get(0)]
-        size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        size = int(self.train_size.get()) if self.train_size_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
 
         if series.dtype == int or series.dtype == np.intc or series.dtype == np.int64:
@@ -267,8 +341,8 @@ class SARIMA:
         pqd = tuple(i.get() for i in self.pdq_var)
         
         if self.seasonality_option.get() == 1:
-            PQDM = tuple(i.get() for i in self.PQDM_var)
-            model = ARIMA(series, order=pqd, seasonal_order=PQDM)
+            PDQM = tuple(i.get() for i in self.PDQM_var)
+            model = ARIMA(series, order=pqd, seasonal_order=PDQM)
             self.model = model.fit()
             self.end = len(series)
         else:

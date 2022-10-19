@@ -274,8 +274,8 @@ class TimeSeries:
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
-        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE", "MASE"]
-        self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
+        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
+        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i], width=8).grid(column=1,row=i, padx=3)
@@ -987,8 +987,7 @@ class TimeSeries:
             self.y_test = np.asarray(self.y_test)[:num]
             self.y_test: np.ndarray
 
-            seasons = self.interval_var.get() if self.difference_choice_var.get() == 1 else 1
-            losses = loss(self.y_test, self.pred, seasons)
+            losses = loss(self.y_test, self.pred)
             for i in range(6):
                 self.test_metrics_vars[i].set(losses[i])
         self.forecast_done = True

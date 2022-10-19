@@ -82,7 +82,7 @@ class MonteCarlo:
         ttk.Button(test_frame, text="Show Maes", command=self.showMaes).grid(column=0, row=2)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable(), tk.Variable()]
+        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_frame, text=j).grid(column=3, row=i)
             ttk.Entry(test_frame, textvariable=self.test_metrics_vars[i], width=8).grid(column=4, row=i)
