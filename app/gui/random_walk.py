@@ -169,6 +169,7 @@ class RandomWalk:
                 self.df = pd.read_excel(path)
             except:
                 self.df = pd.read_excel(path, engine="openpyxl")
+
         self.test_data_valid = True
         if self.forecast_done:
             self.forecast(self.forecast_num.get())
@@ -321,13 +322,15 @@ class RandomWalk:
             self.pred = self.pred.clip(0, None)
         if self.is_round:
             self.pred = np.round(self.pred).astype(int)
+
+        self.forecast_done = True
         
         if self.test_data_valid:
             y_test = self.test_df[self.target_list.get(0)][:num]
             self.y_test = y_test
             losses = loss(y_test, self.pred)
 
-            for i in range(6):
+            for i in range(len(self.test_metrics_vars)):
                 self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):

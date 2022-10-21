@@ -104,6 +104,7 @@ class SARIMA:
             j[1].grid(column=3, row=i+1)
 
         ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=1)
+        ttk.Button(create_model_frame, text="Save Model", command=self.saveModel).grid(column=1, row=1)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -123,7 +124,8 @@ class SARIMA:
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=lambda: self.forecast(self.forecast_num.get())).grid(column=2, row=3)
+        ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=3)
+        ttk.Button(test_model_main_frame, text="Forecast", command=lambda: self.forecast(self.forecast_num.get())).grid(column=2, row=3)
         ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
@@ -358,12 +360,14 @@ class SARIMA:
         if self.is_round:
             self.pred = np.round(self.pred).astype(int)
 
+        self.forecast_done = True
+
         if self.test_data_valid:
             y_test = self.test_df[self.target_list.get(0)][:num]
             self.pred.index = y_test.index
             self.y_test = y_test
             losses = loss(y_test, self.pred)
-            for i in range(6):
+            for i in range(len(self.test_metrics_vars)):
                 self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
