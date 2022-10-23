@@ -689,7 +689,7 @@ class MultiLayerPerceptron:
                 if self.scale_var.get() != "None":
                     pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                     y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
-                losses = loss(y, pred)[:-1]
+                losses = loss(y, pred)
                 self.y_test = y
                 self.pred = pred
                 for i,j in enumerate(losses):
@@ -705,7 +705,7 @@ class MultiLayerPerceptron:
                 if self.scale_var.get() != "None":
                     pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                     y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
-                losses = loss(y_test, pred)[:-1]
+                losses = loss(y_test, pred)
                 self.y_test = y_test
                 self.pred = pred
                 for i,j in enumerate(losses):
@@ -824,7 +824,7 @@ class MultiLayerPerceptron:
             self.pred = np.round(self.pred).astype(int)
 
         losses = loss(y_test, self.pred)
-        for i in range(6):
+        for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):

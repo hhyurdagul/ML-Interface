@@ -126,5 +126,5 @@ class MovingAverage:
         if self.do_test:
             y_test = self.test_df[self.col].iloc[:self.forecast_num.get()].values # type: ignore
             losses = loss(y_test, self.pred)
-            for i in range(6):
+            for i in range(len(self.test_metrics_vars)):
                 self.test_metrics_vars[i].set(losses[i])

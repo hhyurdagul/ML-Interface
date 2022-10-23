@@ -166,9 +166,9 @@ class RandomWalk:
             self.test_df = pd.read_csv(path)
         else:
             try:
-                self.df = pd.read_excel(path)
+                self.test_df = pd.read_excel(path)
             except:
-                self.df = pd.read_excel(path, engine="openpyxl")
+                self.test_df = pd.read_excel(path, engine="openpyxl")
 
         self.test_data_valid = True
         if self.forecast_done:

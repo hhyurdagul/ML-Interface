@@ -272,7 +272,7 @@ class GeneralRegressionNeuralNetwork:
                 model.fit(X, y)
                 if do_forecast == 0:
                     pred = model.predict(X)
-                    losses = loss(y, pred)[:-1]
+                    losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
@@ -284,7 +284,7 @@ class GeneralRegressionNeuralNetwork:
                     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test)
-                    losses = loss(y_test, pred)[:-1]
+                    losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
                     for i,j in enumerate(losses):
@@ -326,7 +326,7 @@ class GeneralRegressionNeuralNetwork:
                 reg.fit(X, y)
                 if do_forecast == 0:
                     pred = reg.predict(X)
-                    losses = loss(y, pred)[:-1]
+                    losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
@@ -385,7 +385,7 @@ class GeneralRegressionNeuralNetwork:
             self.pred = np.round(self.pred).astype(int)
         
         losses = loss(y_test, self.pred)
-        for i in range(6):
+        for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):

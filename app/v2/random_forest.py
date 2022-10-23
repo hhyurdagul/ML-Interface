@@ -19,7 +19,7 @@ from pickle import load as pickle_load
 
 # from .helpers import *
 
-from .components import DatasetInputComponent, ModelValidationComponent
+from .components import DatasetInputComponent, ModelValidationComponent, CustomizeTrainsetComponent
 
 class RandomForest:
     def __init__(self):
@@ -32,27 +32,8 @@ class RandomForest:
         self.model_validation_component = ModelValidationComponent(root_frame=self.root, column=0, row=1)
 
         # Customize Train Set
-        customize_train_set_frame = ttk.LabelFrame(self.root, text="Customize Train Set")
-        customize_train_set_frame.grid(column=0, row=2)
-        
-        self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option, command=self.openOtherEntries).grid(column=0, row=0)
-        self.lookback_entry = tk.Entry(customize_train_set_frame, textvariable=self.lookback_val_var, width=8, state=tk.DISABLED)
-        self.lookback_entry.grid(column=1, row=0)
-
-        self.seasonal_lookback_option = tk.IntVar(value=0)
-        self.seasonal_period_var = tk.IntVar(value="") # type: ignore
-        self.seasonal_val_var = tk.IntVar(value="") # type: ignore
-        tk.Checkbutton(customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option, command=self.openOtherEntries).grid(column=0, row=1)
-        self.seasonal_lookback_entry_1 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_period_var, width=9, state=tk.DISABLED)
-        self.seasonal_lookback_entry_1.grid(column=0, row=2)
-        self.seasonal_lookback_entry_2 = tk.Entry(customize_train_set_frame, textvariable=self.seasonal_val_var, width=8, state=tk.DISABLED)
-        self.seasonal_lookback_entry_2.grid(column=1, row=2)
-
-        self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
-        ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
+        self.customize_train_set_component = CustomizeTrainsetComponent(root_frame=self.root, column=0, row=2)
+        self.customize_train_set_component.attach_lookback()
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
@@ -137,7 +118,6 @@ class RandomForest:
             ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
 
         self.openEntries()
-        self.openOtherEntries()
 
     def getTestSet(self, file_path):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
@@ -174,16 +154,10 @@ class RandomForest:
         param_list = list(params.items())
         param_list.append(list(self.get_train_set_component.get_params().items()))
         param_list.append(list(self.model_validation_component.get_params().items()))
-
+        param_list.append(list(self.customize_train_set_component.get_params().items()))
+        
         params["is_round"] = self.is_round
         params["is_negative"] = self.is_negative
-        params["lookback_option"] = self.lookback_option.get()
-        params["lookback_value"] = self.lookback_val_var.get() if self.lookback_option.get() else None
-        params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
-        params["seasonal_period"] = self.seasonal_period_var.get() if self.seasonal_lookback_option.get() else None
-        params["seasonal_value"] = self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
-        params["sliding"] = self.sliding
-        params["scale_type"] = self.scale_var.get()
 
         os.mkdir(path)
         dump(self.model, path+"/model.joblib")
@@ -223,25 +197,18 @@ class RandomForest:
         self.is_negative = params.get("is_negative", False)
 
 
-        self.lookback_option.set(params["lookback_option"]) 
-        self.sliding=-1
         if params["lookback_option"] == 1:
-            self.lookback_val_var.set(params["lookback_value"])
             last_values = open(path+"/last_values.npy", 'rb')
             self.last = np.load(last_values)
             last_values.close()
         try:
-            self.sliding = params["sliding"]
-            self.seasonal_lookback_option.set(params["seasonal_lookback_option"]) 
             if params["seasonal_lookback_option"] == 1:
-                self.seasonal_period_var.set(params["seasonal_period"])
-                self.seasonal_val_var.set(params["seasonal_value"])
                 seasonal_last_values = open(path+"/seasonal_last_values.npy", 'rb')
                 self.seasonal_last = np.load(seasonal_last_values)
                 seasonal_last_values.close()
         except:
             pass
-        self.scale_var.set(params["scale_type"])
+
         if params["scale_type"] != "None":
             try:
                 with open(path+"/feature_scaler.pkl", "rb") as f:
@@ -256,7 +223,6 @@ class RandomForest:
         self.parameters[3].set(params["min_samples_leaf"])
        
         self.openEntries()
-        self.openOtherEntries()
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
@@ -289,36 +255,15 @@ class RandomForest:
         
         self.vars_nums = to_open
     
-    def openOtherEntries(self):
-        if self.lookback_option.get():
-            self.lookback_entry["state"] = tk.NORMAL
-        else:
-            self.lookback_entry["state"] = tk.DISABLED
-        if self.seasonal_lookback_option.get():
-            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
-            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
-        else:
-            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
-            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
-
-
     def check_errors(self):
         def raise_error(err: bool, msg: str):
             return popupmsg(msg) if err else None
 
         raise_error(*self.get_train_set_component.check_errors())
         raise_error(*self.model_validation_component.check_errors())
+        raise_error(*self.customize_train_set_component.check_errors())
 
         try:
-            msg = "Enter a valid lookback value"
-            if self.lookback_option.get():
-                self.lookback_val_var.get()
-            
-            msg = "Enter valid periodic lookback values"
-            if self.seasonal_lookback_option.get():
-                self.seasonal_val_var.get()
-                self.seasonal_period_var.get()
-
             msg = "Enter a valid Interval for grid search"
             if self.grid_option_var.get() and self.interval_var.get() < 1:
                 raise Exception
@@ -326,17 +271,6 @@ class RandomForest:
             msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
-
-            # for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-            #    if str(self.model_parameters_frame_options[i][1]["state"]) != "disabled" and not self.parameters[i].get():
-            #        msg = "Enter a valid " + j +  " value"
-            #        raise Exception
-                
-            #    if self.grid_option_var.get():
-            #        if str(self.model_parameters_frame_options[i][2]["state"]) != "disabled":
-            #            if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-            #                msg = "Enter a valid " + j +  " value in grid search area"
-            #                raise Exception
 
         except:
             popupmsg(msg) # type: ignore

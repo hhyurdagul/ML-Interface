@@ -841,7 +841,7 @@ class SupportVectorMachine:
             self.pred = np.round(self.pred).astype(int)
         
         losses = loss(y_test, self.pred)
-        for i in range(6):
+        for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):

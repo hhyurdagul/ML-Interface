@@ -1,1 +1,5 @@
-from .test import DatasetInputComponent, ModelValidationComponent
+from .test import (
+        DatasetInputComponent, 
+        ModelValidationComponent,
+        CustomizeTrainsetComponent,
+    )
