@@ -20,6 +20,7 @@ from gui.montecarlo import MonteCarlo
 from gui.movingaverage import MovingAverage
 from gui.hybrid import Hybrid
 
+
 class GUI:
     def __init__(self):
         self.gui = tk.Tk()
