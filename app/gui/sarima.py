@@ -331,7 +331,9 @@ class SARIMA:
     def createModel(self):
         self.is_round = False
         self.is_negative = False
-        data = self.df[self.target_list.get(0)]
+        self.predictor_names = self.predictor_list.get(0)
+        self.label_name = self.target_list.get(0)
+        data = self.df[self.label_name]
         size = int(self.train_size.get()) if self.train_size_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
 

@@ -122,7 +122,7 @@ class ELM:
         model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
         
         parameter_names = ["Alpha (C)", "Neuron Size"]
-        self.parameters = [tk.DoubleVar(value=0.1), tk.IntVar(value=100), tk.Variable(value="lin")]
+        self.parameters = [tk.DoubleVar(value=0.1), tk.IntVar(value=100)]
         self.optimization_parameters = [[tk.DoubleVar(value=0.1), tk.DoubleVar(value=1)], [tk.IntVar(value=10), tk.IntVar(value=100)]]
         
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
@@ -141,9 +141,6 @@ class ELM:
             j[1].grid(column=1, row=i+1, padx=2, pady=2, sticky=tk.W)
             j[2].grid(column=2, row=i+1, padx=2, pady=2)
             j[3].grid(column=3, row=i+1, padx=2, pady=2)
-
-        ttk.Label(model_parameters_frame, text="Activation Function:").grid(column=0, row=3)
-        ttk.OptionMenu(model_parameters_frame, self.parameters[2], "lin", "lin","relu", "tanh", "sigm").grid(column=1, row=3, padx=2, pady=2, sticky=tk.W)
 
 
         ttk.Button(model_frame, text="Create Model", command=self.createModel).grid(column=0, row=3)
@@ -353,10 +350,8 @@ class ELM:
                     self.label_scaler = pickle_load(f)
             except:
                 pass
-        self.parameters[0].set(params["n_estimators"])
-        self.parameters[1].set(params["max_depth"])
-        self.parameters[2].set(params["min_samples_split"])
-        self.parameters[3].set(params["min_samples_leaf"])
+        self.parameters[0].set(params["alpha"])
+        self.parameters[1].set(params["n_neurons"])
        
         self.openEntries()
         self.openOtherEntries()
@@ -460,17 +455,6 @@ class ELM:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
-            # for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-            #    if str(self.model_parameters_frame_options[i][1]["state"]) != "disabled" and not self.parameters[i].get():
-            #        msg = "Enter a valid " + j +  " value"
-            #        raise Exception
-                
-            #    if self.grid_option_var.get():
-            #        if str(self.model_parameters_frame_options[i][2]["state"]) != "disabled":
-            #            if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-            #                msg = "Enter a valid " + j +  " value in grid search area"
-            #                raise Exception
-
         except:
             popupmsg(msg) # type: ignore
             return True
@@ -567,9 +551,8 @@ class ELM:
         if self.grid_option_var.get() == 0:
             alpha = self.parameters[0].get()
             n_neurons = self.parameters[1].get()
-            ufunc = self.parameters[2].get()
 
-            model = ELMRegressor(alpha=alpha, n_neurons=n_neurons, ufunc=ufunc)
+            model = ELMRegressor(alpha=alpha, n_neurons=n_neurons)
             
             if val_option == 0:
                 model.fit(X, y)
@@ -623,7 +606,6 @@ class ELM:
              
             params["alpha"] = np.unique(np.linspace(self.optimization_parameters[0][0].get(), self.optimization_parameters[0][1].get(), interval, dtype=float))
             params["n_neurons"] = np.unique(np.linspace(self.optimization_parameters[1][0].get(), self.optimization_parameters[1][1].get(), interval, dtype=int))
-            params["ufunc"] = [self.parameters[2].get()]
 
             cv = self.gs_cross_val_var.get() if self.gs_cross_val_option.get() == 1 else None
             regressor = GridSearchCV(ELMRegressor(), params, cv=cv)

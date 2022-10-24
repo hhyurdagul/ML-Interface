@@ -301,8 +301,8 @@ class RandomWalk:
         self.is_round = False
         self.is_negative = False
         self.predictor_names = self.target_list.get(0)
-        self.target_name = self.target_list.get(0)
-        data = self.df[self.target_name]
+        self.label_name = self.target_list.get(0)
+        data = self.df[self.label_name]
         size = int(self.train_size.get()) if self.train_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
         series = data.iloc[-size:]
 
