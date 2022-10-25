@@ -235,7 +235,6 @@ class RandomWalk:
         os.mkdir(path)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
-        os.mkdir(path)
         with open(path+"/last.npy", 'wb') as outfile:
             np.save(outfile, self.model.last)
 
@@ -326,7 +325,7 @@ class RandomWalk:
         self.forecast_done = True
         
         if self.test_data_valid:
-            y_test = self.test_df[self.target_list.get(0)][:num]
+            y_test = self.test_df[self.label_name][:num]
             self.y_test = y_test
             losses = loss(y_test, self.pred)
 

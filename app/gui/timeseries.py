@@ -983,7 +983,7 @@ class TimeSeries:
             self.pred = np.round(self.pred).astype(int)
         
         if self.test_data_valid:
-            self.y_test = self.test_df[[self.label_name]]
+            self.y_test = self.test_df[self.label_name]
             self.y_test = np.asarray(self.y_test)[:num]
             self.y_test: np.ndarray
 

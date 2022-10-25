@@ -365,7 +365,7 @@ class SARIMA:
         self.forecast_done = True
 
         if self.test_data_valid:
-            y_test = self.test_df[self.target_list.get(0)][:num]
+            y_test = self.test_df[self.label_name][:num]
             self.pred.index = y_test.index
             self.y_test = y_test
             losses = loss(y_test, self.pred)
