@@ -208,7 +208,7 @@ class SupportVectorMachine:
 
 
     def readCsv(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Xlsx Files", "*.xlsx"), ("Xlrd Files", ".xls")])
         if not path:
             return
         file_path.set(path)
@@ -229,7 +229,7 @@ class SupportVectorMachine:
             self.input_list.insert(tk.END, i)
 
     def getTestSet(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Xlsx Files", "*.xlsx"), ("Xlrd Files", ".xls")])
         if not path:
             return
         file_path.set(path)
