@@ -310,11 +310,11 @@ class Ridge:
         self.label_name = params["label_name"]
         try:
             self.is_round = params["is_round"]
-        except:
+        except Exception:
             self.is_round = True
         try:
             self.is_negative = params["is_negative"]
-        except:
+        except Exception:
             self.is_negative = False
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
@@ -338,7 +338,7 @@ class Ridge:
                 seasonal_last_values = open(path+"/seasonal_last_values.npy", 'rb')
                 self.seasonal_last = np.load(seasonal_last_values)
                 seasonal_last_values.close()
-        except:
+        except Exception:
             pass
         self.scale_var.set(params["scale_type"])
         if params["scale_type"] != "None":
@@ -347,12 +347,8 @@ class Ridge:
                     self.feature_scaler = pickle_load(f)
                 with open(path+"/label_scaler.pkl", "rb") as f:
                     self.label_scaler = pickle_load(f)
-            except:
+            except Exception:
                 pass
-        self.parameters[0].set(params["n_estimators"])
-        self.parameters[1].set(params["max_depth"])
-        self.parameters[2].set(params["min_samples_split"])
-        self.parameters[3].set(params["min_samples_leaf"])
        
         self.openEntries()
         self.openOtherEntries()
@@ -454,17 +450,6 @@ class Ridge:
             msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
-
-            # for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-            #    if str(self.model_parameters_frame_options[i][1]["state"]) != "disabled" and not self.parameters[i].get():
-            #        msg = "Enter a valid " + j +  " value"
-            #        raise Exception
-                
-            #    if self.grid_option_var.get():
-            #        if str(self.model_parameters_frame_options[i][2]["state"]) != "disabled":
-            #            if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-            #                msg = "Enter a valid " + j +  " value in grid search area"
-            #                raise Exception
 
         except:
             popupmsg(msg) # type: ignore
