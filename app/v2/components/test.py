@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from types import FunctionType
 from pandastable import Table
 
 import numpy as np
@@ -9,12 +10,12 @@ import matplotlib.pyplot as plt
 
 import os
 import json
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 class DatasetInputComponent:
     def __init__(self, root_frame: ttk.Frame, column: int=0, row: int=0):
         self.df: pd.DataFrame
-        self.train_file_path: tk.StringVar
+        self.train_file_path_var: tk.StringVar
 
         train_set_frame = self.attach_frame(root_frame, column, row)
         self.attach_input_list(train_set_frame)
@@ -49,10 +50,10 @@ class DatasetInputComponent:
             self.input_list.insert(tk.END, i)
 
     def _read_csv(self):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx"), ("Xls Files", "*.xls")])
         if not path:
             return
-        self.train_file_path.set(path)
+        self.train_file_path_var.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
         else:
@@ -69,7 +70,7 @@ class DatasetInputComponent:
         return {"predictor_names": self.get_predictors(), "label_name": self.get_label()}
 
     def check_errors(self) -> Tuple[bool, str]:
-        if not self.train_file_path.get():
+        if not self.train_file_path_var.get():
             return (True, "Read a data first")
         if not self.predictor_list.get(0):
             return (True, "Select predictors")
@@ -84,9 +85,9 @@ class DatasetInputComponent:
         train_set_frame = ttk.Labelframe(root_frame, text="Get Train Set")
         train_set_frame.grid(column=0, row=0)
 
-        self.train_file_path = tk.StringVar(value="")
+        self.train_file_path_var = tk.StringVar(value="")
         ttk.Label(train_set_frame, text="Train File Path").grid(column=column, row=row)
-        ttk.Entry(train_set_frame, textvariable=self.train_file_path).grid(column=1, row=0)
+        ttk.Entry(train_set_frame, textvariable=self.train_file_path_var).grid(column=1, row=0)
         ttk.Button(train_set_frame, text="Read Data", command=self._read_csv).grid(column=2, row=0)
 
         return train_set_frame
@@ -242,15 +243,15 @@ class CustomizeTrainsetComponent:
 
     def attach_lookback(self):
         self.lookback_option_var = tk.IntVar(value=0)
-        self.lookback_value_var = tk.IntVar()
+        self.lookback_value_var = tk.IntVar(value=0)
         tk.Checkbutton(self.customize_train_set_frame, text="Lookback", offvalue=0, onvalue=1, variable=self.lookback_option_var, command=self._open_lookback_entries).grid(column=0, row=1)
 
         lookback_entry = tk.Entry(self.customize_train_set_frame, textvariable=self.lookback_value_var, width=8, state=tk.DISABLED)
         lookback_entry.grid(column=1, row=1)
 
         self.seasonal_lookback_option_var = tk.IntVar(value=0)
-        self.seasonal_period_value_var = tk.IntVar()
-        self.seasonal_value_var = tk.IntVar()
+        self.seasonal_period_value_var = tk.IntVar(value=0)
+        self.seasonal_value_var = tk.IntVar(value=0)
         tk.Checkbutton(self.customize_train_set_frame, text="Periodic Lookback", offvalue=0, onvalue=1, variable=self.seasonal_lookback_option_var, command=self._open_lookback_entries).grid(column=0, row=2)
 
         seasonal_lookback_entry_1 = tk.Entry(self.customize_train_set_frame, textvariable=self.seasonal_period_value_var, width=9, state=tk.DISABLED)
@@ -260,90 +261,65 @@ class CustomizeTrainsetComponent:
 
         self.entry_vars = [lookback_entry, seasonal_lookback_entry_1, seasonal_lookback_entry_2]
         self.lookback_attached = True
-    
 
-class RandomForest:
-    def __init__(self):
-        self.root = ttk.Frame()
+class TestModelComponent:
+    def __init__(self, root_frame: ttk.Frame, column: int=1, row: int=1, **functions):
+        self.test_file_path_var: tk.StringVar
+        self.forecast_num_var: tk.IntVar
+        self.test_metrics_vars: List[tk.DoubleVar]
 
-        # Model
-        model_frame = ttk.Labelframe(self.root, text="Model Frame")
-        model_frame.grid(column=1, row=0)
+        self.forecast_function = functions["forecast_function"]
+        self.graph_predicts_function = functions["graph_predicts_function"]
+        self.show_predict_values_function = functions["show_predict_values_function"]
 
-        ## Parameter Optimization
-        parameter_optimization_frame = ttk.Labelframe(model_frame, text="Parameter Optimization")
-        parameter_optimization_frame.grid(column=0, row=2)
+        self.type = "Supervised"
+        self.attach_frame(root_frame, column, row)
 
-        self.grid_option_var = tk.IntVar(value=0)
-        tk.Checkbutton(parameter_optimization_frame, text="Do grid search for optimal parameters", offvalue=0, onvalue=1, variable=self.grid_option_var, command=self.openEntries).grid(column=0, row=0, columnspan=3)
+    def _read_test_set(self):
+        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx"), ("Xls Files", "*.xls")])
+        if not path:
+            return
+        self.test_file_path_var.set(path)
+        if path.endswith(".csv"):
+            self.df = pd.read_csv(path)
+        else:
+            self.df = pd.read_excel(path, engine="openpyxl")
 
-        self.interval_var = tk.IntVar(value=3)
-        ttk.Label(parameter_optimization_frame, text="Interval:").grid(column=0, row=1)
-        self.interval_entry = ttk.Entry(parameter_optimization_frame, textvariable=self.interval_var, width=8, state=tk.DISABLED)
-        self.interval_entry.grid(column=1, row=1, pady=2)
+    def check_errors(self) -> Tuple[bool, str]:
+        if self.forecast_num_var.get() <= 0:
+            return (True, "Enter a valid forecast count")
+        if self.type != "Timeseries" and self.test_file_path_var.get() == "":
+            return (True, "Enter a valid test dataset")
+        return (False, "")
 
-        self.gs_cross_val_option = tk.IntVar(value=0)
-        self.gs_cross_val_var = tk.IntVar(value=5)
-        tk.Checkbutton(parameter_optimization_frame, text="Cross validate; folds:", offvalue=0, onvalue=1, variable=self.gs_cross_val_option, command=self.openEntries).grid(column=0, row=2)
-        self.gs_cross_val_entry = tk.Entry(parameter_optimization_frame, textvariable=self.gs_cross_val_var, state=tk.DISABLED, width=8)
-        self.gs_cross_val_entry.grid(column=1, row=2)
-
-        ## Model Parameters
-        model_parameters_frame = ttk.LabelFrame(model_frame, text="Model Parameters")
-        model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
-        
-        parameter_names = ["N Estimators", "Max Depth", "Min Samples Split", "Min Samples Leaf"]
-        self.parameters = [tk.IntVar(value=100), tk.Variable(value="None"), tk.IntVar(value=2), tk.IntVar(value=1)]
-        self.optimization_parameters = [[tk.IntVar(value=75), tk.IntVar(value=150)], [tk.IntVar(value=5), tk.IntVar(value=15)], [tk.IntVar(value=2), tk.IntVar(value=4)], [tk.IntVar(value=1), tk.IntVar(value=4)]]
-        
-        ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
-        ttk.Label(model_parameters_frame, text="----- Search Range -----").grid(column=2, row=0, columnspan=2)
-
-        self.model_parameters_frame_options = [
-            [
-                ttk.Label(model_parameters_frame, text=j+":").grid(column=0, row=i+1),
-                ttk.Entry(model_parameters_frame, textvariable=self.parameters[i], state=tk.DISABLED, width=9),
-                ttk.Entry(model_parameters_frame, textvariable=self.optimization_parameters[i][0], state=tk.DISABLED, width=9),
-                ttk.Entry(model_parameters_frame, textvariable=self.optimization_parameters[i][1], state=tk.DISABLED, width=9)
-            ] for i,j in enumerate(parameter_names)
-        ]
-
-        for i, j in enumerate(self.model_parameters_frame_options):
-            j[1].grid(column=1, row=i+1, padx=2, pady=2, sticky=tk.W)
-            j[2].grid(column=2, row=i+1, padx=2, pady=2)
-            j[3].grid(column=3, row=i+1, padx=2, pady=2)
-
-        ttk.Button(model_frame, text="Create Model", command=self.createModel).grid(column=0, row=3)
-        ttk.Button(model_frame, text="Save Model", command=self.saveModel).grid(column=1, row=3)
-        ttk.Button(model_frame, text="Load Model", command=self.loadModel).grid(column=2, row=3)
-
-        # Test Model
-        test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=1, row=1)
+    def attach_frame(self, root_frame: ttk.Frame, column: int, row: int):
+        test_model_frame = ttk.LabelFrame(root_frame, text="Test Frame")
+        test_model_frame.grid(column=column, row=row)
 
         ## Test Model Main
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        self.forecast_num = tk.IntVar(value="") # type: ignore
+        self.forecast_num_var = tk.IntVar(value=7)
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num_var).grid(column=1, row=0)
+        ttk.Button(test_model_main_frame, text="Values", command=self.show_predict_values_function).grid(column=2, row=0)
 
-        test_file_path = tk.StringVar()
+        self.test_file_path_var = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
-        ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
+        ttk.Entry(test_model_main_frame, textvariable=self.test_file_path_var).grid(column=1, row=1)
+        ttk.Button(test_model_main_frame, text="Get Test Set", command=self._read_test_set).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Test Model", command=self.forecast).grid(column=2, row=3)
-        ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
+        ttk.Button(test_model_main_frame, text="Test Model", command=self.forecast_function).grid(column=2, row=3)
+        ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.graph_predicts_function).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
+        self.test_metrics_vars = [tk.DoubleVar() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
+            ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1, row=i)
+    

@@ -17,9 +17,9 @@ import json
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
-# from .helpers import *
+from .helpers import loss, skloss, popupmsg
 
-from .components import DatasetInputComponent, ModelValidationComponent, CustomizeTrainsetComponent
+from .components import DatasetInputComponent, ModelValidationComponent, CustomizeTrainsetComponent, TestModelComponent
 
 class RandomForest:
     def __init__(self):
@@ -87,52 +87,17 @@ class RandomForest:
         ttk.Button(model_frame, text="Load Model", command=self.loadModel).grid(column=2, row=3)
 
         # Test Model
-        test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
-        test_model_frame.grid(column=1, row=1)
-
-        ## Test Model Main
-        test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
-        test_model_main_frame.grid(column=0, row=0)
-
-        self.forecast_num = tk.IntVar(value="") # type: ignore
-        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
-
-        test_file_path = tk.StringVar()
-        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
-        ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
-
-        ttk.Button(test_model_main_frame, text="Test Model", command=self.forecast).grid(column=2, row=3)
-        ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
-
-        ## Test Model Metrics
-        test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
-        test_model_metrics_frame.grid(column=1, row=0)
-
-        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
-        for i, j in enumerate(test_metrics):
-            ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
+        self.test_model_component = TestModelComponent(
+            root_frame=self.root, column=1, row=1, 
+            forecast_function = self.forecast,
+            graph_predicts_function = self.vsGraph,
+            show_predict_values_function = self.showPredicts,
+        )
 
         self.openEntries()
 
-    def getTestSet(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xl*")])
-        if not path:
-            return
-        file_path.set(path)
-        if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path) # type: ignore
-        else:
-            try:
-                self.test_df = pd.read_excel(path)
-            except:
-                self.test_df = pd.read_excel(path, engine="openpyxl")
-
     def showPredicts(self):
+        print("showp")
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         except:
@@ -146,30 +111,33 @@ class RandomForest:
         if not path:
             return
         try:
-            params = self.model.get_params()
+            self.model: RandomForestRegressor
+            model_params = self.model.get_params()
         except:
             popupmsg("Model is not created")
             return
 
-        param_list = list(params.items())
+        param_list = []
+        param_list.append(list(model_params.items()))
         param_list.append(list(self.get_train_set_component.get_params().items()))
         param_list.append(list(self.model_validation_component.get_params().items()))
         param_list.append(list(self.customize_train_set_component.get_params().items()))
-        
+
+        params = dict(param_list)
         params["is_round"] = self.is_round
         params["is_negative"] = self.is_negative
 
         os.mkdir(path)
         dump(self.model, path+"/model.joblib")
-        if self.scale_var.get() != "None":
+        if params.get("scale_var") != "None":
             with open(path+"/feature_scaler.pkl", "wb") as f:
                 pickle_dump(self.feature_scaler, f)
             with open(path+"/label_scaler.pkl", "wb") as f:
                 pickle_dump(self.label_scaler, f)
-        if self.lookback_option.get() == 1:
+        if params.get("lookback_option") == 1:
             with open(path+"/last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.last)
-        if self.seasonal_lookback_option.get() == 1:
+        if params.get("seasonal_lookback_option") == 1:
             with open(path+"/seasonal_last_values.npy", 'wb') as outfile:
                 np.save(outfile, self.seasonal_last)
         with open(path+"/model.json", 'w') as outfile:
@@ -192,6 +160,7 @@ class RandomForest:
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
         self.model_validation_component.set_params(params)
+        self.customize_train_set_component.set_params(params)
 
         self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
@@ -262,6 +231,8 @@ class RandomForest:
         raise_error(*self.get_train_set_component.check_errors())
         raise_error(*self.model_validation_component.check_errors())
         raise_error(*self.customize_train_set_component.check_errors())
+        
+        raise_error(*self.test_model_component.check_errors())
 
         try:
             msg = "Enter a valid Interval for grid search"
@@ -306,11 +277,11 @@ class RandomForest:
     def getData(self):
         self.is_round = False
         self.is_negative = False
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        lookback_option = self.customize_train_set_component.lookback_option_var.get()
+        seasonal_lookback_option = self.customize_train_set_component.seasonal_lookback_option_var.get()
         sliding = lookback_option + 2*seasonal_lookback_option - 1
         self.sliding = sliding
-        scale_choice = self.scale_var.get()
+        scale_choice = self.customize_train_set_component.scale_var.get()
 
         self.predictor_names = self.get_train_set_component.get_predictors()
         self.label_name = self.get_train_set_component.get_label()
@@ -338,16 +309,9 @@ class RandomForest:
             X.iloc[:] = self.feature_scaler.fit_transform(X)
             y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
         
-        try:
-            lookback = self.lookback_val_var.get()
-        except:
-            lookback = 0
-        try:
-            seasonal_period = self.seasonal_period_var.get()
-            seasonal_lookback = self.seasonal_val_var.get()
-        except:
-            seasonal_period = 0
-            seasonal_lookback = 0
+        lookback = self.customize_train_set_component.lookback_value_var.get()
+        seasonal_period = self.customize_train_set_component.seasonal_period_value_var.get()
+        seasonal_lookback = self.customize_train_set_component.seasonal_value_var.get()
             
         X,y = self.getLookback(X, y, lookback, seasonal_period, seasonal_lookback, sliding)
 
@@ -355,15 +319,19 @@ class RandomForest:
 
 
     def createModel(self):
-        if self.checkErrors():
+        if self.check_errors():
             return
         
-        do_forecast = self.model_validation_component.do_forecast_option.get()
-        val_option = self.model_validation_component.validation_option.get()
+        do_forecast = self.model_validation_component.do_forecast_option_var.get()
+        val_option = self.model_validation_component.validation_option_var.get()
         
         X, y = self.getData()
         X: np.ndarray
         y: np.ndarray
+            
+        scale_type = self.customize_train_set_component.scale_var.get()
+        random_percent_value = self.model_validation_component.random_percent_var.get()
+        test_metrics_vars = self.test_model_component.test_metrics_vars
 
         if self.grid_option_var.get() == 0:
             n_estimators = self.parameters[0].get()
@@ -378,31 +346,31 @@ class RandomForest:
                 model.fit(X, y)
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
-                    if self.scale_var.get() != "None":
+                    if scale_type != "None":
                         pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                         y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
-                    losses = loss(y, pred)[:-1]
+                    losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
+                        test_metrics_vars[i].set(j)
                 self.model = model # type: ignore
             
             elif val_option == 1:
                 if do_forecast == 0:
-                    X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=random_percent_value/100)
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
-                    if self.scale_var.get() != "None":
+                    if scale_type != "None":
                         pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                         y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
-                    losses = loss(y_test, pred)[:-1]
+                    losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
                     for i,j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
+                        test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get()/100)*len(X))
+                    size = int((random_percent_value/100)*len(X))
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
@@ -410,15 +378,15 @@ class RandomForest:
 
             elif val_option == 2:
                 if do_forecast == 0:
-                    cvs = cross_validate(model, X, y, cv=self.cross_val_var.get(), scoring=skloss)
+                    cvs = cross_validate(model, X, y, cv=self.model_validation_component.k_fold_value_var.get(), scoring=skloss)
                     for i,j in enumerate(list(cvs.values())[2:]):
-                        self.test_metrics_vars[i].set(j.mean())
+                        self.test_model_component.test_metrics_vars[i].set(j)
 
             elif val_option == 3:
                 if do_forecast == 0:
                     cvs = cross_validate(model, X, y, cv=X.shape[0]-1, scoring=skloss)
                     for i,j in enumerate(list(cvs.values())[2:]):
-                        self.test_metrics_vars[i].set(j.mean())
+                        self.test_model_component.test_metrics_vars[i].set(j)
             
         else:
             params = {}
@@ -436,46 +404,47 @@ class RandomForest:
                 regressor.fit(X, y)
                 if do_forecast == 0:
                     pred = regressor.predict(X)
-                    if self.scale_var.get() != "None":
+                    if scale_type != "None":
                         pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                         y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y, pred)[:-1]
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
-                self.model = regressor.best_estimator_
+                        test_metrics_vars[i].set(j)
+                self.model = regressor.best_estimator_ # type: ignore
 
             elif val_option == 1:
                 if do_forecast == 0:
-                    X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+                    X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=random_percent_value/100)
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
-                    if self.scale_var.get() != "None":
+                    if scale_type != "None":
                         pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
                         y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
                     losses = loss(y_test, pred)[:-1]
                     self.y_test = y_test
                     self.pred = pred
                     for i,j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
+                        test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get()/100)*len(X))
+                    size = int((random_percent_value/100)*len(X))
                     X = X[-size:]
                     y = y[-size:]
                     regressor.fit(X, y)
-                self.model = regressor.best_estimator_
+                self.model = regressor.best_estimator_ # type: ignore
             
-            popupmsg("Best Params: " + str(self.model.get_params()))
+            popupmsg("Best Params: " + str(self.model.get_params())) # type: ignore
         
     def forecastLookback(self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
         self.test_df: pd.DataFrame
+        scale_type = self.customize_train_set_component.scale_var.get()
         pred = []
         if sliding == 0:
             last = self.last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if scale_type != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j] # type: ignore
@@ -488,7 +457,7 @@ class RandomForest:
             seasonal_last = self.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if scale_type != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, seasons+1):
                     X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
@@ -502,7 +471,7 @@ class RandomForest:
             seasonal_last = self.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if scale_type != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j] # type: ignore
@@ -517,41 +486,35 @@ class RandomForest:
         return np.array(pred).reshape(-1)
 
     def forecast(self):
+        scale_type = self.customize_train_set_component.scale_var.get()
         try:
-            num = self.forecast_num.get()
-        except:
+            num = self.test_model_component.forecast_num_var.get()
+        except Exception:
             popupmsg("Enter a valid forecast value")
             return
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
+
+        lookback_option = self.customize_train_set_component.lookback_option_var.get()
+        seasonal_lookback_option = self.customize_train_set_component.seasonal_lookback_option_var.get()
         try:
             X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
             self.y_test = y_test
-        except:
+        except Exception:
             popupmsg("Read a test data")
             return
        
         if lookback_option == 0 and seasonal_lookback_option == 0:
-            if self.scale_var.get() != "None":
+            if scale_type != "None":
                 X_test = self.feature_scaler.transform(X_test)
             self.pred = self.model.predict(X_test).reshape(-1)
         else:
             sliding = self.sliding
-            try:
-                lookback = self.lookback_val_var.get()
-            except:
-                lookback = 0
-            try:
-                seasonal_lookback = self.seasonal_val_var.get()
-                seasons = self.seasonal_period_var.get()
-            except:
-                seasonal_lookback = 0
-                seasons = 0 
-
+            lookback = self.customize_train_set_component.lookback_value_var.get()
+            seasonal_lookback = self.customize_train_set_component.seasonal_value_var.get()
+            seasons = self.customize_train_set_component.seasonal_period_value_var.get()
             self.pred = self.forecastLookback(num, lookback, seasons, seasonal_lookback, sliding)
 
-        if self.scale_var.get() != "None":
+        if scale_type != "None":
             self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1,1)).reshape(-1) # type: ignore
 
         if not self.is_negative:
@@ -560,10 +523,11 @@ class RandomForest:
             self.pred = np.round(self.pred).astype(int)
         
         losses = loss(y_test, self.pred)
-        for i in range(6):
-            self.test_metrics_vars[i].set(losses[i])
+        for i in range(len(losses)):
+            self.test_model_component.test_metrics_vars[i].set(losses[i])
 
     def vsGraph(self):
+        print("vsGraph")
         y_test = self.y_test
         try:
             pred = self.pred
