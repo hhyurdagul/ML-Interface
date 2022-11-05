@@ -13,9 +13,11 @@ import json
 from typing import List, Tuple, Union
 
 class DatasetInputComponent:
-    def __init__(self, root_frame: ttk.Frame, column: int=0, row: int=0):
+    def __init__(self, root_frame: ttk.Frame, column: int=0, row: int=0, data_service = None):
         self.df: pd.DataFrame
         self.train_file_path_var: tk.StringVar
+
+        self.data_service = data_service
 
         train_set_frame = self.attach_frame(root_frame, column, row)
         self.attach_input_list(train_set_frame)
@@ -49,11 +51,12 @@ class DatasetInputComponent:
         for i in self.df.columns.to_list():
             self.input_list.insert(tk.END, i)
 
-    def _read_csv(self):
+    def _read_data(self):
         path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Excel Files", "*.xlsx"), ("Xls Files", "*.xls")])
         if not path:
             return
         self.train_file_path_var.set(path)
+        # self.columns = self.data_service.read_data(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
         else:
@@ -88,7 +91,7 @@ class DatasetInputComponent:
         self.train_file_path_var = tk.StringVar(value="")
         ttk.Label(train_set_frame, text="Train File Path").grid(column=column, row=row)
         ttk.Entry(train_set_frame, textvariable=self.train_file_path_var).grid(column=1, row=0)
-        ttk.Button(train_set_frame, text="Read Data", command=self._read_csv).grid(column=2, row=0)
+        ttk.Button(train_set_frame, text="Read Data", command=self._read_data).grid(column=2, row=0)
 
         return train_set_frame
 

@@ -238,6 +238,7 @@ class SARIMA:
         params["train_size"] = self.train_size.get()
         params["train_size_choice"] = self.train_size_choice.get()
         params["seasonality_option"] = self.seasonality_option.get()
+        params["end_len"] = self.end
         os.mkdir(path)
 
         with open(path+"/model", 'wb') as model_path:
@@ -272,6 +273,7 @@ class SARIMA:
         
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
+        self.end = params["end_len"]
         try:
             self.is_round = params["is_round"]
         except:

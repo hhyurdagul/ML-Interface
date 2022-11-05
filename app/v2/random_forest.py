@@ -21,6 +21,11 @@ from .helpers import loss, skloss, popupmsg
 
 from .components import DatasetInputComponent, ModelValidationComponent, CustomizeTrainsetComponent, TestModelComponent
 
+
+class DataService:
+    def __init__(self):
+        pass
+
 class RandomForest:
     def __init__(self):
         self.root = ttk.Frame()
