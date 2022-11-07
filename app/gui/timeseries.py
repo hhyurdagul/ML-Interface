@@ -7,8 +7,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 
 # Default
 import os
-from datetime import datetime
 import json
+from random import seed
+from datetime import datetime
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
@@ -33,12 +34,9 @@ from tensorflow.keras.initializers import GlorotUniform, Orthogonal
 tf.config.set_visible_devices([], "GPU")
 
 # Seed
-from random import seed
-from numpy.random import seed as np_seed # type: ignore
-from tensorflow import random
 seed(0)
-np_seed(0)
-random.set_seed(0)
+np.random.seed(0)
+tf.random.set_seed(0)
 
 # Helper
 from .helpers import loss, popupmsg, cartesian

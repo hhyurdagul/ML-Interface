@@ -9,6 +9,7 @@ from gui.mlp import MultiLayerPerceptron
 from gui.supportvectormachine import SupportVectorMachine
 from gui.random_forest import RandomForest
 from gui.lgbm import LGBM
+from gui.catboost_arch import CatBoost
 from gui.xg import XGB
 from gui.ridge import Ridge
 from gui.generalregression import GeneralRegressionNeuralNetwork
@@ -16,9 +17,9 @@ from gui.random_walk import RandomWalk
 from gui.sarima import SARIMA
 from gui.elm import ELM
 from gui.feature_selection import FS
-from gui.montecarlo import MonteCarlo
-from gui.movingaverage import MovingAverage
-from gui.hybrid import Hybrid
+# from gui.montecarlo import MonteCarlo
+# from gui.movingaverage import MovingAverage
+# from gui.hybrid import Hybrid
 
 
 class GUI:
@@ -40,6 +41,9 @@ class GUI:
 
         lgbm = LGBM()
         self.add(lgbm, "LightGBM")
+        
+        catboost = CatBoost()
+        self.add(catboost, "CatBoost")
         
         xgb = XGB()
         self.add(xgb, "XGBoost")
