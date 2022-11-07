@@ -62,14 +62,14 @@ class GUI:
         fs = FS()
         self.add(fs, "Feature Selection")
 
-        monte = MonteCarlo()
-        self.add(monte, "Monte Carlo")
-        
-        moving_average = MovingAverage()
-        self.add(moving_average, "Moving Average")
-
-        hybrid = Hybrid()
-        self.add(hybrid, "Hybrid")
+        # monte = MonteCarlo()
+        # self.add(monte, "Monte Carlo")
+        #
+        # moving_average = MovingAverage()
+        # self.add(moving_average, "Moving Average")
+        #
+        # hybrid = Hybrid()
+        # self.add(hybrid, "Hybrid")
 
         self.parent.pack(expand=1, fill='both')
 

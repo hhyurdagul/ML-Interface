@@ -21,6 +21,7 @@ from statsmodels.tsa.stattools import acf
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 # Keras
+import tensorflow as tf
 from tensorflow.keras.backend import clear_session
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Conv1D, MaxPooling1D
@@ -28,6 +29,8 @@ from tensorflow.keras.layers import Input, Flatten, Dropout, Dense
 from tensorflow.keras.layers import SimpleRNN, GRU, LSTM, Bidirectional
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.initializers import GlorotUniform, Orthogonal
+
+tf.config.set_visible_devices([], "GPU")
 
 # Seed
 from random import seed
@@ -230,11 +233,11 @@ class TimeSeries:
         ttk.Entry(hyperparameter_frame, textvariable=self.hyperparameters["Momentum"]).grid(column=3, row=2)
 
         model_names = ["MLP Model", "CNN Model", "LSTM Model", "Bi-LSTM Model"]
-        second_model_names = ["RNN Model", "GRU Model", "CNN-LSTM Model"]
+        second_model_names = ["RNN Model", "GRU Model", "CNN-LSTM Model", "MQRNN Model"]
         self.model_var = tk.IntVar(value=0)
         ttk.Label(hyperparameter_frame, text="Model Type").grid(column=0, row=3, columnspan=4)
         [tk.Radiobutton(hyperparameter_frame, text=model_names[i], value=i, variable=self.model_var).grid(column=i, row=4) for i in range(4)]
-        [tk.Radiobutton(hyperparameter_frame, text=second_model_names[i], value=i+4, variable=self.model_var).grid(column=i, row=5) for i in range(3)]
+        [tk.Radiobutton(hyperparameter_frame, text=second_model_names[i], value=i+4, variable=self.model_var).grid(column=i, row=5) for i in range(4)]
 
         self.train_loss = tk.Variable(value="")
         ttk.Button(hyperparameter_frame, text="Create Model", command=self.createModel).grid(column=0, row=6)
@@ -792,6 +795,9 @@ class TimeSeries:
                 model.add(Flatten())
 
             layers = self.no_optimization_choice_var.get()
+            # CNN-LSTM
+            cnn_layers = []
+            lstm_layers = []
             for i in range(layers):
                 neuron_number = self.neuron_numbers_var[i].get()
                 activation_function = self.activation_var[i].get()
@@ -827,13 +833,31 @@ class TimeSeries:
                         model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
 
-                #elif model_choice == 5:
-                else: 
+                elif model_choice == 5:
                     if i == layers-1:
                         model.add(GRU(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
                     else:
                         model.add(GRU(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
+                        model.add(Dropout(0.2))
+                elif model_choice == 6:
+                    # CNN-LSTM
+                    cnn_layers.append(Conv1D(filters=neuron_number, kernel_size=2, activation=activation_function, kernel_initializer=GlorotUniform(seed=0)))
+                    if i == layers-1:
+                        lstm_layers.append(LSTM(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
+                        for j in range(layers):
+                            model.add(cnn_layers[i])
+                        for j in range(layers):
+                            model.add(lstm_layers[i])
+                    else:
+                        lstm_layers.append(LSTM(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
+                else:
+                    # MQRNN
+                    if i == layers-1:
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=False, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
+                        model.add(Dropout(0.2))
+                    else:
+                        model.add(SimpleRNN(neuron_number, activation=activation_function, return_sequences=True, kernel_initializer=GlorotUniform(seed=0), recurrent_initializer=Orthogonal(seed=0)))
                         model.add(Dropout(0.2))
             
             if model_choice == 1:
