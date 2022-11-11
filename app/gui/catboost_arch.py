@@ -566,7 +566,7 @@ class CatBoost:
             iterations = self.parameters[1].get()
             learning_rate = self.parameters[2].get()
 
-            model = CatBoostRegressor(max_depth=max_depth, iterations=iterations, learning_rate=learning_rate)
+            model = CatBoostRegressor(max_depth=max_depth, iterations=iterations, learning_rate=learning_rate, allow_writing_files=False)
             
             if val_option == 0:
                 model.fit(X, y)
@@ -623,7 +623,7 @@ class CatBoost:
             params["learning_rate"] = np.unique(np.linspace(self.optimization_parameters[2][0].get(), self.optimization_parameters[2][1].get(), interval, dtype=float))
 
             cv = self.gs_cross_val_var.get() if self.gs_cross_val_option.get() == 1 else None
-            regressor = GridSearchCV(CatBoostRegressor(), params, cv=cv)
+            regressor = GridSearchCV(CatBoostRegressor(allow_writing_files=False), params, cv=cv)
             
             if val_option == 0:
                 regressor.fit(X, y)
