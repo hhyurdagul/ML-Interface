@@ -349,10 +349,9 @@ class CatBoost:
                     self.label_scaler = pickle_load(f)
             except:
                 pass
-        self.parameters[0].set(params["n_estimators"])
-        self.parameters[1].set(params["max_depth"])
-        self.parameters[2].set(params["min_samples_split"])
-        self.parameters[3].set(params["min_samples_leaf"])
+        self.parameters[0].set(params["max_depth"])
+        self.parameters[1].set(params["iterations"])
+        self.parameters[2].set(params["learning_rate"])
        
         self.openEntries()
         self.openOtherEntries()
