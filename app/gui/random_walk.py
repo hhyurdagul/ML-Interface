@@ -226,6 +226,7 @@ class RandomWalk:
         except:
             popupmsg("Model is not created")
             return
+
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
         params["is_round"] = self.is_round
@@ -233,6 +234,8 @@ class RandomWalk:
         params["seasonal_option"] = self.seasonal_option.get()
 
         os.mkdir(path)
+        with open(path+"/pred.npy", "wb") as outfile:
+            np.save(outfile, self.pred)
         with open(path+"/model.json", 'w') as outfile:
             json.dump(params, outfile)
         with open(path+"/last.npy", 'wb') as outfile:
@@ -244,11 +247,15 @@ class RandomWalk:
             return
         try:
             infile = open(path+"/model.json")
+            with open(path+"/pred.npy", "rb") as f:
+                self.pred = np.load(f)
         except:
             popupmsg("There is no model file at the path")
             return
-        params = json.load(infile)
 
+        self.model_loaded = True
+
+        params = json.load(infile)
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
         self.is_round = params["is_round"]
@@ -259,10 +266,6 @@ class RandomWalk:
         self.seasonal_value.set(params["seasonal_value"])
         self.epsilon_var.set(params["epsilon"])
 
-        self.model = RandomWalkRegressor(params["epsilon"], params["seasonal_value"])
-
-        with open(path+"/last.npy", 'rb') as outfile:
-            self.model.last = np.load(outfile)
 
         self.openEntries()
         msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
@@ -299,6 +302,7 @@ class RandomWalk:
     def createModel(self):
         self.is_round = False
         self.is_negative = False
+        self.model_loaded = False
         self.predictor_names = self.target_list.get(0)
         self.label_name = self.target_list.get(0)
         data = self.df[self.label_name]
@@ -315,12 +319,14 @@ class RandomWalk:
         self.model.set_series(series)
 
     def forecast(self, num):
-        self.pred = self.model.predict(num)
+        if not self.model_loaded:
+            print("asd")
+            self.pred = self.model.predict(num)
 
-        if not self.is_negative:
-            self.pred = self.pred.clip(0, None)
-        if self.is_round:
-            self.pred = np.round(self.pred).astype(int)
+            if not self.is_negative:
+                self.pred = self.pred.clip(0, None)
+            if self.is_round:
+                self.pred = np.round(self.pred).astype(int)
 
         self.forecast_done = True
         
