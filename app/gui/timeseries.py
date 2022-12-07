@@ -624,7 +624,7 @@ class TimeSeries:
                 raise Exception
  
             msg = "Select a valid layer number"
-            if not self.no_optimization_choice_var.get() or not self.optimization_choice_var.get():
+            if not self.no_optimization_choice_var.get() and not self.optimization_choice_var.get():
                 raise Exception
 
             msg = "Enter a valid neuron number"
