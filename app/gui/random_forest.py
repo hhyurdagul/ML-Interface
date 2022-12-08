@@ -122,7 +122,7 @@ class RandomForest:
         model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
         
         parameter_names = ["N Estimators", "Max Depth", "Min Samples Split", "Min Samples Leaf"]
-        self.parameters = [tk.IntVar(value=100), tk.Variable(value="None"), tk.IntVar(value=2), tk.IntVar(value=1)]
+        self.parameters = [tk.IntVar(value=100), tk.IntVar(value=100), tk.IntVar(value=2), tk.IntVar(value=1)]
         self.optimization_parameters = [[tk.IntVar(value=75), tk.IntVar(value=150)], [tk.IntVar(value=5), tk.IntVar(value=15)], [tk.IntVar(value=2), tk.IntVar(value=4)], [tk.IntVar(value=1), tk.IntVar(value=4)]]
         
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
@@ -563,7 +563,6 @@ class RandomForest:
         if self.grid_option_var.get() == 0:
             n_estimators = self.parameters[0].get()
             max_depth = self.parameters[1].get()
-            max_depth = int(max_depth) if max_depth != "None" else None
             min_samples_split = self.parameters[2].get()
             min_samples_leaf = self.parameters[3].get()
 
