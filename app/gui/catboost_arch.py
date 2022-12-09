@@ -122,7 +122,7 @@ class CatBoost:
         model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
         
         parameter_names = ["Max Depth", "Iterations", "Learning Rate"]
-        self.parameters = [tk.IntVar(value=100), tk.IntVar(value=10), tk.DoubleVar(value=1)]
+        self.parameters = [tk.IntVar(value=16), tk.IntVar(value=10), tk.DoubleVar(value=1)]
         self.optimization_parameters = [[tk.IntVar(value=5), tk.IntVar(value=25)], [tk.IntVar(value=1), tk.IntVar(value=4)], [tk.DoubleVar(value=0.1), tk.DoubleVar(value=2)]]
         
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
