@@ -292,7 +292,7 @@ class TimeSeries:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
 
         self.input_list.delete(0, tk.END)
@@ -312,7 +312,7 @@ class TimeSeries:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
         self.test_data_valid = True
         if self.forecast_done:
@@ -326,7 +326,7 @@ class TimeSeries:
         self.pred: np.ndarray
         try:
             d["Predict"] = self.pred[:,0]
-        except:
+        except Exception:
             return
         df = pd.DataFrame(d)
         top = tk.Toplevel(self.root)
@@ -361,7 +361,7 @@ class TimeSeries:
                 "model": self.model_var.get(),
                 "train_loss": self.train_loss.get()
                 }
-        except:
+        except Exception:
             popupmsg("Model is not created")
             return
 
@@ -395,7 +395,7 @@ class TimeSeries:
             return
         try:
             self.model = load_model(path+"/model.h5")
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
         infile = open(path+"/model.json")
         params = json.load(infile)
@@ -411,11 +411,11 @@ class TimeSeries:
         self.label_name = params["label_name"]
         try:
             self.is_round = params["is_round"]
-        except:
+        except Exception:
             self.is_round = True
         try:
             self.is_negative = False
-        except:
+        except Exception:
             self.is_negative = params["is_negative"]
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
@@ -426,7 +426,7 @@ class TimeSeries:
                     self.feature_scaler = pickle_load(f)
                 with open(path+"/label_scaler.pkl", "rb") as f:
                     self.label_scaler = pickle_load(f)
-            except:
+            except Exception:
                 pass
         self.difference_choice_var.set(params["difference_choice"])
         if params["difference_choice"] == 1:
@@ -434,7 +434,7 @@ class TimeSeries:
             try:
                 with open(path+"/fill.npy", "rb") as f:
                     self.fill_values = np.load(f)
-            except:
+            except Exception:
                 pass
         self.s_difference_choice_var.set(params["second_difference_choice"])
         if params["second_difference_choice"] == 1:
@@ -442,7 +442,7 @@ class TimeSeries:
             try:
                 with open(path+"/s_fill.npy", "rb") as f:
                     self.s_fill_values = np.load(f)
-            except:
+            except Exception:
                 pass
         self.acf_lags.set(params["acf_lags"])
         self.lag_option_var.set(params["lag_choice"])
@@ -454,7 +454,7 @@ class TimeSeries:
         [self.activation_var[i].set(j) for i,j in enumerate(params["activations"])]
         try:
             self.output_activation.set(params["output_activation"])
-        except:
+        except Exception:
             self.output_activation.set("relu")
         [self.hyperparameters[i].set(j) for (i,j) in params["hyperparameters"].items()]
         self.model_var.set(params["model"])
@@ -472,13 +472,13 @@ class TimeSeries:
             a = self.input_list.get(self.input_list.curselection())
             if self.predictor_list.size() < 1:
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, _=None):
@@ -486,13 +486,13 @@ class TimeSeries:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
 
     def openDifference(self):
@@ -632,7 +632,7 @@ class TimeSeries:
             for i in range(self.no_optimization_choice_var.get()):
                 try:
                     self.neuron_numbers_var[i].get()
-                except:
+                except Exception:
                     neuron_empty = True
             if neuron_empty:
                 raise Exception
@@ -655,7 +655,7 @@ class TimeSeries:
 
             return False
             
-        except:
+        except Exception:
             popupmsg(msg) # type: ignore
             return True
 
@@ -974,7 +974,7 @@ class TimeSeries:
     def testModel(self):
         try:
             num = self.forecast_num.get()
-        except:
+        except Exception:
             popupmsg("Enter a valid Forecast value")
             return
 
@@ -1019,7 +1019,7 @@ class TimeSeries:
             plt.plot(self.y_test, label="Test")
         try:
             plt.plot(self.pred, label="Predict")
-        except:
+        except Exception:
             return
         plt.legend(loc="upper left")
         plt.show()

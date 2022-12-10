@@ -104,7 +104,7 @@ class FS:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -120,13 +120,13 @@ class FS:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, _=None):
@@ -134,11 +134,11 @@ class FS:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass

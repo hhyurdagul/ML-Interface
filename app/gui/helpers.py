@@ -16,19 +16,19 @@ def MAE(y_true, y_pred):
 def MAPE(y_true, y_pred):
     try:
         return round(np.mean(np.abs((y_true - y_pred) / y_true)) * 100, 2)
-    except:
+    except Exception:
         return None 
 
 def SMAPE(y_true, y_pred):
     try:
         return round(np.mean(np.abs(y_true-y_pred)/((np.abs(y_true)+np.abs(y_pred))/2)) * 100, 2)
-    except:
+    except Exception:
         return None
 
 def MASE(y_true, y_pred, seasons=1):
     try:
         return round(mean_absolute_error(y_true, y_pred) / mean_absolute_error(y_true[seasons:], y_true[:-seasons]), 2)
-    except:
+    except Exception:
         return None
 
 skloss = {
@@ -46,15 +46,15 @@ def loss(y_true, y_pred, seasons=1):
     MAE = round(mean_absolute_error(y_true, y_pred), 2)
     try:
         MAPE = round(np.mean(np.abs((y_true - y_pred) / y_true)) * 100, 2)
-    except:
+    except Exception:
         MAPE = None 
     try:
         SMAPE = round(np.mean(np.abs(y_true-y_pred)/((np.abs(y_true)+np.abs(y_pred))/2)) * 100, 2)
-    except:
+    except Exception:
         SMAPE = None
     try:
         MASE = round(mean_absolute_error(y_true, y_pred) / mean_absolute_error(y_true[seasons:], y_true[:-seasons]), 2)
-    except:
+    except Exception:
         MASE = None
 
     return [NMSE, RMSE, MAE, MAPE, SMAPE]

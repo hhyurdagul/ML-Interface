@@ -147,7 +147,7 @@ class GeneralRegressionNeuralNetwork:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -165,7 +165,7 @@ class GeneralRegressionNeuralNetwork:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
@@ -179,13 +179,13 @@ class GeneralRegressionNeuralNetwork:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, event=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, event=None):
@@ -193,13 +193,13 @@ class GeneralRegressionNeuralNetwork:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, event=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
     
     def openEntries(self):

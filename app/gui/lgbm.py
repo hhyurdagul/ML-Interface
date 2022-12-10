@@ -176,7 +176,7 @@ class LGBM:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -197,13 +197,13 @@ class LGBM:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
-        except:
+        except Exception:
             return
         top = tk.Toplevel(self.root)
         pt = Table(top, dataframe=df, editable=False)
@@ -214,13 +214,13 @@ class LGBM:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, event=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, event=None):
@@ -228,13 +228,13 @@ class LGBM:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, event=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
 
     def saveModel(self):
@@ -285,7 +285,7 @@ class LGBM:
             return
         try:
             model_path = path + "/model.joblib"
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
             return
         self.model = load(model_path)
@@ -296,11 +296,11 @@ class LGBM:
         self.label_name = params["label_name"]
         try:
             self.is_round = params["is_round"]
-        except:
+        except Exception:
             self.is_round = True
         try:
             self.is_negative = params["is_negative"]
-        except:
+        except Exception:
             self.is_negative = False
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
@@ -315,7 +315,7 @@ class LGBM:
                     self.feature_scaler = pickle_load(f)
                 with open(path+"/label_scaler.pkl", "rb") as f:
                     self.label_scaler = pickle_load(f)
-            except:
+            except Exception:
                 pass
         self.parameters[0].set(params["n_estimators"])
         self.parameters[1].set(params["max_depth"])
@@ -404,7 +404,7 @@ class LGBM:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
-        except:
+        except Exception:
             popupmsg(msg) # type: ignore
             return True
 
@@ -562,14 +562,14 @@ class LGBM:
     def forecast(self):
         try:
             num = self.forecast_num.get()
-        except:
+        except Exception:
             popupmsg("Enter a valid forecast value")
             return
         try:
             X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
             self.y_test = y_test
-        except:
+        except Exception:
             popupmsg("Read a test data")
             return
        
@@ -593,7 +593,7 @@ class LGBM:
         y_test = self.y_test
         try:
             pred = self.pred
-        except:
+        except Exception:
             return
         plt.plot(y_test)
         plt.plot(pred)

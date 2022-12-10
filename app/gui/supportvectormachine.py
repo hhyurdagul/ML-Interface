@@ -217,7 +217,7 @@ class SupportVectorMachine:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -238,13 +238,13 @@ class SupportVectorMachine:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
-        except:
+        except Exception:
             return
         top = tk.Toplevel(self.root)
         pt = Table(top, dataframe=df, editable=False)
@@ -255,13 +255,13 @@ class SupportVectorMachine:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, event=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, event=None):
@@ -269,13 +269,13 @@ class SupportVectorMachine:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, event=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
 
     def saveModel(self):
@@ -284,7 +284,7 @@ class SupportVectorMachine:
             return
         try:
             params = self.model.get_params()
-        except:
+        except Exception:
             popupmsg("Model is not created")
             return
         params["predictor_names"] = self.predictor_names
@@ -325,7 +325,7 @@ class SupportVectorMachine:
             return
         try:
             model_path = path + "/model.joblib"
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
             return
         self.model = load(model_path)
@@ -336,11 +336,11 @@ class SupportVectorMachine:
         self.label_name = params["label_name"]
         try:
             self.is_round = params["is_round"]
-        except:
+        except Exception:
             self.is_round = True
         try:
             self.is_negative = params["is_negative"]
-        except:
+        except Exception:
             self.is_negative = False
         self.do_forecast_option.set(params["do_forecast"])
         self.validation_option.set(params["validation_option"])
@@ -364,7 +364,7 @@ class SupportVectorMachine:
                 seasonal_last_values = open(path+"/seasonal_last_values.npy", 'rb')
                 self.seasonal_last = np.load(seasonal_last_values)
                 seasonal_last_values.close()
-        except:
+        except Exception:
             pass
         self.scale_var.set(params["scale_type"])
         if params["scale_type"] != "None":
@@ -373,12 +373,12 @@ class SupportVectorMachine:
                     self.feature_scaler = pickle_load(f)
                 with open(path+"/label_scaler.pkl", "rb") as f:
                     self.label_scaler = pickle_load(f)
-            except:
+            except Exception:
                 pass
         try:
             self.parameters[0].set(params["epsilon"])
             self.model_type_var.set(0)
-        except:
+        except Exception:
             self.parameters[1].set(params["nu"])
             self.model_type_var.set(1)
         self.parameters[2].set(np.log2(params["C"]))
@@ -525,7 +525,7 @@ class SupportVectorMachine:
                             msg = "Enter a valid " + j +  " value in grid search area"
                             raise Exception
 
-        except:
+        except Exception:
             popupmsg(msg)
             return True
 
@@ -593,12 +593,12 @@ class SupportVectorMachine:
         
         try:
             lookback = self.lookback_val_var.get()
-        except:
+        except Exception:
             lookback = 0
         try:
             seasonal_period = self.seasonal_period_var.get()
             seasonal_lookback = self.seasonal_val_var.get()
-        except:
+        except Exception:
             seasonal_period = 0
             seasonal_lookback = 0
             
@@ -800,7 +800,7 @@ class SupportVectorMachine:
     def forecast(self):
         try:
             num = self.forecast_num.get()
-        except:
+        except Exception:
             popupmsg("Enter a valid forecast value")
             return
         lookback_option = self.lookback_option.get()
@@ -809,7 +809,7 @@ class SupportVectorMachine:
             X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
             self.y_test = y_test
-        except:
+        except Exception:
             popupmsg("Read a test data")
             return
        
@@ -821,12 +821,12 @@ class SupportVectorMachine:
             sliding = self.sliding
             try:
                 lookback = self.lookback_val_var.get()
-            except:
+            except Exception:
                 lookback = 0
             try:
                 seasonal_lookback = self.seasonal_val_var.get()
                 seasons = self.seasonal_period_var.get()
-            except:
+            except Exception:
                 seasonal_lookback = 0
                 seasons = 0 
 
@@ -848,7 +848,7 @@ class SupportVectorMachine:
         y_test = self.y_test
         try:
             pred = self.pred
-        except:
+        except Exception:
             return
         plt.plot(y_test)
         plt.plot(pred)

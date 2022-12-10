@@ -149,7 +149,7 @@ class RandomWalk:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -167,7 +167,7 @@ class RandomWalk:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
         self.test_data_valid = True
@@ -182,7 +182,7 @@ class RandomWalk:
         self.pred: np.ndarray
         try:
             d["Predict"] = self.pred
-        except:
+        except Exception:
             return
         df = pd.DataFrame(d)
         top = tk.Toplevel(self.root)
@@ -194,13 +194,13 @@ class RandomWalk:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, _=None):
@@ -208,13 +208,13 @@ class RandomWalk:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
     
     def saveModel(self):
@@ -223,7 +223,7 @@ class RandomWalk:
             return
         try:
             params = self.model.get_params()
-        except:
+        except Exception:
             popupmsg("Model is not created")
             return
 
@@ -249,7 +249,7 @@ class RandomWalk:
             infile = open(path+"/model.json")
             with open(path+"/pred.npy", "rb") as f:
                 self.pred = np.load(f)
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
             return
 
@@ -343,7 +343,7 @@ class RandomWalk:
             plt.plot(self.y_test, label="Test")
         try:
             plt.plot(self.pred, label="Predict")
-        except:
+        except Exception:
             return
         plt.legend(loc="upper left")
         plt.show()

@@ -191,7 +191,7 @@ class Ridge:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -212,13 +212,13 @@ class Ridge:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
     def showPredicts(self):
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
-        except:
+        except Exception:
             return
         top = tk.Toplevel(self.root)
         pt = Table(top, dataframe=df, editable=False)
@@ -229,13 +229,13 @@ class Ridge:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, _=None):
@@ -243,13 +243,13 @@ class Ridge:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
 
     def saveModel(self):
@@ -258,7 +258,7 @@ class Ridge:
             return
         try:
             params = self.model.get_params()
-        except:
+        except Exception:
             popupmsg("Model is not created")
             return
         params["predictor_names"] = self.predictor_names
@@ -299,7 +299,7 @@ class Ridge:
             return
         try:
             model_path = path + "/model.joblib"
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
             return
         self.model = load(model_path)
@@ -451,7 +451,7 @@ class Ridge:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
-        except:
+        except Exception:
             popupmsg(msg) # type: ignore
             return True
 
@@ -519,12 +519,12 @@ class Ridge:
         
         try:
             lookback = self.lookback_val_var.get()
-        except:
+        except Exception:
             lookback = 0
         try:
             seasonal_period = self.seasonal_period_var.get()
             seasonal_lookback = self.seasonal_val_var.get()
-        except:
+        except Exception:
             seasonal_period = 0
             seasonal_lookback = 0
             
@@ -691,7 +691,7 @@ class Ridge:
     def forecast(self):
         try:
             num = self.forecast_num.get()
-        except:
+        except Exception:
             popupmsg("Enter a valid forecast value")
             return
         lookback_option = self.lookback_option.get()
@@ -700,7 +700,7 @@ class Ridge:
             X_test = self.test_df[self.predictor_names][:num].to_numpy() # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1) # type: ignore
             self.y_test = y_test
-        except:
+        except Exception:
             popupmsg("Read a test data")
             return
        
@@ -712,12 +712,12 @@ class Ridge:
             sliding = self.sliding
             try:
                 lookback = self.lookback_val_var.get()
-            except:
+            except Exception:
                 lookback = 0
             try:
                 seasonal_lookback = self.seasonal_val_var.get()
                 seasons = self.seasonal_period_var.get()
-            except:
+            except Exception:
                 seasonal_lookback = 0
                 seasons = 0 
 
@@ -739,7 +739,7 @@ class Ridge:
         y_test = self.y_test
         try:
             pred = self.pred
-        except:
+        except Exception:
             return
         plt.plot(y_test)
         plt.plot(pred)

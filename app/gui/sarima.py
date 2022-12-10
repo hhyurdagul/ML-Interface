@@ -148,7 +148,7 @@ class SARIMA:
         else:
             try:
                 self.df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
         self.fillInputList()
         
@@ -166,7 +166,7 @@ class SARIMA:
         else:
             try:
                 self.test_df = pd.read_excel(path)
-            except:
+            except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
         self.test_data_valid = True
         if self.forecast_done:
@@ -180,7 +180,7 @@ class SARIMA:
         self.pred: np.ndarray
         try:
             d["Predict"] = self.pred
-        except:
+        except Exception:
             return
         df = pd.DataFrame(d)
         top = tk.Toplevel(self.root)
@@ -192,13 +192,13 @@ class SARIMA:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
                 self.predictor_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
-        except:
+        except Exception:
             pass
     
     def addTarget(self, _=None):
@@ -206,13 +206,13 @@ class SARIMA:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
                 self.target_list.insert(tk.END, a)
-        except:
+        except Exception:
             pass
 
     def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
-        except:
+        except Exception:
             pass
     
     def saveModel(self):
@@ -252,7 +252,7 @@ class SARIMA:
             return
         try:
             model_path = path + "/model"
-        except:
+        except Exception:
             popupmsg("There is no model file at the path")
             return
         with open(path+"/model", 'rb') as model_path:
@@ -276,11 +276,11 @@ class SARIMA:
         self.end = params["end_len"]
         try:
             self.is_round = params["is_round"]
-        except:
+        except Exception:
             self.is_round = True
         try:
             self.is_negative = params["is_negative"]
-        except:
+        except Exception:
             self.is_negative = False
         
         self.train_size.set(params["train_size"])
@@ -379,7 +379,7 @@ class SARIMA:
             plt.plot(self.y_test, label="Test")
         try:
             plt.plot(self.pred, label="Predict")
-        except:
+        except Exception:
             return
         plt.legend(loc="upper left")
         plt.show()
