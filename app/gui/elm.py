@@ -96,6 +96,7 @@ class ELM:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Model
+        self.model: ELMRegressor
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
         model_frame.grid(column=1, row=0)
 
@@ -257,8 +258,12 @@ class ELM:
         path = filedialog.asksaveasfilename()
         if not path:
             return
+
+        params = {}
         try:
-            params = self.model.get_params()
+            model_params = self.model.get_params()
+            params["alpha"] = float(model_params["alpha"])
+            params["n_neurons"] = int(model_params["n_neurons"])
         except Exception:
             popupmsg("Model is not created")
             return

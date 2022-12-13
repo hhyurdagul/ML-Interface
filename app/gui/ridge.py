@@ -96,6 +96,7 @@ class Ridge:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Model
+        self.model: RidgeRegression
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
         model_frame.grid(column=1, row=0)
 

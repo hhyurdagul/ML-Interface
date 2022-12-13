@@ -96,6 +96,7 @@ class CatBoost:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Model
+        self.model: CatBoostRegressor
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
         model_frame.grid(column=1, row=0)
 
@@ -224,7 +225,7 @@ class CatBoost:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
-    def addPredictor(self, event=None):
+    def addPredictor(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
@@ -232,13 +233,13 @@ class CatBoost:
         except Exception:
             pass
 
-    def ejectPredictor(self, event=None):
+    def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except Exception:
             pass
     
-    def addTarget(self, event=None):
+    def addTarget(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -246,7 +247,7 @@ class CatBoost:
         except Exception:
             pass
 
-    def ejectTarget(self, event=None):
+    def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
@@ -256,8 +257,13 @@ class CatBoost:
         path = filedialog.asksaveasfilename()
         if not path:
             return
+        
+        params = {}
         try:
-            params = self.model.get_params()
+            model_params = self.model.get_params()
+            params["max_depth"] = int(model_params["max_depth"])
+            params["iterations"] = int(model_params["iterations"])
+            params["learning_rate"] = float(model_params["learning_rate"])
         except Exception:
             popupmsg("Model is not created")
             return
@@ -455,17 +461,6 @@ class CatBoost:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
-            # for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-            #    if str(self.model_parameters_frame_options[i][1]["state"]) != "disabled" and not self.parameters[i].get():
-            #        msg = "Enter a valid " + j +  " value"
-            #        raise Exception
-                
-            #    if self.grid_option_var.get():
-            #        if str(self.model_parameters_frame_options[i][2]["state"]) != "disabled":
-            #            if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-            #                msg = "Enter a valid " + j +  " value in grid search area"
-            #                raise Exception
-
         except Exception:
             popupmsg(msg) # type: ignore
             return True
@@ -523,14 +518,14 @@ class CatBoost:
             self.label_scaler = StandardScaler()
         
             X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
+            y.iloc[:] = self.label_scaler.fit_transform(y.to_numpy().reshape(-1,1)).reshape(-1)
         
         elif scale_choice == "MinMaxScaler":
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
             
             X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(-1,1)).reshape(-1)
+            y.iloc[:] = self.label_scaler.fit_transform(y.to_numpy().reshape(-1,1)).reshape(-1)
         
         try:
             lookback = self.lookback_val_var.get()
@@ -571,14 +566,14 @@ class CatBoost:
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
-                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1)
+                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1)
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
                     for i,j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
-                self.model = model # type: ignore
+                self.model = model
             
             elif val_option == 1:
                 if do_forecast == 0:
@@ -586,8 +581,8 @@ class CatBoost:
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
-                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1)
+                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1)
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -598,7 +593,7 @@ class CatBoost:
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
-                self.model = model # type: ignore
+                self.model = model
 
             elif val_option == 2:
                 if do_forecast == 0:
@@ -628,8 +623,8 @@ class CatBoost:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
-                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1) # type: ignore
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1)
+                        y = self.label_scaler.inverse_transform(y.reshape(-1,1)).reshape(-1)
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -639,12 +634,12 @@ class CatBoost:
 
             elif val_option == 1:
                 if do_forecast == 0:
-                    X_train, X_test, y_train, y_test = train_test_split(X,y, train_size=self.random_percent_var.get()/100)
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=self.random_percent_var.get()/100)
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1) # type: ignore
-                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1) # type: ignore
+                        pred = self.label_scaler.inverse_transform(pred.reshape(-1,1)).reshape(-1)
+                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1,1)).reshape(-1)
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -667,10 +662,10 @@ class CatBoost:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.to_numpy().reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j] # type: ignore
-                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1)
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
@@ -680,10 +675,10 @@ class CatBoost:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.to_numpy().reshape(1,-1)).reshape(-1)
                 for j in range(1, seasons+1):
                     X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j*seasonal_lookback] # type: ignore
-                to_pred = X_test.to_numpy().reshape(1,-1) # type: ignore
+                to_pred = X_test.to_numpy().reshape(1,-1)
                 out = self.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
                 pred.append(out)
@@ -694,7 +689,7 @@ class CatBoost:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1,-1)).reshape(-1) # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(X_test.to_numpy().reshape(1,-1)).reshape(-1)
                 for j in range(1, lookback+1):
                     X_test[f"t-{j}"] = last[-j] # type: ignore
                 for j in range(1, seasons+1):

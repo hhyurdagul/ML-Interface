@@ -218,6 +218,8 @@ class LinearModel:
         except Exception:
             popupmsg("Model is not created")
             return
+
+        params = {}
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
         params["is_round"] = self.is_round

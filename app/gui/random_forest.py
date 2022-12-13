@@ -96,6 +96,7 @@ class RandomForest:
         ttk.OptionMenu(customize_train_set_frame, self.scale_var, "None", "None","StandardScaler", "MinMaxScaler").grid(column=1, row=3)
 
         # Model
+        self.model: RandomForestRegressor
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
         model_frame.grid(column=1, row=0)
 
@@ -256,8 +257,13 @@ class RandomForest:
         path = filedialog.asksaveasfilename()
         if not path:
             return
+        params = {}
         try:
-            params = self.model.get_params()
+            model_params = self.model.get_params()
+            params["n_estimators"] = model_params["n_estimators"]
+            params["max_depth"] = model_params["max_depth"]
+            params["min_samples_split"] = model_params["min_samples_split"]
+            params["min_samples_leaf"] = model_params["min_samples_leaf"]
         except Exception:
             popupmsg("Model is not created")
             return

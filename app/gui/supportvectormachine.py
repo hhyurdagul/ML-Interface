@@ -250,7 +250,7 @@ class SupportVectorMachine:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
-    def addPredictor(self, event=None):
+    def addPredictor(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0,tk.END):
@@ -258,13 +258,13 @@ class SupportVectorMachine:
         except Exception:
             pass
 
-    def ejectPredictor(self, event=None):
+    def ejectPredictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except Exception:
             pass
     
-    def addTarget(self, event=None):
+    def addTarget(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -272,7 +272,7 @@ class SupportVectorMachine:
         except Exception:
             pass
 
-    def ejectTarget(self, event=None):
+    def ejectTarget(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
