@@ -409,14 +409,8 @@ class TimeSeries:
         
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
-        try:
-            self.is_round = params["is_round"]
-        except Exception:
-            self.is_round = True
-        try:
-            self.is_negative = False
-        except Exception:
-            self.is_negative = params["is_negative"]
+        self.is_round = params.get("is_round", True)
+        self.is_negative = params.get("is_negative", False)
         self.train_size_var.set(params["train_size"])
         self.size_choice_var.set(params["size_choice"])
         self.scale_var.set(params["scale_type"])
