@@ -52,7 +52,8 @@ class TimeSeries:
         file_path = tk.StringVar(value="")
         ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
         ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(get_train_set_frame, text="Read Data", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
+        ttk.Button(get_train_set_frame, text="Read Data", 
+                   command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
