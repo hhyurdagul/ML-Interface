@@ -458,7 +458,7 @@ class TimeSeries:
                 value=i,
                 variable=self.model_var,
             ).grid(column=i, row=4)
-            for i in range(4)
+            for i in range(len(model_names))
         ]
         [
             tk.Radiobutton(
@@ -467,7 +467,7 @@ class TimeSeries:
                 value=i + 4,
                 variable=self.model_var,
             ).grid(column=i, row=5)
-            for i in range(4)
+            for i in range(len(second_model_names))
         ]
 
         self.train_loss = tk.Variable(value="")
