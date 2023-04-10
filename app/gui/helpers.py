@@ -31,7 +31,9 @@ def smape(y_true, y_pred):
         return round(
             np.mean(
                 np.abs(y_true - y_pred) /
-                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100, 2)
+                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100,
+            2,
+        )
     except Exception:
         return None
 
@@ -40,22 +42,23 @@ def mase(y_true, y_pred, seasons=1):
     try:
         return round(
             mean_absolute_error(y_true, y_pred) /
-            mean_absolute_error(y_true[seasons:], y_true[:-seasons]), 2)
+            mean_absolute_error(y_true[seasons:], y_true[:-seasons]),
+            2,
+        )
     except Exception:
         return None
 
 
 skloss = {
-    'NMSE': make_scorer(nmse),
-    'RMSE': make_scorer(rmse),
-    'MAE': make_scorer(mae),
-    'MAPE': make_scorer(mape),
-    'SMAPE': make_scorer(smape),
+    "NMSE": make_scorer(nmse),
+    "RMSE": make_scorer(rmse),
+    "MAE": make_scorer(mae),
+    "MAPE": make_scorer(mape),
+    "SMAPE": make_scorer(smape),
 }
 
 
 def loss(y_true, y_pred, seasons=1):
-
     NMSE = round(
         (((y_true - y_pred)**2) / (y_true.mean() * y_pred.mean())).mean(), 2)
     RMSE = round(np.sqrt(mean_squared_error(y_true, y_pred)), 2)
@@ -68,7 +71,9 @@ def loss(y_true, y_pred, seasons=1):
         SMAPE = round(
             np.mean(
                 np.abs(y_true - y_pred) /
-                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100, 2)
+                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100,
+            2,
+        )
     except Exception:
         SMAPE = None
 

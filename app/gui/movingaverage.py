@@ -1,12 +1,11 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
 from pandastable import Table
+
 from .helpers import loss
 
 
