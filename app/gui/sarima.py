@@ -13,12 +13,13 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 import os
 import json
-from .helpers import *
+from .helpers import loss, popupmsg
+
 
 class SARIMA:
     def __init__(self):
         self.root = ttk.Frame()
-        
+
         # Get Train Set
         get_train_set_frame = ttk.Labelframe(self.root, text="Get Train Set")
         get_train_set_frame.grid(column=0, row=0)
@@ -26,85 +27,145 @@ class SARIMA:
         file_path = tk.StringVar(value="")
         ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
         ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(get_train_set_frame, text="Read Data", command=lambda: self.readCsv(file_path)).grid(column=2, row=0)
+        ttk.Button(
+            get_train_set_frame,
+            text="Read Data",
+            command=lambda: self.read_input_data(file_path),
+        ).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
-        self.input_list.bind("<Double-Button-1>", self.addPredictor)
-        self.input_list.bind("<Double-Button-3>", self.addTarget)
+        self.input_list.bind("<Double-Button-1>", self.add_predictor)
+        self.input_list.bind("<Double-Button-3>", self.add_target)
 
         self.predictor_list = tk.Listbox(get_train_set_frame)
         self.predictor_list.grid(column=1, row=1)
-        self.predictor_list.bind("<Double-Button-1>", self.ejectPredictor)
+        self.predictor_list.bind("<Double-Button-1>", self.eject_predictor)
 
         self.target_list = tk.Listbox(get_train_set_frame)
         self.target_list.grid(column=2, row=1)
-        self.target_list.bind("<Double-Button-1>", self.ejectTarget)
+        self.target_list.bind("<Double-Button-1>", self.eject_target)
 
-        ttk.Button(get_train_set_frame, text="Add Predictor", command=self.addPredictor).grid(column=1, row=2)
-        ttk.Button(get_train_set_frame, text="Eject Predictor", command=self.ejectPredictor).grid(column=1, row=3)
+        ttk.Button(
+            get_train_set_frame, text="Add Predictor", command=self.add_predictor
+        ).grid(column=1, row=2)
+        ttk.Button(
+            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
+        ).grid(column=1, row=3)
 
-        ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(column=2, row=2)
-        ttk.Button(get_train_set_frame, text="Eject Target", command=self.ejectTarget).grid(column=2, row=3)
-        
+        ttk.Button(
+            get_train_set_frame, text="Add Target", command=self.add_target
+        ).grid(column=2, row=2)
+        ttk.Button(
+            get_train_set_frame, text="Eject Target", command=self.eject_target
+        ).grid(column=2, row=3)
+
         # Graphs
         graph_frame = ttk.Labelframe(self.root, text="Graphs")
         graph_frame.grid(column=0, row=1)
-        
+
         self.train_size = tk.IntVar(value=100)
         ttk.Label(graph_frame, text="Train Size").grid(column=0, row=0)
         ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1, row=0)
 
         self.train_size_choice = tk.IntVar(value=0)
-        tk.Radiobutton(graph_frame, text="As Percent", variable=self.train_size_choice, value=0).grid(column=0, row=1)
-        tk.Radiobutton(graph_frame, text="As Number", variable=self.train_size_choice, value=1).grid(column=1, row=1)
+        tk.Radiobutton(
+            graph_frame, text="As Percent", variable=self.train_size_choice, value=0
+        ).grid(column=0, row=1)
+        tk.Radiobutton(
+            graph_frame, text="As Number", variable=self.train_size_choice, value=1
+        ).grid(column=1, row=1)
 
         lags = tk.IntVar(value=40)
         ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
         ttk.Entry(graph_frame, textvariable=lags).grid(column=1, row=2)
 
-        ttk.Button(graph_frame, text="Show ACF", command=lambda: self.showAcf(0, lags.get())).grid(column=0, row=3)
-        ttk.Button(graph_frame, text="First Difference ACF", command=lambda: self.showAcf(1, lags.get())).grid(column=1, row=3)
-        
-        self.season_number_var = tk.IntVar(value="")
-        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(column=0, row=4)
-        ttk.Button(graph_frame, text="Seasonal Difference ACF", command=lambda: self.showAcf(2, lags.get())).grid(column=1, row=4)
+        ttk.Button(
+            graph_frame, text="Show ACF", command=lambda: self.show_acf(0, lags.get())
+        ).grid(column=0, row=3)
+        ttk.Button(
+            graph_frame,
+            text="First Difference ACF",
+            command=lambda: self.show_acf(1, lags.get()),
+        ).grid(column=1, row=3)
 
-        ttk.Button(graph_frame, text="Both Difference ACF", command=lambda: self.showAcf(3, lags.get())).grid(column=0, row=5, columnspan=2)
+        self.season_number_var = tk.IntVar(value="")
+        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(
+            column=0, row=4
+        )
+        ttk.Button(
+            graph_frame,
+            text="Seasonal Difference ACF",
+            command=lambda: self.show_acf(2, lags.get()),
+        ).grid(column=1, row=4)
+
+        ttk.Button(
+            graph_frame,
+            text="Both Difference ACF",
+            command=lambda: self.show_acf(3, lags.get()),
+        ).grid(column=0, row=5, columnspan=2)
 
         # Crete Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
 
         ## Model Without Optimization
-        model_without_optimization_frame = ttk.LabelFrame(create_model_frame, text="Model Without Optimization")
+        model_without_optimization_frame = ttk.LabelFrame(
+            create_model_frame, text="Model Without Optimization"
+        )
         model_without_optimization_frame.grid(column=0, row=0)
 
         self.pdq_var = [tk.IntVar(value="") for _ in range(3)]
         [
             [
-                ttk.Label(model_without_optimization_frame, text=j).grid(column=0, row=i+1),
-                ttk.Entry(model_without_optimization_frame, textvariable=self.pdq_var[i], width=8).grid(column=1, row=i+1)
-            ] for i, j in enumerate(['p', 'd', 'q'])
+                ttk.Label(model_without_optimization_frame, text=j).grid(
+                    column=0, row=i + 1
+                ),
+                ttk.Entry(
+                    model_without_optimization_frame,
+                    textvariable=self.pdq_var[i],
+                    width=8,
+                ).grid(column=1, row=i + 1),
+            ]
+            for i, j in enumerate(["p", "d", "q"])
         ]
-        
+
         self.seasonality_option = tk.IntVar(value=0)
-        tk.Checkbutton(model_without_optimization_frame, text="Seasonality", offvalue=0, onvalue=1, variable=self.seasonality_option, command=self.openSeasons).grid(column=0, row=0, columnspan=2)
-        
+        tk.Checkbutton(
+            model_without_optimization_frame,
+            text="Seasonality",
+            offvalue=0,
+            onvalue=1,
+            variable=self.seasonality_option,
+            command=self.open_seasons,
+        ).grid(column=0, row=0, columnspan=2)
+
         self.PDQM_var = [tk.IntVar(value="") for _ in range(4)]
-        
+
         self.seasonals = [
             [
-                ttk.Label(model_without_optimization_frame, text=j).grid(column=2, row=i+1),
-                ttk.Entry(model_without_optimization_frame, textvariable=self.PDQM_var[i], width=8, state=tk.DISABLED)
-            ] for i, j in enumerate(['P', 'D', 'Q', 's'])
+                ttk.Label(model_without_optimization_frame, text=j).grid(
+                    column=2, row=i + 1
+                ),
+                ttk.Entry(
+                    model_without_optimization_frame,
+                    textvariable=self.PDQM_var[i],
+                    width=8,
+                    state=tk.DISABLED,
+                ),
+            ]
+            for i, j in enumerate(["P", "D", "Q", "s"])
         ]
-        
-        for i, j in enumerate(self.seasonals):
-            j[1].grid(column=3, row=i+1)
 
-        ttk.Button(create_model_frame, text="Create Model", command=self.createModel).grid(column=0, row=1)
-        ttk.Button(create_model_frame, text="Save Model", command=self.saveModel).grid(column=1, row=1)
+        for i, j in enumerate(self.seasonals):
+            j[1].grid(column=3, row=i + 1)
+
+        ttk.Button(
+            create_model_frame, text="Create Model", command=self.create_model
+        ).grid(column=0, row=1)
+        ttk.Button(create_model_frame, text="Save Model", command=self.save_model).grid(
+            column=1, row=1
+        )
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -116,17 +177,37 @@ class SARIMA:
 
         self.forecast_num = tk.IntVar(value="")
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame, text="Values", command=self.showPredicts).grid(column=2, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
+            column=1, row=0
+        )
+        ttk.Button(
+            test_model_main_frame, text="Values", command=self.show_predicts
+        ).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(column=1, row=1)
-        ttk.Button(test_model_main_frame, text="Get Test Set", command=lambda: self.getTestSet(test_file_path)).grid(column=2, row=1)
+        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
+            column=1, row=1
+        )
+        ttk.Button(
+            test_model_main_frame,
+            text="Get Test Set",
+            command=lambda: self.get_test_set(test_file_path),
+        ).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame, text="Load Model", command=self.loadModel).grid(column=0, row=3)
-        ttk.Button(test_model_main_frame, text="Forecast", command=lambda: self.forecast(self.forecast_num.get())).grid(column=2, row=3)
-        ttk.Button(test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph).grid(column=0, row=4, columnspan=3)
+        ttk.Button(
+            test_model_main_frame, text="Load Model", command=self.load_model
+        ).grid(column=0, row=3)
+        ttk.Button(
+            test_model_main_frame,
+            text="Forecast",
+            command=lambda: self.forecast(self.forecast_num.get()),
+        ).grid(column=2, row=3)
+        ttk.Button(
+            test_model_main_frame,
+            text="Actual vs Forecast Graph",
+            command=self.plot_graph,
+        ).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
         self.test_data_valid = False
@@ -138,10 +219,18 @@ class SARIMA:
         self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(test_model_metrics_frame, textvariable=self.test_metrics_vars[i]).grid(column=1,row=i)
+            ttk.Entry(
+                test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
+            ).grid(column=1, row=i)
 
-    def readCsv(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Xlsx Files", "*.xlsx"), ("Xlrd Files", ".xls")])
+    def read_input_data(self, file_path):
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Csv Files", "*.csv"),
+                ("Xlsx Files", "*.xlsx"),
+                ("Xlrd Files", ".xls"),
+            ]
+        )
         file_path.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
@@ -150,16 +239,22 @@ class SARIMA:
                 self.df = pd.read_excel(path)
             except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
-        self.fillInputList()
-        
-    def fillInputList(self):
+        self.fill_input_list()
+
+    def fill_input_list(self):
         self.input_list.delete(0, tk.END)
 
         for i in self.df.columns:
             self.input_list.insert(tk.END, i)
 
-    def getTestSet(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[("Csv Files", "*.csv"), ("Xlsx Files", "*.xlsx"), ("Xlrd Files", ".xls")])
+    def get_test_set(self, file_path):
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Csv Files", "*.csv"),
+                ("Xlsx Files", "*.xlsx"),
+                ("Xlrd Files", ".xls"),
+            ]
+        )
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
@@ -172,7 +267,7 @@ class SARIMA:
         if self.forecast_done:
             self.forecast(self.forecast_num.get())
 
-    def showPredicts(self):
+    def show_predicts(self):
         d = {}
         if self.test_data_valid:
             self.y_test: np.ndarray
@@ -187,21 +282,21 @@ class SARIMA:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
-    def addPredictor(self, _=None):
+    def add_predictor(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
-            if a not in self.predictor_list.get(0,tk.END):
+            if a not in self.predictor_list.get(0, tk.END):
                 self.predictor_list.insert(tk.END, a)
         except Exception:
             pass
 
-    def ejectPredictor(self, _=None):
+    def eject_predictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except Exception:
             pass
-    
-    def addTarget(self, _=None):
+
+    def add_target(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -209,20 +304,20 @@ class SARIMA:
         except Exception:
             pass
 
-    def ejectTarget(self, _=None):
+    def eject_target(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
             pass
-    
-    def saveModel(self):
+
+    def save_model(self):
         path = filedialog.asksaveasfilename()
         if not path:
             return
         params = {
             "p": self.pdq_var[0].get(),
             "d": self.pdq_var[1].get(),
-            "q": self.pdq_var[2].get()
+            "q": self.pdq_var[2].get(),
         }
 
         if self.seasonality_option.get():
@@ -241,12 +336,12 @@ class SARIMA:
         params["end_len"] = self.end
         os.mkdir(path)
 
-        with open(path+"/model", 'wb') as model_path:
+        with open(path + "/model", "wb") as model_path:
             self.model.save(model_path)
-        with open(path+"/model.json", 'w') as outfile:
+        with open(path + "/model.json", "w") as outfile:
             json.dump(params, outfile)
 
-    def loadModel(self):
+    def load_model(self):
         path = filedialog.askdirectory()
         if not path:
             return
@@ -255,9 +350,9 @@ class SARIMA:
         except Exception:
             popupmsg("There is no model file at the path")
             return
-        with open(path+"/model", 'rb') as model_path:
+        with open(path + "/model", "rb") as model_path:
             self.model = ARIMAResults.load(model_path)
-        infile = open(path+"/model.json")
+        infile = open(path + "/model.json")
         params = json.load(infile)
 
         self.pdq_var[0].set(self.model.model_orders["ar"])
@@ -270,7 +365,7 @@ class SARIMA:
             self.PDQM_var[1].set(params["D"])
             self.PDQM_var[2].set(params["Q"])
             self.PDQM_var[3].set(params["s"])
-        
+
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
         self.end = params["end_len"]
@@ -282,19 +377,24 @@ class SARIMA:
             self.is_negative = params["is_negative"]
         except Exception:
             self.is_negative = False
-        
+
         self.train_size.set(params["train_size"])
         self.train_size_choice.set(params["train_size_choice"])
 
-        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        names = "\n".join(self.predictor_names)
+        msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def showAcf(self, choice, lags):
+    def show_acf(self, choice, lags):
         top = tk.Toplevel()
-        fig = plt.Figure((20,15))
+        fig = plt.Figure((20, 15))
 
         data = self.df[self.target_list.get(0)]
-        size = int(self.train_size.get()) if self.train_size_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        size = (
+            int(self.train_size.get())
+            if self.train_size_choice.get() == 1
+            else int((self.train_size.get() / 100) * len(data))
+        )
         data = data.iloc[-size:]
 
         ax = fig.add_subplot(211)
@@ -322,7 +422,7 @@ class SARIMA:
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-    def openSeasons(self):
+    def open_seasons(self):
         if self.seasonality_option.get() == 1:
             for i in self.seasonals:
                 i[1]["state"] = tk.NORMAL
@@ -330,13 +430,17 @@ class SARIMA:
             for i in self.seasonals:
                 i[1]["state"] = tk.DISABLED
 
-    def createModel(self):
+    def create_model(self):
         self.is_round = False
         self.is_negative = False
         self.predictor_names = self.predictor_list.get(0)
         self.label_name = self.target_list.get(0)
         data = self.df[self.label_name]
-        size = int(self.train_size.get()) if self.train_size_choice.get() == 1 else int((self.train_size.get()/100)*len(data))
+        size = (
+            int(self.train_size.get())
+            if self.train_size_choice.get() == 1
+            else int((self.train_size.get() / 100) * len(data))
+        )
         series = data.iloc[-size:]
 
         if series.dtype == int or series.dtype == np.intc or series.dtype == np.int64:
@@ -345,7 +449,7 @@ class SARIMA:
             self.is_negative = True
 
         pqd = tuple(i.get() for i in self.pdq_var)
-        
+
         if self.seasonality_option.get() == 1:
             PDQM = tuple(i.get() for i in self.PDQM_var)
             model = ARIMA(series, order=pqd, seasonal_order=PDQM)
@@ -354,10 +458,10 @@ class SARIMA:
         else:
             model = ARIMA(series, order=pqd)
             self.model = model.fit()
-            self.end = len(series)-1
-    
+            self.end = len(series) - 1
+
     def forecast(self, num):
-        self.pred = self.model.predict(start=self.end+1, end=self.end+num)
+        self.pred = self.model.predict(start=self.end + 1, end=self.end + num)
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
@@ -374,7 +478,7 @@ class SARIMA:
             for i in range(len(self.test_metrics_vars)):
                 self.test_metrics_vars[i].set(losses[i])
 
-    def vsGraph(self):
+    def plot_graph(self):
         if self.test_data_valid:
             plt.plot(self.y_test, label="Test")
         try:
@@ -383,4 +487,3 @@ class SARIMA:
             return
         plt.legend(loc="upper left")
         plt.show()
-
