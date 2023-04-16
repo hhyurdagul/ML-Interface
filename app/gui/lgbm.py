@@ -39,29 +39,29 @@ class LGBM:
 
         self.input_list = tk.Listbox(get_train_set_frame)
         self.input_list.grid(column=0, row=1)
-        self.input_list.bind("<Double-Button-1>", self.addPredictor)
-        self.input_list.bind("<Double-Button-3>", self.addTarget)
+        self.input_list.bind("<Double-Button-1>", self.add_predictor)
+        self.input_list.bind("<Double-Button-3>", self.add_target)
 
         self.predictor_list = tk.Listbox(get_train_set_frame)
         self.predictor_list.grid(column=1, row=1)
-        self.predictor_list.bind("<Double-Button-1>", self.ejectPredictor)
+        self.predictor_list.bind("<Double-Button-1>", self.eject_predictor)
 
         self.target_list = tk.Listbox(get_train_set_frame)
         self.target_list.grid(column=2, row=1)
-        self.target_list.bind("<Double-Button-1>", self.ejectTarget)
+        self.target_list.bind("<Double-Button-1>", self.eject_target)
 
         ttk.Button(
-            get_train_set_frame, text="Add Predictor", command=self.addPredictor
+            get_train_set_frame, text="Add Predictor", command=self.add_predictor
         ).grid(column=1, row=2)
         ttk.Button(
-            get_train_set_frame, text="Eject Predictor", command=self.ejectPredictor
+            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
         ).grid(column=1, row=3)
 
-        ttk.Button(get_train_set_frame, text="Add Target", command=self.addTarget).grid(
-            column=2, row=2
-        )
         ttk.Button(
-            get_train_set_frame, text="Eject Target", command=self.ejectTarget
+            get_train_set_frame, text="Add Target", command=self.add_target
+        ).grid(column=2, row=2)
+        ttk.Button(
+            get_train_set_frame, text="Eject Target", command=self.eject_target
         ).grid(column=2, row=3)
 
         # Model testing and validation
@@ -77,7 +77,7 @@ class LGBM:
             offvalue=0,
             onvalue=1,
             variable=self.do_forecast_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         ).grid(column=0, row=0, columnspan=2)
 
         self.validation_option = tk.IntVar(value=0)
@@ -88,21 +88,21 @@ class LGBM:
             text="No validation, use all data rows",
             value=0,
             variable=self.validation_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         ).grid(column=0, row=1, columnspan=2, sticky=tk.W)
         tk.Radiobutton(
             model_validation_frame,
             text="Random percent",
             value=1,
             variable=self.validation_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         ).grid(column=0, row=2, sticky=tk.W)
         self.cv_entry_1 = tk.Radiobutton(
             model_validation_frame,
             text="K-fold cross-validation",
             value=2,
             variable=self.validation_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         )
         self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
         self.cv_entry_2 = tk.Radiobutton(
@@ -110,7 +110,7 @@ class LGBM:
             text="Leave one out cross-validation",
             value=3,
             variable=self.validation_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         )
         self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
         self.random_percent_entry = ttk.Entry(
@@ -136,7 +136,7 @@ class LGBM:
             offvalue=0,
             onvalue=1,
             variable=self.lookback_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         ).grid(column=0, row=0)
         self.lookback_entry = tk.Entry(
             customize_train_set_frame,
@@ -155,7 +155,7 @@ class LGBM:
             offvalue=0,
             onvalue=1,
             variable=self.seasonal_lookback_option,
-            command=self.openOtherEntries,
+            command=self.open_other_entries,
         ).grid(column=0, row=1)
         self.seasonal_lookback_entry_1 = tk.Entry(
             customize_train_set_frame,
@@ -200,7 +200,7 @@ class LGBM:
             offvalue=0,
             onvalue=1,
             variable=self.grid_option_var,
-            command=self.openEntries,
+            command=self.open_entries,
         ).grid(column=0, row=0, columnspan=3)
 
         self.interval_var = tk.IntVar(value=3)
@@ -221,7 +221,7 @@ class LGBM:
             offvalue=0,
             onvalue=1,
             variable=self.gs_cross_val_option,
-            command=self.openEntries,
+            command=self.open_entries,
         ).grid(column=0, row=2)
         self.gs_cross_val_entry = tk.Entry(
             parameter_optimization_frame,
@@ -284,13 +284,13 @@ class LGBM:
             j[2].grid(column=2, row=i + 1, padx=2, pady=2)
             j[3].grid(column=3, row=i + 1, padx=2, pady=2)
 
-        ttk.Button(model_frame, text="Create Model", command=self.createModel).grid(
+        ttk.Button(model_frame, text="Create Model", command=self.create_model).grid(
             column=0, row=3
         )
-        ttk.Button(model_frame, text="Save Model", command=self.saveModel).grid(
+        ttk.Button(model_frame, text="Save Model", command=self.save_model).grid(
             column=1, row=3
         )
-        ttk.Button(model_frame, text="Load Model", command=self.loadModel).grid(
+        ttk.Button(model_frame, text="Load Model", command=self.load_model).grid(
             column=2, row=3
         )
 
@@ -308,7 +308,7 @@ class LGBM:
             column=1, row=0
         )
         ttk.Button(
-            test_model_main_frame, text="Values", command=self.showPredicts
+            test_model_main_frame, text="Values", command=self.show_predicts
         ).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
@@ -319,14 +319,16 @@ class LGBM:
         ttk.Button(
             test_model_main_frame,
             text="Get Test Set",
-            command=lambda: self.getTestSet(test_file_path),
+            command=lambda: self.get_test_data(test_file_path),
         ).grid(column=2, row=1)
 
         ttk.Button(
             test_model_main_frame, text="Test Model", command=self.forecast
         ).grid(column=2, row=3)
         ttk.Button(
-            test_model_main_frame, text="Actual vs Forecast Graph", command=self.vsGraph
+            test_model_main_frame,
+            text="Actual vs Forecast Graph",
+            command=self.plot_graph,
         ).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
@@ -341,8 +343,8 @@ class LGBM:
                 test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
             ).grid(column=1, row=i)
 
-        self.openEntries()
-        self.openOtherEntries()
+        self.open_entries()
+        self.open_other_entries()
 
     def read_train_data(self, file_path):
         path = filedialog.askopenfilename(
@@ -362,16 +364,16 @@ class LGBM:
                 self.df = pd.read_excel(path)
             except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
-        self.fillInputList()
+        self.fill_input_list()
 
-    def fillInputList(self):
+    def fill_input_list(self):
         self.input_list.delete(0, tk.END)
 
         self.df: pd.DataFrame
         for i in self.df.columns.to_list():
             self.input_list.insert(tk.END, i)
 
-    def getTestSet(self, file_path):
+    def get_test_data(self, file_path):
         path = filedialog.askopenfilename(
             filetypes=[
                 ("Csv Files", "*.csv"),
@@ -390,7 +392,7 @@ class LGBM:
             except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
-    def showPredicts(self):
+    def show_predicts(self):
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
         except Exception:
@@ -399,7 +401,7 @@ class LGBM:
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
 
-    def addPredictor(self, _=None):
+    def add_predictor(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if a not in self.predictor_list.get(0, tk.END):
@@ -407,13 +409,13 @@ class LGBM:
         except Exception:
             pass
 
-    def ejectPredictor(self, _=None):
+    def eject_predictor(self, _=None):
         try:
             self.predictor_list.delete(self.predictor_list.curselection())
         except Exception:
             pass
 
-    def addTarget(self, _=None):
+    def add_target(self, _=None):
         try:
             a = self.input_list.get(self.input_list.curselection())
             if self.target_list.size() < 1:
@@ -421,13 +423,13 @@ class LGBM:
         except Exception:
             pass
 
-    def ejectTarget(self, _=None):
+    def eject_target(self, _=None):
         try:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
             pass
 
-    def saveModel(self):
+    def save_model(self):
         path = filedialog.asksaveasfilename()
         if not path:
             return
@@ -493,7 +495,7 @@ class LGBM:
         with open(path + "/model.json", "w") as outfile:
             json.dump(params, outfile)
 
-    def loadModel(self):
+    def load_model(self):
         path = filedialog.askdirectory()
         if not path:
             return
@@ -553,13 +555,13 @@ class LGBM:
         self.parameters[1].set(params["max_depth"])
         self.parameters[2].set(params["learning_rate"])
 
-        self.openEntries()
-        self.openOtherEntries()
+        self.open_entries()
+        self.open_other_entries()
         names = "\n".join(self.predictor_names)
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def openEntries(self):
+    def open_entries(self):
         to_open = []
         for i in self.model_parameters_frame_options:
             i[1]["state"] = tk.DISABLED
@@ -588,7 +590,7 @@ class LGBM:
 
         self.vars_nums = to_open
 
-    def openOtherEntries(self):
+    def open_other_entries(self):
         if not self.do_forecast_option.get():
             self.cv_entry_1["state"] = tk.NORMAL
             self.cv_entry_2["state"] = tk.NORMAL
@@ -614,7 +616,7 @@ class LGBM:
             self.seasonal_lookback_entry_1["state"] = tk.DISABLED
             self.seasonal_lookback_entry_2["state"] = tk.DISABLED
 
-    def checkErrors(self):
+    def check_errors(self):
         try:
             msg = "Read a data first"
             self.df.head(1)
@@ -656,22 +658,13 @@ class LGBM:
             if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
                 raise Exception
 
-            # for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-            #    if str(self.model_parameters_frame_options[i][1]["state"]) != "disabled" and not self.parameters[i].get():
-            #        msg = "Enter a valid " + j +  " value"
-            #        raise Exception
-
-            #    if self.grid_option_var.get():
-            #        if str(self.model_parameters_frame_options[i][2]["state"]) != "disabled":
-            #            if (not self.optimization_parameters[i][0].get() or not self.optimization_parameters[i][1].get()):
-            #                msg = "Enter a valid " + j +  " value in grid search area"
-            #                raise Exception
-
         except Exception:
             popupmsg(msg)  # type: ignore
             return True
 
-    def getLookback(self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1):
+    def get_lookback(
+        self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
+    ):
         if sliding == 0:
             for i in range(1, lookback + 1):
                 X[f"t-{i}"] = y.shift(i)
@@ -698,7 +691,7 @@ class LGBM:
 
         return a, b
 
-    def getData(self):
+    def get_data(self):
         self.is_round = False
         self.is_negative = False
         lookback_option = self.lookback_option.get()
@@ -748,20 +741,20 @@ class LGBM:
             seasonal_period = 0
             seasonal_lookback = 0
 
-        X, y = self.getLookback(
+        X, y = self.get_lookback(
             X, y, lookback, seasonal_period, seasonal_lookback, sliding
         )
 
         return X, y
 
-    def createModel(self):
-        if self.checkErrors():
+    def create_model(self):
+        if self.check_errors():
             return
 
         do_forecast = self.do_forecast_option.get()
         val_option = self.validation_option.get()
 
-        X, y = self.getData()
+        X, y = self.get_data()
         X: np.ndarray
         y: np.ndarray
 
@@ -781,8 +774,16 @@ class LGBM:
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1, 1)).reshape(-1)  # type: ignore
-                        y = self.label_scaler.inverse_transform(y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.label_scaler.inverse_transform(
+                            pred.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
+                        y = self.label_scaler.inverse_transform(
+                            y.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -798,8 +799,16 @@ class LGBM:
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1, 1)).reshape(-1)  # type: ignore
-                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.label_scaler.inverse_transform(
+                            pred.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
+                        y_test = self.label_scaler.inverse_transform(
+                            y_test.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -867,8 +876,16 @@ class LGBM:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1, 1)).reshape(-1)  # type: ignore
-                        y = self.label_scaler.inverse_transform(y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.label_scaler.inverse_transform(
+                            pred.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
+                        y = self.label_scaler.inverse_transform(
+                            y.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -884,8 +901,16 @@ class LGBM:
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(pred.reshape(-1, 1)).reshape(-1)  # type: ignore
-                        y_test = self.label_scaler.inverse_transform(y_test.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.label_scaler.inverse_transform(
+                            pred.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
+                        y_test = self.label_scaler.inverse_transform(
+                            y_test.reshape(-1, 1)
+                        ).reshape(
+                            -1
+                        )  # type: ignore
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -906,7 +931,7 @@ class LGBM:
             }
             popupmsg("Best Params: " + str(self.best_params))
 
-    def forecastLookback(
+    def forecast_lookback(
         self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
     ):
         self.test_df: pd.DataFrame
@@ -916,7 +941,11 @@ class LGBM:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
@@ -929,7 +958,11 @@ class LGBM:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, seasons + 1):
                     X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j * seasonal_lookback]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
@@ -943,7 +976,11 @@ class LGBM:
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                    X_test.iloc[:] = self.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 for j in range(1, seasons + 1):
@@ -965,8 +1002,8 @@ class LGBM:
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
         try:
-            X_test = self.test_df[self.predictor_names][:num].to_numpy()  # type: ignore
-            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)  # type: ignore
+            X_test = self.test_df[self.predictor_names][:num].to_numpy()
+            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
             self.y_test = y_test
         except Exception:
             popupmsg("Read a test data")
@@ -989,12 +1026,16 @@ class LGBM:
                 seasonal_lookback = 0
                 seasons = 0
 
-            self.pred = self.forecastLookback(
+            self.pred = self.forecast_lookback(
                 num, lookback, seasons, seasonal_lookback, sliding
             )
 
         if self.scale_var.get() != "None":
-            self.pred = self.label_scaler.inverse_transform(self.pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+            self.pred = self.label_scaler.inverse_transform(
+                self.pred.reshape(-1, 1)
+            ).reshape(
+                -1
+            )  # type: ignore
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
@@ -1005,7 +1046,7 @@ class LGBM:
         for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
-    def vsGraph(self):
+    def plot_graph(self):
         y_test = self.y_test
         try:
             pred = self.pred
