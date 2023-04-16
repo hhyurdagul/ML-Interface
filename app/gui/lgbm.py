@@ -17,7 +17,7 @@ import json
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
-from .helpers import *
+from .helpers import popupmsg, loss, skloss
 
 
 class LGBM:
@@ -34,7 +34,7 @@ class LGBM:
         ttk.Button(
             get_train_set_frame,
             text="Read Data",
-            command=lambda: self.readCsv(file_path),
+            command=lambda: self.read_train_data(file_path),
         ).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
@@ -344,7 +344,7 @@ class LGBM:
         self.openEntries()
         self.openOtherEntries()
 
-    def readCsv(self, file_path):
+    def read_train_data(self, file_path):
         path = filedialog.askopenfilename(
             filetypes=[
                 ("Csv Files", "*.csv"),
@@ -555,7 +555,8 @@ class LGBM:
 
         self.openEntries()
         self.openOtherEntries()
-        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
+        names = "\n".join(self.predictor_names)
+        msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
     def openEntries(self):
