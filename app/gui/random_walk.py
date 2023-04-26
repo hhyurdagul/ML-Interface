@@ -1,22 +1,22 @@
+import json
+import os
+import random
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
-from pandastable import Table
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from tkinter import filedialog, ttk
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
+                                               NavigationToolbar2Tk)
+from pandastable import Table
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
-import os
-import json
-import random
 from .helpers import loss, popupmsg
 
 
 class RandomWalkRegressor:
+
     def __init__(self, epsilon, seasonal_value=1):
         self.seed = random.randint(0, 100)
         self.epsilon = epsilon
@@ -31,7 +31,7 @@ class RandomWalkRegressor:
 
     def set_series(self, series):
         self.series = series
-        self.last = self.series[-self.seasonal_value :].values
+        self.last = self.series[-self.seasonal_value:].values
 
     def predict(self, n):
         random.seed(self.seed)
@@ -41,10 +41,11 @@ class RandomWalkRegressor:
             val = pred[i] + direction
             pred.append(val)
 
-        return np.array(pred[self.seasonal_value :])
+        return np.array(pred[self.seasonal_value:])
 
 
 class RandomWalk:
+
     def __init__(self):
         self.root = ttk.Frame()
 
@@ -53,8 +54,10 @@ class RandomWalk:
         get_train_set_frame.grid(column=0, row=0)
 
         file_path = tk.StringVar(value="")
-        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
+        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0,
+                                                                    row=0)
+        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1,
+                                                                    row=0)
         ttk.Button(
             get_train_set_frame,
             text="Read Data",
@@ -74,19 +77,19 @@ class RandomWalk:
         self.target_list.grid(column=2, row=1)
         self.target_list.bind("<Double-Button-1>", self.eject_target)
 
-        ttk.Button(
-            get_train_set_frame, text="Add Predictor", command=self.add_predictor
-        ).grid(column=1, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
-        ).grid(column=1, row=3)
+        ttk.Button(get_train_set_frame,
+                   text="Add Predictor",
+                   command=self.add_predictor).grid(column=1, row=2)
+        ttk.Button(get_train_set_frame,
+                   text="Eject Predictor",
+                   command=self.eject_predictor).grid(column=1, row=3)
 
-        ttk.Button(get_train_set_frame, text="Add Target", command=self.add_target).grid(
-            column=2, row=2
-        )
-        ttk.Button(
-            get_train_set_frame, text="Eject Target", command=self.eject_target
-        ).grid(column=2, row=3)
+        ttk.Button(get_train_set_frame,
+                   text="Add Target",
+                   command=self.add_target).grid(column=2, row=2)
+        ttk.Button(get_train_set_frame,
+                   text="Eject Target",
+                   command=self.eject_target).grid(column=2, row=3)
 
         # Graphs
         graph_frame = ttk.Labelframe(self.root, text="Graphs")
@@ -94,33 +97,37 @@ class RandomWalk:
 
         self.train_size = tk.IntVar(value=100)
         ttk.Label(graph_frame, text="Train Size").grid(column=0, row=0)
-        ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1, row=0)
+        ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1,
+                                                                  row=0)
 
         self.train_choice = tk.IntVar(value=0)
-        tk.Radiobutton(
-            graph_frame, text="As Percent", variable=self.train_choice, value=0
-        ).grid(column=0, row=1)
-        tk.Radiobutton(
-            graph_frame, text="As Number", variable=self.train_choice, value=1
-        ).grid(column=1, row=1)
+        tk.Radiobutton(graph_frame,
+                       text="As Percent",
+                       variable=self.train_choice,
+                       value=0).grid(column=0, row=1)
+        tk.Radiobutton(graph_frame,
+                       text="As Number",
+                       variable=self.train_choice,
+                       value=1).grid(column=1, row=1)
 
         lags = tk.IntVar(value=40)
         ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
         ttk.Entry(graph_frame, textvariable=lags).grid(column=1, row=2)
 
-        ttk.Button(
-            graph_frame, text="Show ACF", command=lambda: self.show_acf(lags.get())
-        ).grid(column=0, row=3)
+        ttk.Button(graph_frame,
+                   text="Show ACF",
+                   command=lambda: self.show_acf(lags.get())).grid(column=0,
+                                                                   row=3)
 
         # Crete Model
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
 
         self.epsilon_var = tk.DoubleVar(value=10)
-        ttk.Label(create_model_frame, text="Epsilon Value: ").grid(column=0, row=0)
-        ttk.Entry(create_model_frame, textvariable=self.epsilon_var, width=12).grid(
-            column=1, row=0
-        )
+        ttk.Label(create_model_frame, text="Epsilon Value: ").grid(column=0,
+                                                                   row=0)
+        ttk.Entry(create_model_frame, textvariable=self.epsilon_var,
+                  width=12).grid(column=1, row=0)
 
         self.seasonal_option = tk.IntVar(value=0)
         tk.Checkbutton(
@@ -132,9 +139,8 @@ class RandomWalk:
             command=self.open_entries,
         ).grid(column=0, row=1, columnspan=2)
         self.seasonal_value = tk.IntVar(value=12)
-        ttk.Label(create_model_frame, text="Seasonal Value", width=12).grid(
-            column=0, row=2
-        )
+        ttk.Label(create_model_frame, text="Seasonal Value",
+                  width=12).grid(column=0, row=2)
         self.seasonal_value_entry = ttk.Entry(
             create_model_frame,
             textvariable=self.seasonal_value,
@@ -143,75 +149,77 @@ class RandomWalk:
         )
         self.seasonal_value_entry.grid(column=1, row=2)
 
-        ttk.Button(
-            create_model_frame, text="Create Model", command=self.create_model
-        ).grid(column=0, row=5)
-        ttk.Button(create_model_frame, text="Save Model", command=self.save_model).grid(
-            column=2, row=5
-        )
+        ttk.Button(create_model_frame,
+                   text="Create Model",
+                   command=self.create_model).grid(column=0, row=5)
+        ttk.Button(create_model_frame,
+                   text="Save Model",
+                   command=self.save_model).grid(column=2, row=5)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
         test_model_frame.grid(column=1, row=1)
 
-        ## Test Model Main
-        test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
+        # Test Model Main
+        test_model_main_frame = ttk.LabelFrame(test_model_frame,
+                                               text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
         self.forecast_num = tk.IntVar(value="")
-        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
-            column=1, row=0
-        )
-        ttk.Button(
-            test_model_main_frame, text="Values", command=self.show_predicts
-        ).grid(column=2, row=0)
+        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0,
+                                                                    row=0)
+        ttk.Entry(test_model_main_frame,
+                  textvariable=self.forecast_num).grid(column=1, row=0)
+        ttk.Button(test_model_main_frame,
+                   text="Values",
+                   command=self.show_predicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
-        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
-            column=1, row=1
-        )
+        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0,
+                                                                     row=1)
+        ttk.Entry(test_model_main_frame,
+                  textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(
             test_model_main_frame,
             text="Get Test Set",
             command=lambda: self.get_test_data(test_file_path),
         ).grid(column=2, row=1)
 
-        ttk.Button(
-            test_model_main_frame, text="Load Model", command=self.load_model
-        ).grid(column=0, row=3)
+        ttk.Button(test_model_main_frame,
+                   text="Load Model",
+                   command=self.load_model).grid(column=0, row=3)
         ttk.Button(
             test_model_main_frame,
             text="Forecast",
             command=lambda: self.forecast(self.forecast_num.get()),
         ).grid(column=2, row=3)
-        ttk.Button(
-            test_model_main_frame, text="Actual vs Forecast Graph", command=self.plot_graph
-        ).grid(column=0, row=4, columnspan=3)
+        ttk.Button(test_model_main_frame,
+                   text="Actual vs Forecast Graph",
+                   command=self.plot_graph).grid(column=0, row=4, columnspan=3)
 
-        ## Test Model Metrics
+        # Test Model Metrics
         self.test_data_valid = False
         self.forecast_done = False
-        test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
+        test_model_metrics_frame = ttk.LabelFrame(test_model_frame,
+                                                  text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
+        self.test_metrics_vars = [
+            tk.Variable() for _ in range(len(test_metrics))
+        ]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(
-                test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
-            ).grid(column=1, row=i)
+            ttk.Entry(test_model_metrics_frame,
+                      textvariable=self.test_metrics_vars[i]).grid(column=1,
+                                                                   row=i)
 
     def read_train_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
+        path = filedialog.askopenfilename(filetypes=[
+            ("Csv Files", "*.csv"),
+            ("Xlsx Files", "*.xlsx"),
+            ("Xlrd Files", ".xls"),
+        ])
         file_path.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
@@ -229,13 +237,11 @@ class RandomWalk:
             self.input_list.insert(tk.END, i)
 
     def get_test_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
+        path = filedialog.askopenfilename(filetypes=[
+            ("Csv Files", "*.csv"),
+            ("Xlsx Files", "*.xlsx"),
+            ("Xlrd Files", ".xls"),
+        ])
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
@@ -358,11 +364,8 @@ class RandomWalk:
         fig = plt.Figure((20, 15))
 
         data = self.df[self.target_list.get(0)]
-        size = (
-            int(self.train_size.get())
-            if self.train_choice.get() == 1
-            else int((self.train_size.get() / 100) * len(data))
-        )
+        size = (int(self.train_size.get()) if self.train_choice.get() == 1 else
+                int((self.train_size.get() / 100) * len(data)))
         data = data.iloc[-size:]
 
         ax = fig.add_subplot(211)
@@ -385,11 +388,8 @@ class RandomWalk:
         self.predictor_names = self.target_list.get(0)
         self.label_name = self.target_list.get(0)
         data = self.df[self.label_name]
-        size = (
-            int(self.train_size.get())
-            if self.train_choice.get() == 1
-            else int((self.train_size.get() / 100) * len(data))
-        )
+        size = (int(self.train_size.get()) if self.train_choice.get() == 1 else
+                int((self.train_size.get() / 100) * len(data)))
         series = data.iloc[-size:]
 
         if series.dtype == int or series.dtype == np.intc or series.dtype == np.int64:
@@ -397,8 +397,10 @@ class RandomWalk:
         if any(series < 0):
             self.is_negative = True
 
-        seasonal_value = self.seasonal_value.get() if self.seasonal_option.get() else 1
-        self.model = RandomWalkRegressor(self.epsilon_var.get(), seasonal_value)
+        seasonal_value = self.seasonal_value.get() if self.seasonal_option.get(
+        ) else 1
+        self.model = RandomWalkRegressor(self.epsilon_var.get(),
+                                         seasonal_value)
         self.model.set_series(series)
 
     def forecast(self, num):
