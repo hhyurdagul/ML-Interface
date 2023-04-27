@@ -135,7 +135,7 @@ class GeneralRegressionNeuralNetwork:
                        offvalue=0,
                        onvalue=1,
                        variable=self.find_sigma_option,
-                       command=self.open_entries).grid(column=0,
+                       command=self.__open_entries).grid(column=0,
                                                       row=1,
                                                       columnspan=2)
 
@@ -192,7 +192,7 @@ class GeneralRegressionNeuralNetwork:
                   textvariable=forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame,
                    text="Values",
-                   command=self.show_predicts).grid(column=2, row=0)
+                   command=self.show_result_values).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0,
@@ -210,7 +210,7 @@ class GeneralRegressionNeuralNetwork:
                        column=2, row=3)
         ttk.Button(test_model_main_frame,
                    text="Actual vs Forecast Graph",
-                   command=self.plot_graph).grid(column=0, row=4, columnspan=3)
+                   command=self.show_result_graph).grid(column=0, row=4, columnspan=3)
 
         # Test Model Metrics
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame,
@@ -252,13 +252,7 @@ class GeneralRegressionNeuralNetwork:
                 self.df = pd.read_excel(path)
             except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
-        self.fill_input_list()
-
-    def fill_input_list(self):
-        self.input_list.delete(0, tk.END)
-
-        for i in self.df.columns:
-            self.input_list.insert(tk.END, i)
+        self.__fill_input_list()
 
     def read_test_data(self, file_path):
         path = filedialog.askopenfilename(
@@ -274,11 +268,11 @@ class GeneralRegressionNeuralNetwork:
             except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
 
-    def show_predicts(self):
-        top = tk.Toplevel(self.root)
-        df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
-        pt = Table(top, dataframe=df, editable=False)
-        pt.show()
+    def __fill_input_list(self):
+        self.input_list.delete(0, tk.END)
+
+        for i in self.df.columns:
+            self.input_list.insert(tk.END, i)
 
     def add_predictor(self, event=None):
         try:
@@ -308,7 +302,7 @@ class GeneralRegressionNeuralNetwork:
         except Exception:
             pass
 
-    def open_entries(self):
+    def __open_entries(self):
         if self.find_sigma_option.get() == 1:
             op = tk.NORMAL
         else:
@@ -316,14 +310,14 @@ class GeneralRegressionNeuralNetwork:
         for i in self.sigma_find_list:
             i[1]["state"] = op
 
-    def get_lookback(self, X, y, lookback):
+    def __get_lookback(self, X, y, lookback):
         for i in range(1, lookback + 1):
             X[f"t-{i}"] = y.shift(i)
         X.dropna(inplace=True)
 
         return X.to_numpy(), y.iloc[lookback:].to_numpy().reshape(-1)
 
-    def get_data(self):
+    def __get_data(self):
         self.is_round = False
         self.is_negative = False
         lookback_option = self.lookback_option.get()
@@ -357,7 +351,7 @@ class GeneralRegressionNeuralNetwork:
 
         if lookback_option == 1:
             lookback = self.lookback_val_var.get()
-            X, y = self.get_lookback(X, y, lookback)
+            X, y = self.__get_lookback(X, y, lookback)
             self.last = y[-lookback:]
         else:
             X = X.to_numpy()
@@ -370,7 +364,7 @@ class GeneralRegressionNeuralNetwork:
         val_option = self.validation_option.get()
         do_forecast = self.do_forecast_option.get()
 
-        X, y = self.get_data()
+        X, y = self.__get_data()
 
         if op == 0:
             sigma = self.sigma_var.get()
@@ -508,10 +502,17 @@ class GeneralRegressionNeuralNetwork:
         for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
-    def plot_graph(self):
+    def show_result_values(self):
+        top = tk.Toplevel(self.root)
+        df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+
+    def show_result_graph(self):
         y_test = self.y_test
         pred = self.pred
         plt.plot(y_test)
         plt.plot(pred)
         plt.legend(["test", "pred"], loc="upper left")
         plt.show()
+
