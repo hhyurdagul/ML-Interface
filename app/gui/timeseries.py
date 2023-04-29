@@ -599,10 +599,10 @@ class TimeSeries:
         d = {}
         if self.test_data_valid:
             self.y_test: np.ndarray
-            d["Test"] = self.y_test[:, 0]
+            d["Test"] = self.y_test
         self.pred: np.ndarray
         try:
-            d["Predict"] = self.pred[:, 0]
+            d["Predict"] = self.pred
         except Exception:
             return
         df = pd.DataFrame(d)
