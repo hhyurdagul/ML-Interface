@@ -1,22 +1,22 @@
+import json
+import os
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
-from pandastable import Table
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from tkinter import filedialog, ttk
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from statsmodels.tsa.arima.model import ARIMA, ARIMAResults
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
+                                               NavigationToolbar2Tk)
+from pandastable import Table
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima.model import ARIMA, ARIMAResults
 
-import os
-import json
 from .helpers import loss, popupmsg
 
 
 class SARIMA:
+
     def __init__(self):
         self.root = ttk.Frame()
 
@@ -25,8 +25,10 @@ class SARIMA:
         get_train_set_frame.grid(column=0, row=0)
 
         file_path = tk.StringVar(value="")
-        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
+        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0,
+                                                                    row=0)
+        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1,
+                                                                    row=0)
         ttk.Button(
             get_train_set_frame,
             text="Read Data",
@@ -46,19 +48,19 @@ class SARIMA:
         self.target_list.grid(column=2, row=1)
         self.target_list.bind("<Double-Button-1>", self.eject_target)
 
-        ttk.Button(
-            get_train_set_frame, text="Add Predictor", command=self.add_predictor
-        ).grid(column=1, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
-        ).grid(column=1, row=3)
+        ttk.Button(get_train_set_frame,
+                   text="Add Predictor",
+                   command=self.add_predictor).grid(column=1, row=2)
+        ttk.Button(get_train_set_frame,
+                   text="Eject Predictor",
+                   command=self.eject_predictor).grid(column=1, row=3)
 
-        ttk.Button(
-            get_train_set_frame, text="Add Target", command=self.add_target
-        ).grid(column=2, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Target", command=self.eject_target
-        ).grid(column=2, row=3)
+        ttk.Button(get_train_set_frame,
+                   text="Add Target",
+                   command=self.add_target).grid(column=2, row=2)
+        ttk.Button(get_train_set_frame,
+                   text="Eject Target",
+                   command=self.eject_target).grid(column=2, row=3)
 
         # Graphs
         graph_frame = ttk.Labelframe(self.root, text="Graphs")
@@ -66,23 +68,27 @@ class SARIMA:
 
         self.train_size = tk.IntVar(value=100)
         ttk.Label(graph_frame, text="Train Size").grid(column=0, row=0)
-        ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1, row=0)
+        ttk.Entry(graph_frame, textvariable=self.train_size).grid(column=1,
+                                                                  row=0)
 
         self.train_size_choice = tk.IntVar(value=0)
-        tk.Radiobutton(
-            graph_frame, text="As Percent", variable=self.train_size_choice, value=0
-        ).grid(column=0, row=1)
-        tk.Radiobutton(
-            graph_frame, text="As Number", variable=self.train_size_choice, value=1
-        ).grid(column=1, row=1)
+        tk.Radiobutton(graph_frame,
+                       text="As Percent",
+                       variable=self.train_size_choice,
+                       value=0).grid(column=0, row=1)
+        tk.Radiobutton(graph_frame,
+                       text="As Number",
+                       variable=self.train_size_choice,
+                       value=1).grid(column=1, row=1)
 
         lags = tk.IntVar(value=40)
         ttk.Label(graph_frame, text="Lag Number").grid(column=0, row=2)
         ttk.Entry(graph_frame, textvariable=lags).grid(column=1, row=2)
 
-        ttk.Button(
-            graph_frame, text="Show ACF", command=lambda: self.show_acf(0, lags.get())
-        ).grid(column=0, row=3)
+        ttk.Button(graph_frame,
+                   text="Show ACF",
+                   command=lambda: self.show_acf(0, lags.get())).grid(column=0,
+                                                                      row=3)
         ttk.Button(
             graph_frame,
             text="First Difference ACF",
@@ -90,9 +96,8 @@ class SARIMA:
         ).grid(column=1, row=3)
 
         self.season_number_var = tk.IntVar(value="")
-        ttk.Entry(graph_frame, textvariable=self.season_number_var, width=8).grid(
-            column=0, row=4
-        )
+        ttk.Entry(graph_frame, textvariable=self.season_number_var,
+                  width=8).grid(column=0, row=4)
         ttk.Button(
             graph_frame,
             text="Seasonal Difference ACF",
@@ -109,26 +114,21 @@ class SARIMA:
         create_model_frame = ttk.Labelframe(self.root, text="Create Model")
         create_model_frame.grid(column=1, row=0)
 
-        ## Model Without Optimization
+        # Model Without Optimization
         model_without_optimization_frame = ttk.LabelFrame(
-            create_model_frame, text="Model Without Optimization"
-        )
+            create_model_frame, text="Model Without Optimization")
         model_without_optimization_frame.grid(column=0, row=0)
 
         self.pdq_var = [tk.IntVar(value="") for _ in range(3)]
-        [
-            [
-                ttk.Label(model_without_optimization_frame, text=j).grid(
-                    column=0, row=i + 1
-                ),
-                ttk.Entry(
-                    model_without_optimization_frame,
-                    textvariable=self.pdq_var[i],
-                    width=8,
-                ).grid(column=1, row=i + 1),
-            ]
-            for i, j in enumerate(["p", "d", "q"])
-        ]
+        [[
+            ttk.Label(model_without_optimization_frame,
+                      text=j).grid(column=0, row=i + 1),
+            ttk.Entry(
+                model_without_optimization_frame,
+                textvariable=self.pdq_var[i],
+                width=8,
+            ).grid(column=1, row=i + 1),
+        ] for i, j in enumerate(["p", "d", "q"])]
 
         self.seasonality_option = tk.IntVar(value=0)
         tk.Checkbutton(
@@ -142,62 +142,59 @@ class SARIMA:
 
         self.PDQM_var = [tk.IntVar(value="") for _ in range(4)]
 
-        self.seasonals = [
-            [
-                ttk.Label(model_without_optimization_frame, text=j).grid(
-                    column=2, row=i + 1
-                ),
-                ttk.Entry(
-                    model_without_optimization_frame,
-                    textvariable=self.PDQM_var[i],
-                    width=8,
-                    state=tk.DISABLED,
-                ),
-            ]
-            for i, j in enumerate(["P", "D", "Q", "s"])
-        ]
+        self.seasonals = [[
+            ttk.Label(model_without_optimization_frame,
+                      text=j).grid(column=2, row=i + 1),
+            ttk.Entry(
+                model_without_optimization_frame,
+                textvariable=self.PDQM_var[i],
+                width=8,
+                state=tk.DISABLED,
+            ),
+        ] for i, j in enumerate(["P", "D", "Q", "s"])]
 
         for i, j in enumerate(self.seasonals):
             j[1].grid(column=3, row=i + 1)
 
-        ttk.Button(
-            create_model_frame, text="Create Model", command=self.create_model
-        ).grid(column=0, row=1)
-        ttk.Button(create_model_frame, text="Save Model", command=self.save_model).grid(
-            column=1, row=1
-        )
+        ttk.Button(create_model_frame,
+                   text="Create Model",
+                   command=self.create_model).grid(column=0, row=1)
+        ttk.Button(create_model_frame,
+                   text="Save Model",
+                   command=self.save_model).grid(column=1, row=1)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
         test_model_frame.grid(column=1, row=1)
 
-        ## Test Model Main
-        test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
+        # Test Model Main
+        test_model_main_frame = ttk.LabelFrame(test_model_frame,
+                                               text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
         self.forecast_num = tk.IntVar(value="")
-        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
-            column=1, row=0
-        )
-        ttk.Button(
-            test_model_main_frame, text="Values", command=self.show_predicts
-        ).grid(column=2, row=0)
+        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0,
+                                                                    row=0)
+        ttk.Entry(test_model_main_frame,
+                  textvariable=self.forecast_num).grid(column=1, row=0)
+        ttk.Button(test_model_main_frame,
+                   text="Values",
+                   command=self.show_predicts).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
-        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
-            column=1, row=1
-        )
+        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0,
+                                                                     row=1)
+        ttk.Entry(test_model_main_frame,
+                  textvariable=test_file_path).grid(column=1, row=1)
         ttk.Button(
             test_model_main_frame,
             text="Get Test Set",
             command=lambda: self.get_test_set(test_file_path),
         ).grid(column=2, row=1)
 
-        ttk.Button(
-            test_model_main_frame, text="Load Model", command=self.load_model
-        ).grid(column=0, row=3)
+        ttk.Button(test_model_main_frame,
+                   text="Load Model",
+                   command=self.load_model).grid(column=0, row=3)
         ttk.Button(
             test_model_main_frame,
             text="Forecast",
@@ -209,28 +206,29 @@ class SARIMA:
             command=self.plot_graph,
         ).grid(column=0, row=4, columnspan=3)
 
-        ## Test Model Metrics
+        # Test Model Metrics
         self.test_data_valid = False
         self.forecast_done = False
-        test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
+        test_model_metrics_frame = ttk.LabelFrame(test_model_frame,
+                                                  text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
+        self.test_metrics_vars = [
+            tk.Variable() for _ in range(len(test_metrics))
+        ]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(
-                test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
-            ).grid(column=1, row=i)
+            ttk.Entry(test_model_metrics_frame,
+                      textvariable=self.test_metrics_vars[i]).grid(column=1,
+                                                                   row=i)
 
     def read_input_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
+        path = filedialog.askopenfilename(filetypes=[
+            ("Csv Files", "*.csv"),
+            ("Xlsx Files", "*.xlsx"),
+            ("Xlrd Files", ".xls"),
+        ])
         file_path.set(path)
         if path.endswith(".csv"):
             self.df = pd.read_csv(path)
@@ -248,13 +246,11 @@ class SARIMA:
             self.input_list.insert(tk.END, i)
 
     def get_test_set(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
+        path = filedialog.askopenfilename(filetypes=[
+            ("Csv Files", "*.csv"),
+            ("Xlsx Files", "*.xlsx"),
+            ("Xlrd Files", ".xls"),
+        ])
         file_path.set(path)
         if path.endswith(".csv"):
             self.test_df = pd.read_csv(path)
@@ -381,7 +377,7 @@ class SARIMA:
         self.train_size.set(params["train_size"])
         self.train_size_choice.set(params["train_size_choice"])
 
-        names = "\n".join(self.predictor_names)
+        names = self.predictor_names
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
@@ -390,11 +386,8 @@ class SARIMA:
         fig = plt.Figure((20, 15))
 
         data = self.df[self.target_list.get(0)]
-        size = (
-            int(self.train_size.get())
-            if self.train_size_choice.get() == 1
-            else int((self.train_size.get() / 100) * len(data))
-        )
+        size = (int(self.train_size.get()) if self.train_size_choice.get() == 1
+                else int((self.train_size.get() / 100) * len(data)))
         data = data.iloc[-size:]
 
         ax = fig.add_subplot(211)
@@ -436,11 +429,8 @@ class SARIMA:
         self.predictor_names = self.predictor_list.get(0)
         self.label_name = self.target_list.get(0)
         data = self.df[self.label_name]
-        size = (
-            int(self.train_size.get())
-            if self.train_size_choice.get() == 1
-            else int((self.train_size.get() / 100) * len(data))
-        )
+        size = (int(self.train_size.get()) if self.train_size_choice.get() == 1
+                else int((self.train_size.get() / 100) * len(data)))
         series = data.iloc[-size:]
 
         if series.dtype == int or series.dtype == np.intc or series.dtype == np.int64:

@@ -769,7 +769,7 @@ class TimeSeries:
         self.train_loss.set(params["train_loss"])
         self.open_optimization_layers(True)
 
-        names = "\n".join(self.predictor_names)
+        names = self.predictor_names
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
