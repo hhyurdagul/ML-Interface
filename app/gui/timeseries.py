@@ -1314,8 +1314,9 @@ class TimeSeries:
             self.model = model
 
         else:
-            X_train, X_test = X[:-60], X[-60:]
-            y_train, y_test = y[:-60], y[-60:]
+            test_len = int(len(y) * 0.2)
+            X_train, X_test = X[:-test_len], X[-test_len:]
+            y_train, y_test = y[:-test_len], y[-test_len:]
 
             def eval(model):
                 model.compile(
