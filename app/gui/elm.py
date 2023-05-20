@@ -1,14 +1,13 @@
 import json
 import os
+import pickle
 import tkinter as tk
-from pickle import dump as pickle_dump
-from pickle import load as pickle_load
 from tkinter import filedialog, ttk
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from joblib import dump, load
 from pandastable import Table
 from skelm import ELMRegressor
 from sklearn.model_selection import GridSearchCV, cross_validate, train_test_split
@@ -556,12 +555,12 @@ class ELM:
         params["scale_type"] = self.scale_var.get()
 
         os.mkdir(path)
-        dump(self.model, path + "/model.joblib")
+        joblib.dump(self.model, path + "/model.joblib")
         if self.scale_var.get() != "None":
             with open(path + "/feature_scaler.pkl", "wb") as f:
-                pickle_dump(self.feature_scaler, f)
+                pickle.dump(self.feature_scaler, f)
             with open(path + "/label_scaler.pkl", "wb") as f:
-                pickle_dump(self.label_scaler, f)
+                pickle.dump(self.label_scaler, f)
         if self.lookback_option.get() == 1:
             with open(path + "/last_values.npy", "wb") as outfile:
                 np.save(outfile, self.last)
@@ -580,7 +579,7 @@ class ELM:
         except Exception:
             popupmsg("There is no model file at the path")
             return
-        self.model = load(model_path)
+        self.model = joblib.load(model_path)
         infile = open(path + "/model.json")
         params = json.load(infile)
         params: dict
@@ -623,9 +622,9 @@ class ELM:
         if params.get("scale_type", "None") != "None":
             try:
                 with open(path + "/feature_scaler.pkl", "rb") as f:
-                    self.feature_scaler = pickle_load(f)
+                    self.feature_scaler = pickle.load(f)
                 with open(path + "/label_scaler.pkl", "rb") as f:
-                    self.label_scaler = pickle_load(f)
+                    self.label_scaler = pickle.load(f)
             except Exception:
                 pass
         self.parameters[0].set(params.get("alpha", 0.1))

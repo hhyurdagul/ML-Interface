@@ -1,0 +1,20 @@
+imports
+Class
+- read_train_data
+- read_test_data
+- fill_input_list (private)
+- add_predictor
+- eject_predictor
+- add_target
+- eject_target
+- open_entries (private)
+- check_errors (private)
+- save_model
+- load_model
+- get_lookback (private)
+- get_data (private)
+- create_model
+- forecast_lookback (private)
+- forecast
+- show_result_values
+- show_result_graph
