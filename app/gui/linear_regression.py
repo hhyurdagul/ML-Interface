@@ -34,7 +34,7 @@ class LinearModel:
         ttk.Button(
             get_train_set_frame,
             text="Read Data",
-            command=lambda: self.read_csv(file_path),
+            command=lambda: self.read_train_data(file_path),
         ).grid(column=2, row=0)
 
         self.input_list = tk.Listbox(get_train_set_frame)
@@ -76,7 +76,7 @@ class LinearModel:
             offvalue=0,
             onvalue=1,
             variable=self.do_forecast_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         ).grid(column=0, row=0, columnspan=2)
 
         self.validation_option = tk.IntVar(value=0)
@@ -87,21 +87,21 @@ class LinearModel:
             text="No validation, use all data rows",
             value=0,
             variable=self.validation_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         ).grid(column=0, row=1, columnspan=2, sticky=tk.W)
         tk.Radiobutton(
             model_validation_frame,
             text="Random percent",
             value=1,
             variable=self.validation_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         ).grid(column=0, row=2, sticky=tk.W)
         self.cv_entry_1 = tk.Radiobutton(
             model_validation_frame,
             text="K-fold cross-validation",
             value=2,
             variable=self.validation_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         )
         self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
         self.cv_entry_2 = tk.Radiobutton(
@@ -109,7 +109,7 @@ class LinearModel:
             text="Leave one out cross-validation",
             value=3,
             variable=self.validation_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         )
         self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
         self.random_percent_entry = ttk.Entry(
@@ -135,7 +135,7 @@ class LinearModel:
             offvalue=0,
             onvalue=1,
             variable=self.lookback_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         ).grid(column=0, row=0)
         self.lookback_entry = tk.Entry(
             customize_train_set_frame,
@@ -154,7 +154,7 @@ class LinearModel:
             offvalue=0,
             onvalue=1,
             variable=self.seasonal_lookback_option,
-            command=self.open_other_entries,
+            command=self.__open_other_entries,
         ).grid(column=0, row=1)
         self.seasonal_lookback_entry_1 = tk.Entry(
             customize_train_set_frame,
@@ -211,7 +211,7 @@ class LinearModel:
                   textvariable=self.forecast_num).grid(column=1, row=0)
         ttk.Button(test_model_main_frame,
                    text="Values",
-                   command=self.show_predicts).grid(column=2, row=0)
+                   command=self.show_result_values).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0,
@@ -221,7 +221,7 @@ class LinearModel:
         ttk.Button(
             test_model_main_frame,
             text="Get Test Set",
-            command=lambda: self.get_test_set(test_file_path),
+            command=lambda: self.read_test_data(test_file_path),
         ).grid(column=2, row=1)
 
         ttk.Button(test_model_main_frame,
@@ -230,7 +230,7 @@ class LinearModel:
         ttk.Button(
             test_model_main_frame,
             text="Actual vs Forecast Graph",
-            command=self.plot_graph,
+            command=self.show_result_graph,
         ).grid(column=0, row=4, columnspan=3)
 
         # Test Model Metrics
@@ -248,9 +248,9 @@ class LinearModel:
                       textvariable=self.test_metrics_vars[i]).grid(column=1,
                                                                    row=i)
 
-        self.open_other_entries()
+        self.__open_other_entries()
 
-    def read_csv(self, file_path):
+    def read_train_data(self, file_path):
         path = filedialog.askopenfilename(filetypes=[
             ("Csv Files", "*.csv"),
             ("Xlsx Files", "*.xlsx"),
@@ -266,16 +266,9 @@ class LinearModel:
                 self.df = pd.read_excel(path)
             except Exception:
                 self.df = pd.read_excel(path, engine="openpyxl")
-        self.fill_input_list()
+        self.__fill_input_list()
 
-    def fill_input_list(self):
-        self.input_list.delete(0, tk.END)
-
-        self.df: pd.DataFrame
-        for i in self.df.columns.to_list():
-            self.input_list.insert(tk.END, i)
-
-    def get_test_set(self, file_path):
+    def read_test_data(self, file_path):
         path = filedialog.askopenfilename(filetypes=[
             ("Csv Files", "*.csv"),
             ("Xlsx Files", "*.xlsx"),
@@ -292,14 +285,12 @@ class LinearModel:
             except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
-    def show_predicts(self):
-        try:
-            df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
-        except Exception:
-            return
-        top = tk.Toplevel(self.root)
-        pt = Table(top, dataframe=df, editable=False)
-        pt.show()
+    def __fill_input_list(self):
+        self.input_list.delete(0, tk.END)
+
+        self.df: pd.DataFrame
+        for i in self.df.columns.to_list():
+            self.input_list.insert(tk.END, i)
 
     def add_predictor(self, _=None):
         try:
@@ -328,6 +319,71 @@ class LinearModel:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
             pass
+    
+    def __open_other_entries(self):
+        if not self.do_forecast_option.get():
+            self.cv_entry_1["state"] = tk.NORMAL
+            self.cv_entry_2["state"] = tk.NORMAL
+        else:
+            self.cv_entry_1["state"] = tk.DISABLED
+            self.cv_entry_2["state"] = tk.DISABLED
+        if self.validation_option.get() == 1:
+            self.random_percent_entry["state"] = tk.NORMAL
+        else:
+            self.random_percent_entry["state"] = tk.DISABLED
+        if self.validation_option.get() == 2:
+            self.cv_value_entry["state"] = tk.NORMAL
+        else:
+            self.cv_value_entry["state"] = tk.DISABLED
+        if self.lookback_option.get():
+            self.lookback_entry["state"] = tk.NORMAL
+        else:
+            self.lookback_entry["state"] = tk.DISABLED
+        if self.seasonal_lookback_option.get():
+            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
+            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
+        else:
+            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
+            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
+
+    def __check_errors(self):
+        try:
+            msg = "Read a data first"
+            self.df.head(1)
+
+            msg = "Select predictors"
+            if not self.predictor_list.get(0):
+                raise Exception
+
+            msg = "Select a target"
+            if not self.target_list.get(0):
+                raise Exception
+
+            msg = "Target and predictor have same variable"
+            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
+                raise Exception
+
+            msg = "Enter a valid percent value"
+            if self.random_percent_var.get() <= 0:
+                raise Exception
+
+            msg = "Enter a valid K-fold value (Above 2)"
+            if self.validation_option.get(
+            ) == 2 and self.cross_val_var.get() <= 1:
+                raise Exception
+
+            msg = "Enter a valid lookback value"
+            if self.lookback_option.get():
+                self.lookback_val_var.get()
+
+            msg = "Enter valid periodic lookback values"
+            if self.seasonal_lookback_option.get():
+                self.seasonal_val_var.get()
+                self.seasonal_period_var.get()
+
+        except Exception:
+            popupmsg(msg)  # type: ignore
+            return True
 
     def save_model(self):
         path = filedialog.asksaveasfilename()
@@ -394,44 +450,38 @@ class LinearModel:
         infile = open(path + "/model.json")
         params = json.load(infile)
 
-        self.predictor_names = params["predictor_names"]
-        self.label_name = params["label_name"]
+        self.predictor_names = params.get("predictor_names", [])
+        self.label_name = params.get("label_name", [])
+        self.is_round = params("is_round", True)
+        self.is_negative = params.get("is_negative", False)
+
+        self.do_forecast_option.set(params.get("do_forecast", 0))
+        self.validation_option.set(params.get("validation_option", 0))
+        if self.validation_option.get() == 1:
+            self.random_percent_var.set(params.get("random_percent", 80))
+        elif self.validation_option.get() == 2:
+            self.cross_val_var.set(params.get("k_fold_cv", 5))
+
+        self.lookback_option.set(params.get("lookback_option", 0))
+        if self.lookback_option.get():
+            self.lookback_val_var.set(params.get("lookback_value"))
+            with open(path + "/last_values.npy", "rb") as last_values:
+                self.last = np.load(last_values)
         try:
-            self.is_round = params["is_round"]
-        except Exception:
-            self.is_round = True
-        try:
-            self.is_negative = params["is_negative"]
-        except Exception:
-            self.is_negative = False
-        self.do_forecast_option.set(params["do_forecast"])
-        self.validation_option.set(params["validation_option"])
-        if params["validation_option"] == 1:
-            self.random_percent_var.set(params["random_percent"])
-        elif params["validation_option"] == 2:
-            self.cross_val_var.set(params["k_fold_cv"])
-        self.lookback_option.set(params["lookback_option"])
-        self.sliding = -1
-        if params["lookback_option"] == 1:
-            self.lookback_val_var.set(params["lookback_value"])
-            last_values = open(path + "/last_values.npy", "rb")
-            self.last = np.load(last_values)
-            last_values.close()
-        try:
-            self.sliding = params["sliding"]
+            self.sliding = params.get("sliding", -1)
             self.seasonal_lookback_option.set(
-                params["seasonal_lookback_option"])
-            if params["seasonal_lookback_option"] == 1:
-                self.seasonal_period_var.set(params["seasonal_period"])
-                self.seasonal_val_var.set(params["seasonal_value"])
-                seasonal_last_values = open(path + "/seasonal_last_values.npy",
-                                            "rb")
-                self.seasonal_last = np.load(seasonal_last_values)
-                seasonal_last_values.close()
+                params.get("seasonal_lookback_option", 0))
+            if self.seasonal_lookback_option.get() == 1:
+                self.seasonal_period_var.set(params.get("seasonal_period"))
+                self.seasonal_val_var.set(params.get("seasonal_value"))
+                with open(path + "/seasonal_last_values.npy",
+                          "rb") as seasonal_last_values:
+                    self.seasonal_last = np.load(seasonal_last_values)
         except Exception:
             pass
-        self.scale_var.set(params["scale_type"])
-        if params["scale_type"] != "None":
+
+        self.scale_var.set(params.get("scale_type", "None"))
+        if self.scale_var.get() != "None":
             try:
                 with open(path + "/feature_scaler.pkl", "rb") as f:
                     self.feature_scaler = pickle_load(f)
@@ -440,77 +490,12 @@ class LinearModel:
             except Exception:
                 pass
 
-        self.open_other_entries()
+        self.__open_other_entries()
         names = "\n".join(self.predictor_names)
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def open_other_entries(self):
-        if not self.do_forecast_option.get():
-            self.cv_entry_1["state"] = tk.NORMAL
-            self.cv_entry_2["state"] = tk.NORMAL
-        else:
-            self.cv_entry_1["state"] = tk.DISABLED
-            self.cv_entry_2["state"] = tk.DISABLED
-        if self.validation_option.get() == 1:
-            self.random_percent_entry["state"] = tk.NORMAL
-        else:
-            self.random_percent_entry["state"] = tk.DISABLED
-        if self.validation_option.get() == 2:
-            self.cv_value_entry["state"] = tk.NORMAL
-        else:
-            self.cv_value_entry["state"] = tk.DISABLED
-        if self.lookback_option.get():
-            self.lookback_entry["state"] = tk.NORMAL
-        else:
-            self.lookback_entry["state"] = tk.DISABLED
-        if self.seasonal_lookback_option.get():
-            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
-            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
-        else:
-            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
-            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
-
-    def check_errors(self):
-        try:
-            msg = "Read a data first"
-            self.df.head(1)
-
-            msg = "Select predictors"
-            if not self.predictor_list.get(0):
-                raise Exception
-
-            msg = "Select a target"
-            if not self.target_list.get(0):
-                raise Exception
-
-            msg = "Target and predictor have same variable"
-            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
-                raise Exception
-
-            msg = "Enter a valid percent value"
-            if self.random_percent_var.get() <= 0:
-                raise Exception
-
-            msg = "Enter a valid K-fold value (Above 2)"
-            if self.validation_option.get(
-            ) == 2 and self.cross_val_var.get() <= 1:
-                raise Exception
-
-            msg = "Enter a valid lookback value"
-            if self.lookback_option.get():
-                self.lookback_val_var.get()
-
-            msg = "Enter valid periodic lookback values"
-            if self.seasonal_lookback_option.get():
-                self.seasonal_val_var.get()
-                self.seasonal_period_var.get()
-
-        except Exception:
-            popupmsg(msg)  # type: ignore
-            return True
-
-    def get_lookback(self,
+    def __get_lookback(self,
                      X,
                      y,
                      lookback=0,
@@ -543,7 +528,7 @@ class LinearModel:
 
         return a, b
 
-    def get_data(self):
+    def __get_data(self):
         self.is_round = False
         self.is_negative = False
         lookback_option = self.lookback_option.get()
@@ -591,19 +576,19 @@ class LinearModel:
             seasonal_period = 0
             seasonal_lookback = 0
 
-        X, y = self.get_lookback(X, y, lookback, seasonal_period,
+        X, y = self.__get_lookback(X, y, lookback, seasonal_period,
                                  seasonal_lookback, sliding)
 
         return X, y
 
     def create_model(self):
-        if self.check_errors():
+        if self.__check_errors():
             return
 
         do_forecast = self.do_forecast_option.get()
         val_option = self.validation_option.get()
 
-        X, y = self.get_data()
+        X, y = self.__get_data()
         X: np.ndarray
         y: np.ndarray
 
@@ -668,7 +653,7 @@ class LinearModel:
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
-    def forecast_lookback(self,
+    def __forecast_lookback(self,
                           num,
                           lookback=0,
                           seasons=0,
@@ -766,7 +751,7 @@ class LinearModel:
                 seasonal_lookback = 0
                 seasons = 0
 
-            self.pred = self.forecast_lookback(num, lookback, seasons,
+            self.pred = self.__forecast_lookback(num, lookback, seasons,
                                                seasonal_lookback, sliding)
 
         if self.scale_var.get() != "None":
@@ -782,7 +767,16 @@ class LinearModel:
         for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
 
-    def plot_graph(self):
+    def show_result_values(self):
+        try:
+            df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+        except Exception:
+            return
+        top = tk.Toplevel(self.root)
+        pt = Table(top, dataframe=df, editable=False)
+        pt.show()
+
+    def show_result_graph(self):
         y_test = self.y_test
         try:
             pred = self.pred
