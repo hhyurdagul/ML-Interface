@@ -584,22 +584,21 @@ class ELM:
         params = json.load(infile)
         params: dict
 
-        self.predictor_names = params.get("predictor_names")
-        self.label_name = params.get("label_name")
+        self.predictor_names = params.get("predictor_names", [])
+        self.label_name = params.get("label_name", "")
 
-        self.is_round = params.get("is_round", False)
+        self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
 
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
-        if params.get("validation_option") == 1:
+        if self.validation_option.get() == 1:
             self.random_percent_var.set(params.get("random_percent", 100))
-        elif params.get("validation_option") == 2:
+        elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
 
         self.lookback_option.set(params.get("lookback_option", 0))
-        self.sliding = -1
-        if params.get("lookback_option") == 1:
+        if self.lookback_option.get() == 1:
             self.lookback_val_var.set(params.get("lookback_value", 7))
             try:
                 with open(path + "/last_values.npy", "rb") as last_values:
@@ -607,11 +606,11 @@ class ELM:
             except Exception:
                 pass
 
-        self.sliding = params.get("sliding")
+        self.sliding = params.get("sliding", -1)
         self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
-        if params.get("seasonal_lookback_option") == 1:
-            self.seasonal_period_var.set(params.get("seasonal_period"))
-            self.seasonal_val_var.set(params.get("seasonal_value"))
+        if self.seasonal_lookback_option.get() == 1:
+            self.seasonal_period_var.set(params.get("seasonal_period", 0))
+            self.seasonal_val_var.set(params.get("seasonal_value", 0))
             try:
                 with open(path + "/seasonal_last_values.npy", "rb") as slv:
                     self.seasonal_last = np.load(slv)
@@ -619,7 +618,7 @@ class ELM:
                 pass
 
         self.scale_var.set(params.get("scale_type", "None"))
-        if params.get("scale_type", "None") != "None":
+        if self.scale_var.get() != "None":
             try:
                 with open(path + "/feature_scaler.pkl", "rb") as f:
                     self.feature_scaler = pickle.load(f)

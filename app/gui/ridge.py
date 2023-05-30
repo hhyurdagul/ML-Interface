@@ -485,25 +485,28 @@ class Ridge:
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
         if self.validation_option.get() == 1:
-            self.random_percent_var.set(params.get("random_percent"))
+            self.random_percent_var.set(params.get("random_percent", 80))
         elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
 
         self.lookback_option.set(params.get("lookback_option", 0))
         if self.lookback_option.get() == 1:
-            self.lookback_val_var.set(params.get("lookback_value"))
-            with open(path + "/last_values.npy", "rb") as last_values:
-                self.last = np.load(last_values)
-        try:
-            self.sliding = params.get("sliding", -1)
-            self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
-            if self.seasonal_lookback_option.get() == 1:
-                self.seasonal_period_var.set(params.get("seasonal_period"))
-                self.seasonal_val_var.set(params.get("seasonal_value"))
-                with open(path + "/seasonal_last_values.npy", "rb") as seasonal_last_values:
-                    self.seasonal_last = np.load(seasonal_last_values)
-        except Exception:
-            pass
+            self.lookback_val_var.set(params.get("lookback_value", 0))
+            try:
+                with open(path + "/last_values.npy", "rb") as last_values:
+                    self.last = np.load(last_values)
+            except Exception:
+                pass
+        self.sliding = params.get("sliding", -1)
+        self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
+        if self.seasonal_lookback_option.get() == 1:
+            self.seasonal_period_var.set(params.get("seasonal_period"))
+            self.seasonal_val_var.set(params.get("seasonal_value"))
+            try:
+                with open(path + "/seasonal_last_values.npy", "rb") as slv:
+                    self.seasonal_last = np.load(slv)
+            except Exception:
+                pass
         self.scale_var.set(params.get("scale_type", "None"))
         if self.scale_var.get() != "None":
             try:
@@ -981,7 +984,7 @@ class Ridge:
         losses = loss(y_test, self.pred)
         for i in range(len(self.test_metrics_vars)):
             self.test_metrics_vars[i].set(losses[i])
-    
+
     def show_result_values(self):
         try:
             df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
@@ -990,7 +993,6 @@ class Ridge:
         top = tk.Toplevel(self.root)
         pt = Table(top, dataframe=df, editable=False)
         pt.show()
-
 
     def show_result_graph(self):
         y_test = self.y_test

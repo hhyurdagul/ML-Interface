@@ -451,34 +451,37 @@ class LinearModel:
         params = json.load(infile)
 
         self.predictor_names = params.get("predictor_names", [])
-        self.label_name = params.get("label_name", [])
+        self.label_name = params.get("label_name", "")
         self.is_round = params("is_round", True)
         self.is_negative = params.get("is_negative", False)
 
-        self.do_forecast_option.set(params.get("do_forecast", 0))
+        self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
         if self.validation_option.get() == 1:
             self.random_percent_var.set(params.get("random_percent", 80))
         elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
 
+        self.sliding = params.get("sliding", -1)
         self.lookback_option.set(params.get("lookback_option", 0))
         if self.lookback_option.get():
-            self.lookback_val_var.set(params.get("lookback_value"))
-            with open(path + "/last_values.npy", "rb") as last_values:
-                self.last = np.load(last_values)
-        try:
-            self.sliding = params.get("sliding", -1)
-            self.seasonal_lookback_option.set(
-                params.get("seasonal_lookback_option", 0))
-            if self.seasonal_lookback_option.get() == 1:
-                self.seasonal_period_var.set(params.get("seasonal_period"))
-                self.seasonal_val_var.set(params.get("seasonal_value"))
+            self.lookback_val_var.set(params.get("lookback_value", 0))
+            try:
+                with open(path + "/last_values.npy", "rb") as last_values:
+                    self.last = np.load(last_values)
+            except Exception:
+                pass
+        self.seasonal_lookback_option.set(
+            params.get("seasonal_lookback_option", 0))
+        if self.seasonal_lookback_option.get() == 1:
+            self.seasonal_period_var.set(params.get("seasonal_period"))
+            self.seasonal_val_var.set(params.get("seasonal_value"))
+            try:
                 with open(path + "/seasonal_last_values.npy",
                           "rb") as seasonal_last_values:
                     self.seasonal_last = np.load(seasonal_last_values)
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         self.scale_var.set(params.get("scale_type", "None"))
         if self.scale_var.get() != "None":

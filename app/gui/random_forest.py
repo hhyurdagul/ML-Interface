@@ -602,27 +602,33 @@ class RandomForest:
         self.label_name = params.get("label_name", "")
         self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
+
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
         if self.validation_option.get() == 1:
-            self.random_percent_var.set(params["random_percent"])
+            self.random_percent_var.set(params["random_percent", 80])
         elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
         self.lookback_option.set(params.get("lookback_option", 0))
         if self.lookback_option.get() == 1:
             self.lookback_val_var.set(params.get("lookback_value", 0))
-            with open(path + "/last_values.npy", "rb") as last_values:
-                self.last = np.load(last_values)
-        try:
-            self.sliding = params.get("sliding", -1)
-            self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
-            if self.seasonal_lookback_option.get() == 1:
-                self.seasonal_period_var.set(params.get("seasonal_period", 0))
-                self.seasonal_val_var.set(params.get("seasonal_value", 0))
-                with open(path + "/seasonal_last_values.npy", "rb") as seasonal_last_values:
-                    self.seasonal_last = np.load(seasonal_last_values)
-        except Exception:
-            pass
+            try:
+                with open(path + "/last_values.npy", "rb") as last_values:
+                    self.last = np.load(last_values)
+            except Exception:
+                pass
+
+        self.sliding = params.get("sliding", -1)
+        self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
+        if self.seasonal_lookback_option.get() == 1:
+            self.seasonal_period_var.set(params.get("seasonal_period", 0))
+            self.seasonal_val_var.set(params.get("seasonal_value", 0))
+            try:
+                with open(path + "/seasonal_last_values.npy", "rb") as slv:
+                    self.seasonal_last = np.load(slv)
+            except Exception:
+                pass
+
         self.scale_var.set(params.get("scale_type", "Nonr"))
         if self.scale_var.get() != "None":
             try:
@@ -632,10 +638,10 @@ class RandomForest:
                     self.label_scaler = pickle_load(f)
             except Exception:
                 pass
-        self.parameters[0].set(params.get("n_estimators"))
-        self.parameters[1].set(params.get("max_depth"))
-        self.parameters[2].set(params.get("min_samples_split"))
-        self.parameters[3].set(params.get("min_samples_leaf"))
+        self.parameters[0].set(params.get("n_estimators", 100))
+        self.parameters[1].set(params.get("max_depth", 5))
+        self.parameters[2].set(params.get("min_samples_split", 2))
+        self.parameters[3].set(params.get("min_samples_leaf", 1))
 
         self.__open_entries()
         self.__open_other_entries()

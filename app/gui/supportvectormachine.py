@@ -582,17 +582,21 @@ class SupportVectorMachine:
 
         if params.get("lookback_option", 0) == 1:
             self.lookback_val_var.set(params.get("lookback_value", 0))
-            with open(path + "/last_values.npy", "rb") as last_values:
-                self.last = np.load(last_values)
-        try:
-            self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
-            if self.seasonal_lookback_option.get() == 1:
-                self.seasonal_period_var.set(params.get("seasonal_period", 0))
-                self.seasonal_val_var.set(params.get("seasonal_value", 0))
+            try:
+                with open(path + "/last_values.npy", "rb") as last_values:
+                    self.last = np.load(last_values)
+            except Exception:
+                pass
+        self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
+        if self.seasonal_lookback_option.get() == 1:
+            self.seasonal_period_var.set(params.get("seasonal_period", 0))
+            self.seasonal_val_var.set(params.get("seasonal_value", 0))
+
+            try:
                 with open(path + "/seasonal_last_values.npy", "rb") as slv:
                     self.seasonal_last = np.load(slv)
-        except Exception:
-            pass
+            except Exception:
+                pass
         self.scale_var.set(params.get("scale_type", "None"))
         if self.scale_var.get() != "None":
             try:
