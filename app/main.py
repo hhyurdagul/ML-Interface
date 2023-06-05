@@ -1,3 +1,4 @@
+from gui.test import Test
 from gui.timeseries import TimeSeries
 from gui.mlp import MultiLayerPerceptron
 from gui.supportvectormachine import SupportVectorMachine
@@ -29,6 +30,9 @@ class GUI:
     def __init__(self):
         self.gui = tk.Tk()
         self.parent = ttk.Notebook(self.gui)
+
+        test = Test()
+        self.add(Test, "Test")
 
         time_series = TimeSeries()
         self.add(time_series, "Time Series")
