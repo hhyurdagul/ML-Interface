@@ -18,7 +18,6 @@ from .helpers import loss, popupmsg, skloss
 
 
 class LinearModel:
-
     def __init__(self):
         self.root = ttk.Frame()
 
@@ -27,10 +26,8 @@ class LinearModel:
         get_train_set_frame.grid(column=0, row=0)
 
         file_path = tk.StringVar(value="")
-        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0,
-                                                                    row=0)
-        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1,
-                                                                    row=0)
+        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
+        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
         ttk.Button(
             get_train_set_frame,
             text="Read Data",
@@ -50,23 +47,24 @@ class LinearModel:
         self.target_list.grid(column=2, row=1)
         self.target_list.bind("<Double-Button-1>", self.eject_target)
 
-        ttk.Button(get_train_set_frame,
-                   text="Add Predictor",
-                   command=self.add_predictor).grid(column=1, row=2)
-        ttk.Button(get_train_set_frame,
-                   text="Eject Predictor",
-                   command=self.eject_predictor).grid(column=1, row=3)
+        ttk.Button(
+            get_train_set_frame, text="Add Predictor", command=self.add_predictor
+        ).grid(column=1, row=2)
+        ttk.Button(
+            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
+        ).grid(column=1, row=3)
 
-        ttk.Button(get_train_set_frame,
-                   text="Add Target",
-                   command=self.add_target).grid(column=2, row=2)
-        ttk.Button(get_train_set_frame,
-                   text="Eject Target",
-                   command=self.eject_target).grid(column=2, row=3)
+        ttk.Button(
+            get_train_set_frame, text="Add Target", command=self.add_target
+        ).grid(column=2, row=2)
+        ttk.Button(
+            get_train_set_frame, text="Eject Target", command=self.eject_target
+        ).grid(column=2, row=3)
 
         # Model testing and validation
         model_validation_frame = ttk.Labelframe(
-            self.root, text="Model testing and validation")
+            self.root, text="Model testing and validation"
+        )
         model_validation_frame.grid(column=0, row=1)
 
         self.do_forecast_option = tk.IntVar(value=0)
@@ -113,18 +111,18 @@ class LinearModel:
         )
         self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
         self.random_percent_entry = ttk.Entry(
-            model_validation_frame,
-            textvariable=self.random_percent_var,
-            width=8)
+            model_validation_frame, textvariable=self.random_percent_var, width=8
+        )
         self.random_percent_entry.grid(column=1, row=2)
-        self.cv_value_entry = ttk.Entry(model_validation_frame,
-                                        textvariable=self.cross_val_var,
-                                        width=8)
+        self.cv_value_entry = ttk.Entry(
+            model_validation_frame, textvariable=self.cross_val_var, width=8
+        )
         self.cv_value_entry.grid(column=1, row=3)
 
         # Customize Train Set
-        customize_train_set_frame = ttk.LabelFrame(self.root,
-                                                   text="Customize Train Set")
+        customize_train_set_frame = ttk.LabelFrame(
+            self.root, text="Customize Train Set"
+        )
         customize_train_set_frame.grid(column=0, row=2)
 
         self.lookback_option = tk.IntVar(value=0)
@@ -172,8 +170,7 @@ class LinearModel:
         self.seasonal_lookback_entry_2.grid(column=1, row=2)
 
         self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0,
-                                                                     row=3)
+        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
         ttk.OptionMenu(
             customize_train_set_frame,
             self.scale_var,
@@ -188,45 +185,47 @@ class LinearModel:
         model_frame.grid(column=1, row=0)
 
         self.model: LinearRegression
-        ttk.Button(model_frame, text="Create Model",
-                   command=self.create_model).grid(column=0, row=0)
-        ttk.Button(model_frame, text="Save Model",
-                   command=self.save_model).grid(column=1, row=0)
-        ttk.Button(model_frame, text="Load Model",
-                   command=self.load_model).grid(column=2, row=0)
+        ttk.Button(model_frame, text="Create Model", command=self.create_model).grid(
+            column=0, row=0
+        )
+        ttk.Button(model_frame, text="Save Model", command=self.save_model).grid(
+            column=1, row=0
+        )
+        ttk.Button(model_frame, text="Load Model", command=self.load_model).grid(
+            column=2, row=0
+        )
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
         test_model_frame.grid(column=1, row=1)
 
         # Test Model Main
-        test_model_main_frame = ttk.LabelFrame(test_model_frame,
-                                               text="Test Model")
+        test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
         self.forecast_num = tk.IntVar(value="")  # type: ignore
-        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0,
-                                                                    row=0)
-        ttk.Entry(test_model_main_frame,
-                  textvariable=self.forecast_num).grid(column=1, row=0)
-        ttk.Button(test_model_main_frame,
-                   text="Values",
-                   command=self.show_result_values).grid(column=2, row=0)
+        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
+        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
+            column=1, row=0
+        )
+        ttk.Button(
+            test_model_main_frame, text="Values", command=self.show_result_values
+        ).grid(column=2, row=0)
 
         test_file_path = tk.StringVar()
-        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0,
-                                                                     row=1)
-        ttk.Entry(test_model_main_frame,
-                  textvariable=test_file_path).grid(column=1, row=1)
+        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
+        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
+            column=1, row=1
+        )
         ttk.Button(
             test_model_main_frame,
             text="Get Test Set",
             command=lambda: self.read_test_data(test_file_path),
         ).grid(column=2, row=1)
 
-        ttk.Button(test_model_main_frame,
-                   text="Test Model",
-                   command=self.forecast).grid(column=2, row=3)
+        ttk.Button(
+            test_model_main_frame, text="Test Model", command=self.forecast
+        ).grid(column=2, row=3)
         ttk.Button(
             test_model_main_frame,
             text="Actual vs Forecast Graph",
@@ -234,28 +233,27 @@ class LinearModel:
         ).grid(column=0, row=4, columnspan=3)
 
         # Test Model Metrics
-        test_model_metrics_frame = ttk.LabelFrame(test_model_frame,
-                                                  text="Test Metrics")
+        test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [
-            tk.Variable() for _ in range(len(test_metrics))
-        ]
+        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
-            ttk.Entry(test_model_metrics_frame,
-                      textvariable=self.test_metrics_vars[i]).grid(column=1,
-                                                                   row=i)
+            ttk.Entry(
+                test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
+            ).grid(column=1, row=i)
 
         self.__open_other_entries()
 
     def read_train_data(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[
-            ("Csv Files", "*.csv"),
-            ("Xlsx Files", "*.xlsx"),
-            ("Xlrd Files", ".xls"),
-        ])
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Csv Files", "*.csv"),
+                ("Xlsx Files", "*.xlsx"),
+                ("Xlrd Files", ".xls"),
+            ]
+        )
         if not path:
             return
         file_path.set(path)
@@ -269,11 +267,13 @@ class LinearModel:
         self.__fill_input_list()
 
     def read_test_data(self, file_path):
-        path = filedialog.askopenfilename(filetypes=[
-            ("Csv Files", "*.csv"),
-            ("Xlsx Files", "*.xlsx"),
-            ("Xlrd Files", ".xls"),
-        ])
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Csv Files", "*.csv"),
+                ("Xlsx Files", "*.xlsx"),
+                ("Xlrd Files", ".xls"),
+            ]
+        )
         if not path:
             return
         file_path.set(path)
@@ -319,7 +319,7 @@ class LinearModel:
             self.target_list.delete(self.target_list.curselection())
         except Exception:
             pass
-    
+
     def __open_other_entries(self):
         if not self.do_forecast_option.get():
             self.cv_entry_1["state"] = tk.NORMAL
@@ -368,8 +368,7 @@ class LinearModel:
                 raise Exception
 
             msg = "Enter a valid K-fold value (Above 2)"
-            if self.validation_option.get(
-            ) == 2 and self.cross_val_var.get() <= 1:
+            if self.validation_option.get() == 2 and self.cross_val_var.get() <= 1:
                 raise Exception
 
             msg = "Enter a valid lookback value"
@@ -402,22 +401,25 @@ class LinearModel:
         params["is_negative"] = self.is_negative
         params["do_forecast"] = self.do_forecast_option.get()
         params["validation_option"] = self.validation_option.get()
-        params["random_percent"] = (self.random_percent_var.get()
-                                    if self.validation_option.get() == 1 else
-                                    None)
-        params["k_fold_cv"] = (self.cross_val_var.get()
-                               if self.validation_option.get() == 2 else None)
-        params["lookback_option"] = self.lookback_option.get()
-        params["lookback_value"] = (self.lookback_val_var.get()
-                                    if self.lookback_option.get() else None)
-        params["seasonal_lookback_option"] = self.seasonal_lookback_option.get(
+        params["random_percent"] = (
+            self.random_percent_var.get() if self.validation_option.get() == 1 else None
         )
-        params["seasonal_period"] = (self.seasonal_period_var.get()
-                                     if self.seasonal_lookback_option.get()
-                                     else None)
-        params["seasonal_value"] = (self.seasonal_val_var.get()
-                                    if self.seasonal_lookback_option.get() else
-                                    None)
+        params["k_fold_cv"] = (
+            self.cross_val_var.get() if self.validation_option.get() == 2 else None
+        )
+        params["lookback_option"] = self.lookback_option.get()
+        params["lookback_value"] = (
+            self.lookback_val_var.get() if self.lookback_option.get() else None
+        )
+        params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
+        params["seasonal_period"] = (
+            self.seasonal_period_var.get()
+            if self.seasonal_lookback_option.get()
+            else None
+        )
+        params["seasonal_value"] = (
+            self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
+        )
         params["sliding"] = self.sliding
         params["scale_type"] = self.scale_var.get()
 
@@ -471,14 +473,14 @@ class LinearModel:
                     self.last = np.load(last_values)
             except Exception:
                 pass
-        self.seasonal_lookback_option.set(
-            params.get("seasonal_lookback_option", 0))
+        self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
         if self.seasonal_lookback_option.get() == 1:
             self.seasonal_period_var.set(params.get("seasonal_period"))
             self.seasonal_val_var.set(params.get("seasonal_value"))
             try:
-                with open(path + "/seasonal_last_values.npy",
-                          "rb") as seasonal_last_values:
+                with open(
+                    path + "/seasonal_last_values.npy", "rb"
+                ) as seasonal_last_values:
                     self.seasonal_last = np.load(seasonal_last_values)
             except Exception:
                 pass
@@ -498,13 +500,9 @@ class LinearModel:
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def __get_lookback(self,
-                     X,
-                     y,
-                     lookback=0,
-                     seasons=0,
-                     seasonal_lookback=0,
-                     sliding=-1):
+    def __get_lookback(
+        self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
+    ):
         if sliding == 0:
             for i in range(1, lookback + 1):
                 X[f"t-{i}"] = y.shift(i)
@@ -519,15 +517,15 @@ class LinearModel:
 
         X.dropna(inplace=True)
         a = X.to_numpy()
-        b = y.iloc[-len(a):].to_numpy().reshape(-1)
+        b = y.iloc[-len(a) :].to_numpy().reshape(-1)
 
         if sliding == 0:
             self.last = b[-lookback:]
         elif sliding == 1:
-            self.seasonal_last = b[-seasonal_lookback * seasons:]
+            self.seasonal_last = b[-seasonal_lookback * seasons :]
         elif sliding == 2:
-            self.last = b[-(lookback + seasonal_lookback):-seasonal_lookback]
-            self.seasonal_last = b[-seasonal_lookback * seasons:]
+            self.last = b[-(lookback + seasonal_lookback) : -seasonal_lookback]
+            self.seasonal_last = b[-seasonal_lookback * seasons :]
 
         return a, b
 
@@ -557,16 +555,18 @@ class LinearModel:
             self.label_scaler = StandardScaler()
 
             X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(
-                -1, 1)).reshape(-1)
+            y.iloc[:] = self.label_scaler.fit_transform(
+                y.values.reshape(-1, 1)
+            ).reshape(-1)
 
         elif scale_choice == "MinMaxScaler":
             self.feature_scaler = MinMaxScaler()
             self.label_scaler = MinMaxScaler()
 
             X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(y.values.reshape(
-                -1, 1)).reshape(-1)
+            y.iloc[:] = self.label_scaler.fit_transform(
+                y.values.reshape(-1, 1)
+            ).reshape(-1)
 
         try:
             lookback = self.lookback_val_var.get()
@@ -579,8 +579,9 @@ class LinearModel:
             seasonal_period = 0
             seasonal_lookback = 0
 
-        X, y = self.__get_lookback(X, y, lookback, seasonal_period,
-                                 seasonal_lookback, sliding)
+        X, y = self.__get_lookback(
+            X, y, lookback, seasonal_period, seasonal_lookback, sliding
+        )
 
         return X, y
 
@@ -603,9 +604,13 @@ class LinearModel:
                 pred = model.predict(X).reshape(-1)
                 if self.scale_var.get() != "None":
                     pred = self.label_scaler.inverse_transform(
-                        pred.reshape(-1, 1)).reshape(-1)  # type: ignore
-                    y = self.label_scaler.inverse_transform(y.reshape(
-                        -1, 1)).reshape(-1)  # type: ignore
+                        pred.reshape(-1, 1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
+                    y = self.label_scaler.inverse_transform(y.reshape(-1, 1)).reshape(
+                        -1
+                    )  # type: ignore
                 losses = loss(y, pred)
                 self.y_test = y
                 self.pred = pred
@@ -616,14 +621,21 @@ class LinearModel:
         elif val_option == 1:
             if do_forecast == 0:
                 X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, train_size=self.random_percent_var.get() / 100)
+                    X, y, train_size=self.random_percent_var.get() / 100
+                )
                 model.fit(X_train, y_train)
                 pred = model.predict(X_test).reshape(-1)
                 if self.scale_var.get() != "None":
                     pred = self.label_scaler.inverse_transform(
-                        pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred.reshape(-1, 1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                     y_test = self.label_scaler.inverse_transform(
-                        y_test.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        y_test.reshape(-1, 1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 losses = loss(y_test, pred)
                 self.y_test = y_test
                 self.pred = pred
@@ -638,30 +650,21 @@ class LinearModel:
 
         elif val_option == 2:
             if do_forecast == 0:
-                cvs = cross_validate(model,
-                                     X,
-                                     y,
-                                     cv=self.cross_val_var.get(),
-                                     scoring=skloss)
+                cvs = cross_validate(
+                    model, X, y, cv=self.cross_val_var.get(), scoring=skloss
+                )
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
         elif val_option == 3:
             if do_forecast == 0:
-                cvs = cross_validate(model,
-                                     X,
-                                     y,
-                                     cv=X.shape[0] - 1,
-                                     scoring=skloss)
+                cvs = cross_validate(model, X, y, cv=X.shape[0] - 1, scoring=skloss)
                 for i, j in enumerate(list(cvs.values())[2:]):
                     self.test_metrics_vars[i].set(j.mean())
 
-    def __forecast_lookback(self,
-                          num,
-                          lookback=0,
-                          seasons=0,
-                          seasonal_lookback=0,
-                          sliding=-1):
+    def __forecast_lookback(
+        self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
+    ):
         self.test_df: pd.DataFrame
         pred = []
         if sliding == 0:
@@ -670,8 +673,10 @@ class LinearModel:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                        X_test.values.reshape(1,
-                                              -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
@@ -685,12 +690,15 @@ class LinearModel:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                        X_test.values.reshape(1,
-                                              -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, seasons + 1):
                     # type: ignore
                     X_test[f"t-{j*seasonal_last}"] = seasonal_last[
-                        -j * seasonal_lookback]
+                        -j * seasonal_lookback
+                    ]
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
                 out = self.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
@@ -703,14 +711,17 @@ class LinearModel:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                        X_test.values.reshape(1,
-                                              -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 for j in range(1, seasons + 1):
                     # type: ignore
                     X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[
-                        -j * seasonal_lookback]
+                        -j * seasonal_lookback
+                    ]
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
@@ -730,8 +741,9 @@ class LinearModel:
         try:
             # type: ignore
             X_test = self.test_df[self.predictor_names][:num].to_numpy()
-            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(
-                -1)  # type: ignore
+            y_test = (
+                self.test_df[self.label_name][:num].to_numpy().reshape(-1)
+            )  # type: ignore
             self.y_test = y_test
         except Exception:
             popupmsg("Read a test data")
@@ -754,12 +766,16 @@ class LinearModel:
                 seasonal_lookback = 0
                 seasons = 0
 
-            self.pred = self.__forecast_lookback(num, lookback, seasons,
-                                               seasonal_lookback, sliding)
+            self.pred = self.__forecast_lookback(
+                num, lookback, seasons, seasonal_lookback, sliding
+            )
 
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(
-                self.pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                self.pred.reshape(-1, 1)
+            ).reshape(
+                -1
+            )  # type: ignore
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)

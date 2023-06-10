@@ -2,13 +2,11 @@ import tkinter as tk
 from tkinter import ttk
 
 import numpy as np
-from sklearn.metrics import (make_scorer, mean_absolute_error,
-                             mean_squared_error)
+from sklearn.metrics import make_scorer, mean_absolute_error, mean_squared_error
 
 
 def nmse(y_true, y_pred):
-    return round(
-        (((y_true - y_pred)**2) / (y_true.mean() * y_pred.mean())).mean(), 2)
+    return round((((y_true - y_pred) ** 2) / (y_true.mean() * y_pred.mean())).mean(), 2)
 
 
 def rmse(y_true, y_pred):
@@ -29,9 +27,8 @@ def mape(y_true, y_pred):
 def smape(y_true, y_pred):
     try:
         return round(
-            np.mean(
-                np.abs(y_true - y_pred) /
-                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100,
+            np.mean(np.abs(y_true - y_pred) / ((np.abs(y_true) + np.abs(y_pred)) / 2))
+            * 100,
             2,
         )
     except Exception:
@@ -41,8 +38,8 @@ def smape(y_true, y_pred):
 def mase(y_true, y_pred, seasons=1):
     try:
         return round(
-            mean_absolute_error(y_true, y_pred) /
-            mean_absolute_error(y_true[seasons:], y_true[:-seasons]),
+            mean_absolute_error(y_true, y_pred)
+            / mean_absolute_error(y_true[seasons:], y_true[:-seasons]),
             2,
         )
     except Exception:
@@ -59,8 +56,7 @@ skloss = {
 
 
 def loss(y_true, y_pred, seasons=1):
-    NMSE = round(
-        (((y_true - y_pred)**2) / (y_true.mean() * y_pred.mean())).mean(), 2)
+    NMSE = round((((y_true - y_pred) ** 2) / (y_true.mean() * y_pred.mean())).mean(), 2)
     RMSE = round(np.sqrt(mean_squared_error(y_true, y_pred)), 2)
     MAE = round(mean_absolute_error(y_true, y_pred), 2)
     try:
@@ -69,9 +65,8 @@ def loss(y_true, y_pred, seasons=1):
         MAPE = None
     try:
         SMAPE = round(
-            np.mean(
-                np.abs(y_true - y_pred) /
-                ((np.abs(y_true) + np.abs(y_pred)) / 2)) * 100,
+            np.mean(np.abs(y_true - y_pred) / ((np.abs(y_true) + np.abs(y_pred)) / 2))
+            * 100,
             2,
         )
     except Exception:
