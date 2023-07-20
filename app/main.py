@@ -32,7 +32,7 @@ class GUI:
         self.parent = ttk.Notebook(self.gui)
 
         test = Test()
-        self.add(Test, "Test")
+        self.add(test, "Test")
 
         time_series = TimeSeries()
         self.add(time_series, "Time Series")
