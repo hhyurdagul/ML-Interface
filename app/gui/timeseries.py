@@ -1643,6 +1643,8 @@ class TimeSeries:
         if self.is_round:
             self.pred = np.round(self.pred).astype(int)
 
+        self.pred = self.pred.ravel()
+
         if self.test_data_valid:
             self.y_test = self.test_df[self.label_name]
             self.y_test = np.asarray(self.y_test)[:num]

@@ -310,6 +310,7 @@ class RandomWalk:
 
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
+        params["train_size"] = self.train_size.get()
         params["is_round"] = self.is_round
         params["is_negative"] = self.is_negative
         params["seasonal_option"] = self.seasonal_option.get()
@@ -339,8 +340,8 @@ class RandomWalk:
         params = json.load(infile)
         self.predictor_names = params["predictor_names"]
         self.label_name = params["label_name"]
+        self.train_size.set(params["train_size"])
         self.is_round = params["is_round"]
-        self.is_round = True
         self.is_negative = params["is_negative"]
 
         self.seasonal_option.set(params["seasonal_option"])
@@ -348,8 +349,7 @@ class RandomWalk:
         self.epsilon_var.set(params["epsilon"])
 
         self.open_entries()
-        names = "\n".join(self.predictor_names)
-        msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
+        msg = f"Predictor names are {self.predictor_names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
     def open_entries(self):
