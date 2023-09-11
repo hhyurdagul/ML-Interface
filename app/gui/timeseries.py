@@ -1103,9 +1103,6 @@ class TimeSeries:
                 model.add(Flatten())
 
             layers = self.no_optimization_choice_var.get()
-            # CNN-LSTM
-            cnn_layers = []
-            lstm_layers = []
             for i in range(layers):
                 neuron_number = self.neuron_numbers_var[i].get()
                 activation_function = self.activation_var[i].get()
@@ -1229,9 +1226,10 @@ class TimeSeries:
                             )
                         )
                         model.add(Dropout(0.2))
+            
                 elif model_choice == 6:
                     # CNN-LSTM
-                    cnn_layers.append(
+                    model.add(
                         Conv1D(
                             filters=neuron_number,
                             kernel_size=2,
@@ -1240,25 +1238,11 @@ class TimeSeries:
                         )
                     )
                     if i == layers - 1:
-                        lstm_layers.append(
+                        model.add(
                             LSTM(
                                 neuron_number,
                                 activation=activation_function,
                                 return_sequences=False,
-                                kernel_initializer=GlorotUniform(seed=0),
-                                recurrent_initializer=Orthogonal(seed=0),
-                            )
-                        )
-                        for j in range(layers):
-                            model.add(cnn_layers[i])
-                        for j in range(layers):
-                            model.add(lstm_layers[i])
-                    else:
-                        lstm_layers.append(
-                            LSTM(
-                                neuron_number,
-                                activation=activation_function,
-                                return_sequences=True,
                                 kernel_initializer=GlorotUniform(seed=0),
                                 recurrent_initializer=Orthogonal(seed=0),
                             )

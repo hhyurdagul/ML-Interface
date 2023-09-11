@@ -1,4 +1,4 @@
-from gui.test import Test
+# from gui.test import Test
 from gui.timeseries import TimeSeries
 from gui.mlp import MultiLayerPerceptron
 from gui.supportvectormachine import SupportVectorMachine
@@ -15,7 +15,7 @@ from gui.elm import ELM
 from gui.feature_selection import FS
 
 # from gui.montecarlo import MonteCarlo
-# from gui.movingaverage import MovingAverage
+from gui.movingaverage import MovingAverage
 # from gui.hybrid import Hybrid
 
 import tkinter as tk
@@ -31,8 +31,8 @@ class GUI:
         self.gui = tk.Tk()
         self.parent = ttk.Notebook(self.gui)
 
-        test = Test()
-        self.add(test, "Test")
+        # test = Test()
+        # self.add(test, "Test")
 
         time_series = TimeSeries()
         self.add(time_series, "Time Series")
@@ -79,8 +79,8 @@ class GUI:
         # monte = MonteCarlo()
         # self.add(monte, "Monte Carlo")
         #
-        # moving_average = MovingAverage()
-        # self.add(moving_average, "Moving Average")
+        moving_average = MovingAverage()
+        self.add(moving_average, "Moving Average")
         #
         # hybrid = Hybrid()
         # self.add(hybrid, "Hybrid")
