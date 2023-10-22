@@ -11,7 +11,7 @@ from gui.linear_regression import LinearModel
 from gui.generalregression import GeneralRegressionNeuralNetwork
 from gui.random_walk import RandomWalk
 from gui.sarima import SARIMA
-from gui.elm import ELM
+# from gui.elm import ELM
 from gui.feature_selection import FS
 
 # from gui.montecarlo import MonteCarlo
@@ -67,8 +67,8 @@ class GUI:
         sarima = SARIMA()
         self.add(sarima, "SARIMA")
 
-        elm = ELM()
-        self.add(elm, "ELM")
+        # elm = ELM()
+        # self.add(elm, "ELM")
 
         rw = RandomWalk()
         self.add(rw, "Random Walk")
