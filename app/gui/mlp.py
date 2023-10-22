@@ -21,13 +21,14 @@ from tensorflow.keras.initializers import GlorotUniform
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.optimizers import SGD, Adam, RMSprop
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from scikeras.wrappers import KerasRegressor
+
+from .helpers import loss, popupmsg, skloss
 
 seed(0)
 np_seed(0)
 random.set_seed(0)
 
-from .helpers import loss, popupmsg, skloss
 
 
 class MultiLayerPerceptron:
