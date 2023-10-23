@@ -1,5 +1,3 @@
-from typing import List
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -20,6 +18,8 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
 from .helpers import loss, skloss, popupmsg
+from .backend import DataHandler, handle_errors
+from .components import InputListComponent, ModelValidationComponent
 
 
 def enforce_methods(*required_methods):
@@ -32,229 +32,7 @@ def enforce_methods(*required_methods):
         return cls
 
     return decorator
-
-
-class DataHandler:
-    def __init__(self):
-        self.df = pd.DataFrame()
-        self.df_read = False
-
-    def read_data(self, file_path: str) -> List[str]:
-        if file_path.endswith(".csv"):
-            self.df = pd.read_csv(file_path)
-        else:
-            try:
-                self.df = pd.read_excel(file_path)
-            except Exception:
-                self.df = pd.read_excel(file_path, engine="openpyxl")
-
-        self.df_read = True
-
-        return self.df.columns.to_list()
-
-
-class InputListComponent:
-    def __init__(self, root, data_handler):
-        frame_root = ttk.Labelframe(root, text="Get Train Set")
-        frame_root.grid(column=0, row=0)
-
-        file_path = tk.StringVar(value="")
-        ttk.Label(frame_root, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(frame_root, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(
-            frame_root,
-            text="Read Data",
-            command=lambda: self.read_train_data(file_path),
-        ).grid(column=2, row=0)
-
-        self.input_list = tk.Listbox(frame_root)
-        self.input_list.grid(column=0, row=1)
-        self.input_list.bind("<Double-Button-1>", self.add_predictor)
-        self.input_list.bind("<Double-Button-3>", self.add_target)
-
-        self.predictor_list = tk.Listbox(frame_root)
-        self.predictor_list.grid(column=1, row=1)
-        self.predictor_list.bind("<Double-Button-1>", self.eject_predictor)
-
-        self.target_list = tk.Listbox(frame_root)
-        self.target_list.grid(column=2, row=1)
-        self.target_list.bind("<Double-Button-1>", self.eject_target)
-
-        ttk.Button(frame_root, text="Add Predictor", command=self.add_predictor).grid(
-            column=1, row=2
-        )
-        ttk.Button(
-            frame_root, text="Eject Predictor", command=self.eject_predictor
-        ).grid(column=1, row=3)
-
-        ttk.Button(frame_root, text="Add Target", command=self.add_target).grid(
-            column=2, row=2
-        )
-        ttk.Button(frame_root, text="Eject Target", command=self.eject_target).grid(
-            column=2, row=3
-        )
-
-    def get_save_dict(self):
-        return {
-            "predictor_names": self.get_predictor_names(),
-            "label_name": self.get_target_name(),
-        }
-
-
-    def get_predictor_names(self) -> List[str]:
-        return list(self.predictor_list.get(0, tk.END))
-
-    def get_target_name(self) -> str:
-        return self.target_list.get(0)
-
-    def add_predictor(self, _=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if a not in self.predictor_list.get(0, tk.END):
-                self.predictor_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_predictor(self, _=None):
-        try:
-            self.predictor_list.delete(self.predictor_list.curselection())
-        except Exception:
-            pass
-
-    def add_target(self, _=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if self.target_list.size() < 1:
-                self.target_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_target(self, _=None):
-        try:
-            self.target_list.delete(self.target_list.curselection())
-        except Exception:
-            pass
-
-    def read_train_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
-        if not path:
-            return
-        file_path.set(path)
-
-        columns = self.data_handler.read_data(path)
-
-        self.input_list.delete(0, tk.END)
-
-        for column in columns:
-            self.input_list.insert(tk.END, column)
-
-
-class ModelValidationFrame:
-    def __init__(self, root):
-        self.do_forecast_option = tk.IntVar(value=0)
-        self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=70)
-        self.cross_val_var = tk.IntVar(value=5)
-
-        frame_root = ttk.Labelframe(
-            root, text="Model testing and validation"
-        )
-        frame_root.grid(column=0, row=1)
-
-        tk.Checkbutton(
-            frame_root,
-            text="Do Forecast",
-            offvalue=0,
-            onvalue=1,
-            variable=self.do_forecast_option,
-            command=self.__open_entries,
-        ).grid(column=0, row=0, columnspan=2)
-
-        tk.Radiobutton(
-            frame_root,
-            text="No validation, use all data rows",
-            value=0,
-            variable=self.validation_option,
-            command=self.__open_entries,
-        ).grid(column=0, row=1, columnspan=2, sticky=tk.W)
-
-        tk.Radiobutton(
-            frame_root,
-            text="Random percent",
-            value=1,
-            variable=self.validation_option,
-            command=self.__open_entries,
-        ).grid(column=0, row=2, sticky=tk.W)
-
-        self.cv_entry_1 = tk.Radiobutton(
-            frame_root,
-            text="K-fold cross-validation",
-            value=2,
-            variable=self.validation_option,
-            command=self.__open_entries,
-        )
-
-        self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
-
-        self.cv_entry_2 = tk.Radiobutton(
-            frame_root,
-            text="Leave one out cross-validation",
-            value=3,
-            variable=self.validation_option,
-            command=self.__open_entries,
-        )
-        self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
-
-        self.random_percent_entry = ttk.Entry(
-            frame_root, textvariable=self.random_percent_var, width=8
-        )
-
-        self.random_percent_entry.grid(column=1, row=2)
-
-        self.cv_value_entry = ttk.Entry(
-            frame_root, textvariable=self.cross_val_var, width=8
-        )
-
-        self.cv_value_entry.grid(column=1, row=3)
-    
-    def get_save_dict(self):
-        return {
-            "do_forecast": self.do_forecast_option.get(),
-            "validation_option": self.validation_option.get(),
-            "random_percent": self.random_percent_var.get(),
-            "k_fold_cv": self.cross_val_var.get(),
-        }
-
-    def set_params(self, params):
-        self.do_forecast_option.set(params.get("do_forecast", 1))
-        self.validation_option.set(params.get("validation_option", 0))
-        if self.validation_option.get() == 1:
-            self.random_percent_var.set(params.get("random_percent", 80))
-        elif self.validation_option.get() == 2:
-            self.cross_val_var.set(params.get("k_fold_cv", 5))
-
-    def __open_entries(self):
-        if not self.do_forecast_option.get():
-            self.cv_entry_1["state"] = tk.NORMAL
-            self.cv_entry_2["state"] = tk.NORMAL
-        else:
-            self.cv_entry_1["state"] = tk.DISABLED
-            self.cv_entry_2["state"] = tk.DISABLED
-        if self.validation_option.get() == 1:
-            self.random_percent_entry["state"] = tk.NORMAL
-        else:
-            self.random_percent_entry["state"] = tk.DISABLED
-        if self.validation_option.get() == 2:
-            self.cv_value_entry["state"] = tk.NORMAL
-        else:
-            self.cv_value_entry["state"] = tk.DISABLED
-    
+        
 
 class XGB:
     def __init__(self):
@@ -262,7 +40,7 @@ class XGB:
         self.data_handler = DataHandler()
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
-        self.model_validation_frame = ModelValidationFrame(self.root)
+        self.model_validation_component = ModelValidationComponent(self.root)
 
         # Customize Train Set
         customize_train_set_frame = ttk.LabelFrame(
@@ -529,11 +307,11 @@ class XGB:
         except Exception:
             popupmsg("Model is not created")
             return
-        
+
         save_params = {}
         save_params.update(model_params)
         save_params.update(self.input_list_component.get_save_dict())
-        save_params.update(self.model_validation_frame.get_save_dict())
+        save_params.update(self.model_validation_component.get_save_dict())
 
         save_params["is_round"] = self.is_round
         save_params["is_negative"] = self.is_negative
@@ -589,7 +367,7 @@ class XGB:
         self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
 
-        self.model_validation_frame.load_params(params)
+        self.model_validation_component.load_params(params)
 
         self.lookback_option.set(params.get("lookback_option", 0))
         self.sliding = params.get("sliding", -1)
@@ -667,52 +445,33 @@ class XGB:
             self.seasonal_lookback_entry_2["state"] = tk.DISABLED
 
     def __check_errors(self):
-        predictor_names = self.input_list_component.get_predictor_names()
-        try:
-            msg = "Read a data first"
-            if not self.data_handler.df_read:
-                raise Exception
-
-            msg = "Select predictors"
-            if len(predictor_names) == 0:
-                raise Exception
-
-            msg = "Select a target"
-            if not self.input_list_component.get_target_name():
-                raise Exception
-
-            msg = "Target and predictor have same variable"
-            if self.input_list_component.get_target_name() in predictor_names:
-                raise Exception
-
-            msg = "Enter a valid percent value"
-            if self.random_percent_var.get() <= 0:
-                raise Exception
-
-            msg = "Enter a valid K-fold value (Above 2)"
-            if self.validation_option.get() == 2 and self.cross_val_var.get() <= 1:
-                raise Exception
-
-            msg = "Enter a valid lookback value"
-            if self.lookback_option.get():
-                self.lookback_val_var.get()
-
-            msg = "Enter valid periodic lookback values"
-            if self.seasonal_lookback_option.get():
-                self.seasonal_val_var.get()
-                self.seasonal_period_var.get()
-
-            msg = "Enter a valid Interval for grid search"
-            if self.grid_option_var.get() and self.interval_var.get() < 1:
-                raise Exception
-
-            msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
-            if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
-                raise Exception
-
-        except Exception:
-            popupmsg(msg)  # type: ignore
+        if handle_errors(
+            self.input_list_component.check_errors,
+            self.model_validation_component.check_errors
+        ):
             return True
+        else:
+            try:
+                msg = "Enter a valid lookback value"
+                if self.lookback_option.get():
+                    self.lookback_val_var.get()
+
+                msg = "Enter valid periodic lookback values"
+                if self.seasonal_lookback_option.get():
+                    self.seasonal_val_var.get()
+                    self.seasonal_period_var.get()
+
+                msg = "Enter a valid Interval for grid search"
+                if self.grid_option_var.get() and self.interval_var.get() < 1:
+                    raise Exception
+
+                msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
+                if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
+                    raise Exception
+
+            except Exception:
+                popupmsg(msg)  # type: ignore
+                return False
 
     def __get_lookback(
         self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
@@ -801,11 +560,11 @@ class XGB:
         return X, y
 
     def create_model(self):
-        if self.__check_errors():
+        if not self.__check_errors():
             return
 
-        do_forecast = self.do_forecast_option.get()
-        val_option = self.validation_option.get()
+        do_forecast = self.model_validation_component.do_forecast_option.get()
+        val_option = self.model_validation_component.validation_option.get()
 
         X, y = self.__get_data()
         X: np.ndarray
@@ -847,7 +606,7 @@ class XGB:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.random_percent_var.get() / 100
+                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
                     )
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
@@ -868,7 +627,7 @@ class XGB:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get() / 100) * len(X))
+                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
@@ -877,7 +636,7 @@ class XGB:
             elif val_option == 2:
                 if do_forecast == 0:
                     cvs = cross_validate(
-                        model, X, y, cv=self.cross_val_var.get(), scoring=skloss
+                        model, X, y, cv=self.model_validation_component.cross_val_var.get(), scoring=skloss
                     )
                     for i, j in enumerate(list(cvs.values())[2:]):
                         self.test_metrics_vars[i].set(j.mean())
@@ -949,7 +708,7 @@ class XGB:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.random_percent_var.get() / 100
+                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
                     )
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
@@ -970,7 +729,7 @@ class XGB:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get() / 100) * len(X))
+                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
                     X = X[-size:]
                     y = y[-size:]
                     regressor.fit(X, y)

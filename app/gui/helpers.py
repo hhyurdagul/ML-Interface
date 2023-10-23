@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 
 import numpy as np
 from sklearn.metrics import make_scorer, mean_absolute_error, mean_squared_error
@@ -74,27 +73,9 @@ def loss(y_true, y_pred, seasons=1):
 
     return [NMSE, RMSE, MAE, MAPE, SMAPE]
 
-
 def popupmsg(msg):
-    popup = tk.Tk()
-    popup.wm_title("!")
-    label = ttk.Label(popup, text=msg)
-    label.pack(side="top", fill="x", pady=10)
-    B1 = ttk.Button(popup, text="Okay", command=popup.destroy)
-    B1.pack()
-    popup.mainloop()
-
-
-def waitmsg(msg, size=100):
-    popup = tk.Tk()
-    popup.wm_title("!")
-    ttk.Label(popup, text=msg).pack()
-    pb = ttk.Progressbar(popup, length=size, mode="indeterminate")
-    pb.pack()
-    pb.start()
-    popup.update()
-    return popup
-
+    tk.messagebox.showinfo("!", msg)
+    return False
 
 def cartesian(*arrays):
     mesh = np.meshgrid(*arrays)
