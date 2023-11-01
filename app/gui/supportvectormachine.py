@@ -18,109 +18,17 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
 from .helpers import popupmsg, loss, skloss
+from .backend import DataHandler, handle_errors
+from .components import InputListComponent, ModelValidationComponent
 
 
 class SupportVectorMachine:
     def __init__(self):
         self.root = ttk.Frame()
+        self.data_handler = DataHandler()
 
-        # Get Train Set
-        get_train_set_frame = ttk.Labelframe(self.root, text="Get Train Set")
-        get_train_set_frame.grid(column=0, row=0)
-
-        file_path = tk.StringVar(value="")
-        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(
-            get_train_set_frame,
-            text="Read Data",
-            command=lambda: self.read_train_data(file_path),
-        ).grid(column=2, row=0)
-
-        self.input_list = tk.Listbox(get_train_set_frame)
-        self.input_list.grid(column=0, row=1)
-        self.input_list.bind("<Double-Button-1>", self.add_predictor)
-        self.input_list.bind("<Double-Button-3>", self.add_target)
-
-        self.predictor_list = tk.Listbox(get_train_set_frame)
-        self.predictor_list.grid(column=1, row=1)
-        self.predictor_list.bind("<Double-Button-1>", self.eject_predictor)
-
-        self.target_list = tk.Listbox(get_train_set_frame)
-        self.target_list.grid(column=2, row=1)
-        self.target_list.bind("<Double-Button-1>", self.eject_target)
-
-        ttk.Button(
-            get_train_set_frame, text="Add Predictor", command=self.add_predictor
-        ).grid(column=1, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
-        ).grid(column=1, row=3)
-
-        ttk.Button(
-            get_train_set_frame, text="Add Target", command=self.add_target
-        ).grid(column=2, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Target", command=self.eject_target
-        ).grid(column=2, row=3)
-
-        # Model testing and validation
-        model_validation_frame = ttk.Labelframe(
-            self.root, text="Model testing and validation"
-        )
-        model_validation_frame.grid(column=0, row=1)
-
-        self.do_forecast_option = tk.IntVar(value=0)
-        tk.Checkbutton(
-            model_validation_frame,
-            text="Do Forecast",
-            offvalue=0,
-            onvalue=1,
-            variable=self.do_forecast_option,
-            command=self.__open_other_entries,
-        ).grid(column=0, row=0, columnspan=2)
-
-        self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=70)
-        self.cross_val_var = tk.IntVar(value=5)
-        tk.Radiobutton(
-            model_validation_frame,
-            text="No validation, use all data rows",
-            value=0,
-            variable=self.validation_option,
-            command=self.__open_other_entries,
-        ).grid(column=0, row=1, columnspan=2, sticky=tk.W)
-        tk.Radiobutton(
-            model_validation_frame,
-            text="Random percent",
-            value=1,
-            variable=self.validation_option,
-            command=self.__open_other_entries,
-        ).grid(column=0, row=2, sticky=tk.W)
-        self.cv_entry_1 = tk.Radiobutton(
-            model_validation_frame,
-            text="K-fold cross-validation",
-            value=2,
-            variable=self.validation_option,
-            command=self.__open_other_entries,
-        )
-        self.cv_entry_1.grid(column=0, row=3, sticky=tk.W)
-        self.cv_entry_2 = tk.Radiobutton(
-            model_validation_frame,
-            text="Leave one out cross-validation",
-            value=3,
-            variable=self.validation_option,
-            command=self.__open_other_entries,
-        )
-        self.cv_entry_2.grid(column=0, row=4, columnspan=2, sticky=tk.W)
-        self.random_percent_entry = ttk.Entry(
-            model_validation_frame, textvariable=self.random_percent_var, width=8
-        )
-        self.random_percent_entry.grid(column=1, row=2)
-        self.cv_value_entry = ttk.Entry(
-            model_validation_frame, textvariable=self.cross_val_var, width=8
-        )
-        self.cv_value_entry.grid(column=1, row=3)
+        self.input_list_componenet = InputListComponent(self.root, self.data_handler)
+        self.model_validation_component = ModelValidationComponent(self.root)
 
         # Customize Train Set
         customize_train_set_frame = ttk.LabelFrame(
@@ -426,26 +334,6 @@ class SupportVectorMachine:
         self.__open_entries()
         self.__open_other_entries()
 
-    def read_train_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
-        if not path:
-            return
-        file_path.set(path)
-        if path.endswith(".csv"):
-            self.df = pd.read_csv(path)  # type: ignore
-        else:
-            try:
-                self.df = pd.read_excel(path)
-            except Exception:
-                self.df = pd.read_excel(path, engine="openpyxl")
-        self.__fill_input_list()
-
     def read_test_data(self, file_path):
         path = filedialog.askopenfilename(
             filetypes=[
@@ -465,77 +353,39 @@ class SupportVectorMachine:
             except Exception:
                 self.test_df = pd.read_excel(path, engine="openpyxl")
 
-    def __fill_input_list(self):
-        self.input_list.delete(0, tk.END)
-
-        self.df: pd.DataFrame
-        for i in self.df.columns.to_list():
-            self.input_list.insert(tk.END, i)
-
-    def add_predictor(self, _=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if a not in self.predictor_list.get(0, tk.END):
-                self.predictor_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_predictor(self, _=None):
-        try:
-            self.predictor_list.delete(self.predictor_list.curselection())
-        except Exception:
-            pass
-
-    def add_target(self, _=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if self.target_list.size() < 1:
-                self.target_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_target(self, _=None):
-        try:
-            self.target_list.delete(self.target_list.curselection())
-        except Exception:
-            pass
-
     def save_model(self):
         path = filedialog.asksaveasfilename()
         if not path:
             return
         try:
-            params = self.model.get_params()
+            model_params = self.model.get_params()
         except Exception:
             popupmsg("Model is not created")
             return
-        params["predictor_names"] = self.predictor_names
-        params["label_name"] = self.label_name
-        params["is_round"] = self.is_round
-        params["is_negative"] = self.is_negative
-        params["do_forecast"] = self.do_forecast_option.get()
-        params["validation_option"] = self.validation_option.get()
-        params["random_percent"] = (
-            self.random_percent_var.get() if self.validation_option.get() == 1 else None
-        )
-        params["k_fold_cv"] = (
-            self.cross_val_var.get() if self.validation_option.get() == 2 else None
-        )
-        params["lookback_option"] = self.lookback_option.get()
-        params["lookback_value"] = (
+
+        save_params = {}
+        save_params.update(model_params)
+        save_params.update(self.input_list_componenet.get_save_dict())
+        save_params.update(self.model_validation_component.get_save_dict())
+
+        save_params["is_round"] = self.is_round
+        save_params["is_negative"] = self.is_negative
+
+        save_params["lookback_option"] = self.lookback_option.get()
+        save_params["lookback_value"] = (
             self.lookback_val_var.get() if self.lookback_option.get() else None
         )
-        params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
-        params["seasonal_period"] = (
+        save_params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
+        save_params["seasonal_period"] = (
             self.seasonal_period_var.get()
             if self.seasonal_lookback_option.get()
             else None
         )
-        params["seasonal_value"] = (
+        save_params["seasonal_value"] = (
             self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
         )
-        params["sliding"] = self.sliding
-        params["scale_type"] = self.scale_var.get()
+        save_params["sliding"] = self.sliding
+        save_params["scale_type"] = self.scale_var.get()
 
         os.mkdir(path)
         dump(self.model, path + "/model.joblib")
@@ -551,7 +401,7 @@ class SupportVectorMachine:
             with open(path + "/seasonal_last_values.npy", "wb") as outfile:
                 np.save(outfile, self.seasonal_last)
         with open(path + "/model.json", "w") as outfile:
-            json.dump(params, outfile)
+            json.dump(save_params, outfile)
 
     def load_model(self):
         path = filedialog.askdirectory()
@@ -570,6 +420,8 @@ class SupportVectorMachine:
         self.label_name = params.get("label_name", "")
         self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
+
+        self.model_validation_component.set_params(params)
 
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
@@ -713,71 +565,54 @@ class SupportVectorMachine:
             self.seasonal_lookback_entry_2["state"] = tk.DISABLED
 
     def __check_errors(self):
-        try:
-            msg = "Read a data first"
-            self.df.head(1)
+        if handle_errors(
+            self.input_list_component.check_errors,
+            self.model_validation_component.check_errors
+        ):
+            return True
+        else:
+            try:
+                msg = "Enter a valid lookback value"
+                if self.lookback_option.get():
+                    self.lookback_val_var.get()
 
-            msg = "Select predictors"
-            if not self.predictor_list.get(0):
-                raise Exception
+                msg = "Enter valid periodic lookback values"
+                if self.seasonal_lookback_option.get():
+                    self.seasonal_val_var.get()
+                    self.seasonal_period_var.get()
 
-            msg = "Select a target"
-            if not self.target_list.get(0):
-                raise Exception
-
-            msg = "Target and predictor have same variable"
-            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
-                raise Exception
-
-            msg = "Enter a valid percent value"
-            if self.random_percent_var.get() <= 0:
-                raise Exception
-
-            msg = "Enter a valid K-fold value (Above 2)"
-            if self.validation_option.get() == 2 and self.cross_val_var.get() <= 1:
-                raise Exception
-
-            msg = "Enter a valid lookback value"
-            if self.lookback_option.get():
-                self.lookback_val_var.get()
-
-            msg = "Enter valid periodic lookback values"
-            if self.seasonal_lookback_option.get():
-                self.seasonal_val_var.get()
-                self.seasonal_period_var.get()
-
-            msg = "Enter a valid Interval for grid search"
-            if self.grid_option_var.get() and self.interval_var.get() < 1:
-                raise Exception
-
-            msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
-            if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
-                raise Exception
-
-            for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
-                if (
-                    str(self.model_parameters_frame_options[i][1]["state"])
-                    != "disabled"
-                    and not self.parameters[i].get()
-                ):
-                    msg = "Enter a valid " + j + " value"
+                msg = "Enter a valid Interval for grid search"
+                if self.grid_option_var.get() and self.interval_var.get() < 1:
                     raise Exception
 
-                if self.grid_option_var.get():
-                    if (
-                        str(self.model_parameters_frame_options[i][2]["state"])
-                        != "disabled"
-                    ):
-                        if (
-                            not self.optimization_parameters[i][0].get()
-                            or not self.optimization_parameters[i][1].get()
-                        ):
-                            msg = "Enter a valid " + j + " value in grid search area"
-                            raise Exception
+                msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
+                if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
+                    raise Exception
 
-        except Exception:
-            popupmsg(msg)
-            return True
+                for i, j in enumerate(["Epsilon", "Nu", "C", "Gamma", "Coef0", "Degree"]):
+                    if (
+                        str(self.model_parameters_frame_options[i][1]["state"])
+                        != "disabled"
+                        and not self.parameters[i].get()
+                    ):
+                        msg = "Enter a valid " + j + " value"
+                        raise Exception
+
+                    if self.grid_option_var.get():
+                        if (
+                            str(self.model_parameters_frame_options[i][2]["state"])
+                            != "disabled"
+                        ):
+                            if (
+                                not self.optimization_parameters[i][0].get()
+                                or not self.optimization_parameters[i][1].get()
+                            ):
+                                msg = "Enter a valid " + j + " value in grid search area"
+                                raise Exception
+
+            except Exception:
+                popupmsg(msg)
+                return False
 
     def __get_lookback(
         self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
@@ -817,12 +652,14 @@ class SupportVectorMachine:
         self.sliding = sliding
         scale_choice = self.scale_var.get()
 
-        self.predictor_names = list(self.predictor_list.get(0, tk.END))
-        self.label_name = self.target_list.get(0)
+        
+        self.predictor_names = self.input_list_component.get_predictor_names()
+        self.label_name = self.input_list_component.get_target_name()
 
-        self.df: pd.DataFrame
-        X = self.df[self.predictor_names].copy()
-        y = self.df[self.label_name].copy()
+        df = self.data_handler.df
+
+        X = df[self.predictor_names].copy()
+        y = df[self.label_name].copy()
 
         if y.dtype == int or y.dtype == np.intc or y.dtype == np.int64:
             self.is_round = True
@@ -865,14 +702,15 @@ class SupportVectorMachine:
         return X, y
 
     def create_model(self):
-        if self.__check_errors():
+        if not self.__check_errors():
             return
+
+        do_forecast = self.model_validation_component.do_forecast_option.get()
+        val_option = self.model_validation_component.validation_option.get()
+        
         gamma_choice = self.gamma_choice.get()
         kernels = ["linear", "rbf", "poly", "sigmoid"]
         kernel = kernels[self.kernel_type_var.get()]
-
-        do_forecast = self.do_forecast_option.get()
-        val_option = self.validation_option.get()
 
         X, y = self.__get_data()
         X: np.ndarray
@@ -931,7 +769,7 @@ class SupportVectorMachine:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.random_percent_var.get() / 100
+                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
                     )
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
@@ -952,7 +790,7 @@ class SupportVectorMachine:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get() / 100) * len(X))
+                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
@@ -961,7 +799,7 @@ class SupportVectorMachine:
             elif val_option == 2:
                 if do_forecast == 0:
                     cvs = cross_validate(
-                        model, X, y, cv=self.cross_val_var.get(), scoring=skloss
+                        model, X, y, cv=self.model_validation_component.cross_val_var.get(), scoring=skloss
                     )
                     for i, j in enumerate(list(cvs.values())[2:]):
                         self.test_metrics_vars[i].set(j.mean())
@@ -1067,7 +905,7 @@ class SupportVectorMachine:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.random_percent_var.get() / 100
+                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
                     )
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
@@ -1088,7 +926,7 @@ class SupportVectorMachine:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.random_percent_var.get() / 100) * len(X))
+                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
                     X = X[-size:]
                     y = y[-size:]
                     regressor.fit(X, y)

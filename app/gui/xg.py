@@ -22,18 +22,6 @@ from .backend import DataHandler, handle_errors
 from .components import InputListComponent, ModelValidationComponent
 
 
-def enforce_methods(*required_methods):
-    def decorator(cls):
-        for method in required_methods:
-            if not hasattr(cls, method):
-                raise TypeError(
-                    f"Class {cls.__name__} is missing the required method: {method}"
-                )
-        return cls
-
-    return decorator
-        
-
 class XGB:
     def __init__(self):
         self.root = ttk.Frame()
@@ -367,7 +355,7 @@ class XGB:
         self.is_round = params.get("is_round", True)
         self.is_negative = params.get("is_negative", False)
 
-        self.model_validation_component.load_params(params)
+        self.model_validation_component.set_params(params)
 
         self.lookback_option.set(params.get("lookback_option", 0))
         self.sliding = params.get("sliding", -1)
