@@ -2,13 +2,19 @@ import tkinter as tk
 from tkinter import ttk
 
 from typing import Any, Union
-from ..backend import ObjectHandler
+from ..backend import ScalerHandler, LookbackHandler
 from .utils import popupmsg
 
 
 class CustomizeTrainSetComponent:
-    def __init__(self, root: ttk.Frame, object_handler: ObjectHandler) -> None:
-        self.object_handler = object_handler
+    def __init__(
+        self,
+        root: ttk.Frame,
+        scaler_handler: ScalerHandler,
+        lookback_handler: LookbackHandler,
+    ) -> None:
+        self.scaler_handler = scaler_handler
+        self.lookback_handler = lookback_handler
 
         self.root = root
         self.lookback_option = tk.IntVar(value=0)
@@ -73,6 +79,11 @@ class CustomizeTrainSetComponent:
             "MinMaxScaler",
         ).grid(column=1, row=3)
 
+    def calculate_sliding(self):
+        self.sliding = (
+            self.lookback_option.get() + 2 * self.seasonal_lookback_option.get() - 1
+        )
+
     def check_errors(self) -> bool:
         if self.lookback_option.get() and self.lookback_val_var.get() <= 0:
             return popupmsg("Enter a valid lookback value")
@@ -84,7 +95,7 @@ class CustomizeTrainSetComponent:
 
         return True
 
-    def get_params(self) -> dict[str, Union[str,int]]:
+    def get_params(self) -> dict[str, Union[str, int]]:
         return {
             "lookback_option": self.lookback_option.get(),
             "lookback_value": self.lookback_val_var.get(),
@@ -114,21 +125,21 @@ class CustomizeTrainSetComponent:
         self.__open_entries()
 
     def save_files(self, path: str) -> None:
-        self.object_handler.save_lasts(
+        self.lookback_handler.save_lasts(
             path,
             bool(self.lookback_option.get()),
             bool(self.seasonal_lookback_option.get()),
         )
 
         if self.scale_var.get() != "None":
-            self.object_handler.save_scalers(path)
+            self.scaler_handler.save_scalers(path)
 
     def load_files(self, path: str) -> None:
         if self.lookback_option.get() == 1 or self.seasonal_lookback_option.get():
-            self.object_handler.load_lasts(path)
+            self.lookback_handler.load_lasts(path)
 
         if self.scale_var.get() != "None":
-            self.object_handler.load_scalers(path)
+            self.scaler_handler.load_scalers(path)
 
     def __open_entries(self) -> None:
         if self.lookback_option.get():

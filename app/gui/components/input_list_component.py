@@ -60,7 +60,7 @@ class InputListComponent:
         elif target_name in predictor_names:
             return popupmsg("Target and predictor have same variable")
 
-        if not self.data_handler.df_read:
+        if not self.data_handler.train_df_read:
             return popupmsg("Read a data first")
 
         return True
@@ -112,7 +112,7 @@ class InputListComponent:
             return
         file_path.set(path)
 
-        columns = self.data_handler.read_data(path)
+        columns = self.data_handler.read_train_data(path)
 
         self.input_list.delete(0, tk.END)
         self.predictor_list.delete(0, tk.END)

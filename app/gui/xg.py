@@ -1,38 +1,47 @@
+import json
+import os
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
-from pandastable import Table  # type: ignore
+from tkinter import ttk, filedialog
 
+import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt  # type: ignore
-
 from joblib import dump, load  # type: ignore
+from pandastable import Table  # type: ignore
+from sklearn.model_selection import (  # type: ignore
+    GridSearchCV,
+    train_test_split,
+    cross_validate,
+)
 from xgboost import XGBRegressor
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate  # type: ignore
 
-import os
-import json
-
-from .helpers import loss, skloss, popupmsg
-from .backend import DataHandler, ObjectHandler, handle_errors
+from .backend import (
+    DataHandler,
+    ScalerHandler,
+    LookbackHandler,
+    XGBModelHandler,
+    handle_errors,
+)
 from .components import (
     InputListComponent,
     ModelValidationComponent,
     CustomizeTrainSetComponent,
 )
+from .helpers import loss, skloss, popupmsg
 
 
 class XGB:
     def __init__(self):
         self.root = ttk.Frame()
         self.data_handler = DataHandler()
-        self.object_handler = ObjectHandler()
+        self.scaler_handler = ScalerHandler()
+        self.lookback_handler = LookbackHandler()
+        self.model_handler = XGBModelHandler()
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
         self.model_validation_component = ModelValidationComponent(self.root)
         self.customize_train_set_component = CustomizeTrainSetComponent(
-            self.root, self.object_handler
+            self.root, self.scaler_handler, self.lookback_handler
         )
 
         # Model
@@ -208,13 +217,7 @@ class XGB:
         if not path:
             return
         file_path.set(path)
-        if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path)  # type: ignore
-        else:
-            try:
-                self.test_df = pd.read_excel(path)
-            except Exception:
-                self.test_df = pd.read_excel(path, engine="openpyxl")
+        self.data_handler.read_test_data(path)
 
     def save_model(self):
         path = filedialog.asksaveasfilename()
@@ -315,8 +318,6 @@ class XGB:
             for i in to_open:
                 self.model_parameters_frame_options[i][1]["state"] = tk.NORMAL
 
-        self.vars_nums = to_open
-
     def __check_errors(self):
         if handle_errors(
             self.input_list_component.check_errors,
@@ -338,85 +339,30 @@ class XGB:
                 popupmsg(msg)  # type: ignore
                 return False
 
-    def __get_lookback(
-        self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
-    ):
-        if sliding == 0:
-            for i in range(1, lookback + 1):
-                X[f"t-{i}"] = y.shift(i)
-        elif sliding == 1:
-            for i in range(1, seasons + 1):
-                X[f"t-{i*seasonal_lookback}"] = y.shift(i * seasonal_lookback)
-        elif sliding == 2:
-            for i in range(1, lookback + 1):
-                X[f"t-{i}"] = y.shift(i)
-            for i in range(1, seasons + 1):
-                X[f"t-{i*seasonal_lookback}"] = y.shift(i * seasonal_lookback)
-
-        X.dropna(inplace=True)
-        a = X.to_numpy()
-        b = y.iloc[-len(a) :].to_numpy().reshape(-1)
-
-        if sliding == 0:
-            self.object_handler.set_last(b[-lookback:])
-        elif sliding == 1:
-            self.object_handler.set_seasonal_last(
-                b[-seasonal_lookback * seasons :]
-            )
-        elif sliding == 2:
-            self.object_handler.set_last(b[-lookback:])
-            self.object_handler.set_seasonal_last(
-                b[-seasonal_lookback * seasons :]
-            )
-
-        return a, b
-
     def __get_data(self):
-        self.is_round = False
-        self.is_negative = False
-        lookback_option = self.customize_train_set_component.lookback_option.get()
-        seasonal_lookback_option = (
-            self.customize_train_set_component.seasonal_lookback_option.get()
-        )
-        sliding = lookback_option + 2 * seasonal_lookback_option - 1
-        self.customize_train_set_component.sliding = sliding
-        scale_choice = self.customize_train_set_component.scale_var.get()
-
+        train_df = self.data_handler.train_df
         self.predictor_names = self.input_list_component.get_predictor_names()
         self.label_name = self.input_list_component.get_target_name()
 
-        df = self.data_handler.df
+        X = train_df[self.predictor_names].copy()
+        y = train_df[self.label_name].copy()
 
-        X = df[self.predictor_names].copy()
-        y = df[self.label_name].copy()
+        self.is_round = True if y.dtype in [int, np.intc, np.int64] else False
+        self.is_negative = True if any(y < 0) else False
 
-        if y.dtype == int or y.dtype == np.intc or y.dtype == np.int64:
-            self.is_round = True
-        if any(y < 0):
-            self.is_negative = True
+        scale_choice = self.customize_train_set_component.scale_var.get()
+        if scale_choice != "None":
+            self.scaler_handler.set_scalers(scale_choice)
+            X.iloc[:], y.iloc[:] = self.scaler_handler.scaler_fit_transform(X, y)
 
-        if scale_choice == "StandardScaler":
-            self.object_handler.set_scalers("StandardScaler")
-
-            X.iloc[:] = self.object_handler.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.object_handler.label_scaler.fit_transform(
-                y.values.reshape(-1, 1)
-            ).reshape(-1)
-
-        elif scale_choice == "MinMaxScaler":
-            self.object_handler.set_scalers("MinMaxScaler")
-
-            X.iloc[:] = self.object_handler.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.object_handler.label_scaler.fit_transform(
-                y.values.reshape(-1, 1)
-            ).reshape(-1)
-
-        lookback = self.customize_train_set_component.lookback_val_var.get()
-        seasonal_period = self.customize_train_set_component.seasonal_period_var.get()
-        seasonal_lookback = self.customize_train_set_component.seasonal_val_var.get()
-
-        X, y = self.__get_lookback(
-            X, y, lookback, seasonal_period, seasonal_lookback, sliding
+        self.customize_train_set_component.calculate_sliding()
+        X, y = self.lookback_handler.get_lookback(
+            X,
+            y,
+            self.customize_train_set_component.lookback_val_var.get(),
+            self.customize_train_set_component.seasonal_period_var.get(),
+            self.customize_train_set_component.seasonal_val_var.get(),
+            self.customize_train_set_component.sliding,
         )
 
         return X, y
@@ -425,95 +371,53 @@ class XGB:
         if not self.__check_errors():
             return
 
-        do_forecast = self.model_validation_component.do_forecast_option.get()
-        val_option = self.model_validation_component.validation_option.get()
-
         X, y = self.__get_data()
+                
+        val_option = self.model_validation_component.validation_option.get()
+        do_forecast = self.model_validation_component.do_forecast_option.get()
 
         if self.grid_option_var.get() == 0:
-            n_estimators = self.parameters[0].get()
-            max_depth = self.parameters[1].get()
-            learning_rate = self.parameters[2].get()
-
-            model = XGBRegressor(
-                n_estimators=n_estimators,
-                max_depth=max_depth,
-                learning_rate=learning_rate,
+            self.model = self.model_handler.create_model_without_grid_search(
+                {
+                    "n_estimators": self.parameters[0].get(),
+                    "max_depth": self.parameters[1].get(),
+                    "learning_rate": self.parameters[2].get(),
+                }
             )
 
-            if val_option == 0:
-                model.fit(X, y)
-                if do_forecast == 0:
-                    pred = model.predict(X).reshape(-1)
-                    if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.object_handler.label_scaler.inverse_transform(
-                            pred.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                        y = self.object_handler.label_scaler.inverse_transform(
-                            y.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                    losses = loss(y, pred)
-                    self.y_test = y
-                    self.pred = pred
-                    for i, j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
-                self.model = model  # type: ignore
-
-            elif val_option == 1:
-                if do_forecast == 0:
-                    X_train, X_test, y_train, y_test = train_test_split(
-                        X,
-                        y,
-                        train_size=self.model_validation_component.random_percent_var.get()
-                        / 100,
-                    )
-                    model.fit(X_train, y_train)
-                    pred = model.predict(X_test).reshape(-1)
-                    if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.object_handler.label_scaler.inverse_transform(
-                            pred.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                        y_test = self.object_handler.label_scaler.inverse_transform(
-                            y_test.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                    losses = loss(y_test, pred)
+            (
+                X_train,
+                y_train,
+                X_test,
+                y_test,
+            ) = self.data_handler.get_data_based_on_val_type(
+                X,
+                y,
+                self.model_validation_component.validation_option.get(),
+                self.model_validation_component.do_forecast_option.get(),
+                self.model_validation_component.random_percent_var.get(),
+            )
+            self.model.fit(X_train, y_train)
+            if not do_forecast:
+                if val_option in [0, 1]:
                     self.y_test = y_test
-                    self.pred = pred
-                    for i, j in enumerate(losses):
+                    self.pred = self.model.predict(X_test).reshape(-1)
+                    if self.customize_train_set_component.scale_var.get() != "None":
+                        self.pred = self.scaler_handler.label_scaler.inverse_transform(
+                            self.pred.reshape(-1, 1)
+                        ).reshape(-1)
+                        self.y_test = self.scaler_handler.label_scaler.inverse_transform(
+                            self.y_test.reshape(-1, 1)
+                        ).reshape(-1)
+                    for i, j in enumerate(loss(self.y_test, self.pred)):
                         self.test_metrics_vars[i].set(j)
-                else:
-                    size = int(
-                        (self.model_validation_component.random_percent_var.get() / 100)
-                        * len(X)
+                elif val_option in [2, 3]:
+                    cv_count = (
+                        self.model_validation_component.cross_val_var.get()
+                        if val_option == 2
+                        else X_train.shape[0] - 1
                     )
-                    X = X[-size:]
-                    y = y[-size:]
-                    model.fit(X, y)
-                self.model = model  # type: ignore
-
-            elif val_option == 2:
-                if do_forecast == 0:
-                    cvs = cross_validate(
-                        model,
-                        X,
-                        y,
-                        cv=self.model_validation_component.cross_val_var.get(),
-                        scoring=skloss,
-                    )
-                    for i, j in enumerate(list(cvs.values())[2:]):
-                        self.test_metrics_vars[i].set(j.mean())
-
-            elif val_option == 3:
-                if do_forecast == 0:
-                    cvs = cross_validate(model, X, y, cv=X.shape[0] - 1, scoring=skloss)
+                    cvs = cross_validate(self.model, X, y, cv=cv_count, scoring=skloss)
                     for i, j in enumerate(list(cvs.values())[2:]):
                         self.test_metrics_vars[i].set(j.mean())
 
@@ -558,12 +462,12 @@ class XGB:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.object_handler.label_scaler.inverse_transform(
+                        pred = self.scaler_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y = self.object_handler.label_scaler.inverse_transform(
+                        y = self.scaler_handler.label_scaler.inverse_transform(
                             y.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -586,12 +490,12 @@ class XGB:
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.object_handler.label_scaler.inverse_transform(
+                        pred = self.scaler_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y_test = self.object_handler.label_scaler.inverse_transform(
+                        y_test = self.scaler_handler.label_scaler.inverse_transform(
                             y_test.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -624,11 +528,11 @@ class XGB:
     ):
         pred = []
         if sliding == 0:
-            last = self.object_handler.last
+            last = self.lookback_handler.last
             for i in range(num):
-                X_test = self.test_df[self.predictor_names].iloc[i]
+                X_test = self.data_handler.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -641,11 +545,11 @@ class XGB:
                 pred.append(out)
 
         elif sliding == 1:
-            seasonal_last = self.object_handler.seasonal_last
+            seasonal_last = self.lookback_handler.seasonal_last
             for i in range(num):
-                X_test = self.test_df[self.predictor_names].iloc[i]
+                X_test = self.data_handler.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -660,12 +564,12 @@ class XGB:
                 pred.append(out)
 
         elif sliding == 2:
-            last = self.object_handler.last
-            seasonal_last = self.object_handler.seasonal_last
+            last = self.lookback_handler.last
+            seasonal_last = self.lookback_handler.seasonal_last
             for i in range(num):
-                X_test = self.test_df[self.predictor_names].iloc[i]
+                X_test = self.data_handler.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -691,8 +595,10 @@ class XGB:
             popupmsg("Enter a valid forecast value")
             return
         try:
-            X_test = self.test_df[self.predictor_names][:num].to_numpy()  # type: ignore
-            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
+            X_test = self.data_handler.test_df[self.predictor_names][:num].to_numpy()
+            y_test = (
+                self.data_handler.test_df[self.label_name][:num].to_numpy().reshape(-1)
+            )
             self.y_test = y_test
         except Exception:
             popupmsg("Read a test data")
@@ -700,7 +606,7 @@ class XGB:
 
         if self.customize_train_set_component.sliding == -1:
             if self.customize_train_set_component.scale_var.get() != "None":
-                X_test = self.object_handler.feature_scaler.transform(X_test)
+                X_test = self.scaler_handler.feature_scaler.transform(X_test)
 
             self.pred = self.model.predict(X_test).reshape(-1)
         else:
@@ -716,11 +622,9 @@ class XGB:
             )
 
         if self.customize_train_set_component.scale_var.get() != "None":
-            self.pred = self.object_handler.label_scaler.inverse_transform(
+            self.pred = self.scaler_handler.label_scaler.inverse_transform(
                 self.pred.reshape(-1, 1)
-            ).reshape(
-                -1
-            )  # type: ignore
+            ).reshape(-1)
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
