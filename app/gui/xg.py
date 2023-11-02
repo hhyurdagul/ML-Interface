@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from joblib import dump, load  # type: ignore
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler  # type: ignore
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate  # type: ignore
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
 
 import os
 import json
@@ -19,7 +19,8 @@ from pickle import load as pickle_load
 
 from .helpers import loss, skloss, popupmsg
 from .backend import DataHandler, handle_errors
-from .components import InputListComponent, ModelValidationComponent
+from .components import InputListComponent, ModelValidationComponent, CustomizeTrainSetComponent
+
 
 
 class XGB:
@@ -29,67 +30,7 @@ class XGB:
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
         self.model_validation_component = ModelValidationComponent(self.root)
-
-        # Customize Train Set
-        customize_train_set_frame = ttk.LabelFrame(
-            self.root, text="Customize Train Set"
-        )
-        customize_train_set_frame.grid(column=0, row=2)
-
-        self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="")  # type: ignore
-        tk.Checkbutton(
-            customize_train_set_frame,
-            text="Lookback",
-            offvalue=0,
-            onvalue=1,
-            variable=self.lookback_option,
-            command=self.__open_other_entries,
-        ).grid(column=0, row=0)
-        self.lookback_entry = tk.Entry(
-            customize_train_set_frame,
-            textvariable=self.lookback_val_var,
-            width=8,
-            state=tk.DISABLED,
-        )
-        self.lookback_entry.grid(column=1, row=0)
-
-        self.seasonal_lookback_option = tk.IntVar(value=0)
-        self.seasonal_period_var = tk.IntVar(value="")  # type: ignore
-        self.seasonal_val_var = tk.IntVar(value="")  # type: ignore
-        tk.Checkbutton(
-            customize_train_set_frame,
-            text="Periodic Lookback",
-            offvalue=0,
-            onvalue=1,
-            variable=self.seasonal_lookback_option,
-            command=self.__open_other_entries,
-        ).grid(column=0, row=1)
-        self.seasonal_lookback_entry_1 = tk.Entry(
-            customize_train_set_frame,
-            textvariable=self.seasonal_period_var,
-            width=9,
-            state=tk.DISABLED,
-        )
-        self.seasonal_lookback_entry_1.grid(column=0, row=2)
-        self.seasonal_lookback_entry_2 = tk.Entry(
-            customize_train_set_frame,
-            textvariable=self.seasonal_val_var,
-            width=8,
-            state=tk.DISABLED,
-        )
-        self.seasonal_lookback_entry_2.grid(column=1, row=2)
-
-        self.scale_var = tk.StringVar(value="None")
-        ttk.Label(customize_train_set_frame, text="Scale Type").grid(column=0, row=3)
-        ttk.OptionMenu(
-            customize_train_set_frame,
-            self.scale_var,
-            "None",
-            "None",
-            "StandardScaler",
-            "MinMaxScaler",
-        ).grid(column=1, row=3)
+        self.customize_train_set_component = CustomizeTrainSetComponent(self.root)
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
@@ -252,7 +193,6 @@ class XGB:
             ).grid(column=1, row=i)
 
         self.__open_entries()
-        self.__open_other_entries()
 
     def get_test_data(self, file_path):
         path = filedialog.askopenfilename(
@@ -295,44 +235,27 @@ class XGB:
         except Exception:
             popupmsg("Model is not created")
             return
+        
+        files = {
+            "last": self.last,
+            "seasonal_last": self.seasonal_last,
+            "feature_scaler": self.feature_scaler,
+            "label_scaler": self.label_scaler
+        }
 
         save_params = {}
         save_params.update(model_params)
         save_params.update(self.input_list_component.get_save_dict())
-        save_params.update(self.model_validation_component.get_save_dict())
+        save_params.update(self.model_validation_component.get_params())
+        save_params.update(self.customize_train_set_component.get_params())
 
         save_params["is_round"] = self.is_round
         save_params["is_negative"] = self.is_negative
 
-        save_params["lookback_option"] = self.lookback_option.get()
-        save_params["lookback_value"] = (
-            self.lookback_val_var.get() if self.lookback_option.get() else None
-        )
-        save_params["seasonal_lookback_option"] = self.seasonal_lookback_option.get()
-        save_params["seasonal_period"] = (
-            self.seasonal_period_var.get()
-            if self.seasonal_lookback_option.get()
-            else None
-        )
-        save_params["seasonal_value"] = (
-            self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
-        )
-        save_params["sliding"] = self.sliding
-        save_params["scale_type"] = self.scale_var.get()
+        self.customize_train_set_component.save_files(path, files)
 
         os.mkdir(path)
         dump(self.model, path + "/model.joblib")
-        if self.scale_var.get() != "None":
-            with open(path + "/feature_scaler.pkl", "wb") as f:
-                pickle_dump(self.feature_scaler, f)
-            with open(path + "/label_scaler.pkl", "wb") as f:
-                pickle_dump(self.label_scaler, f)
-        if self.lookback_option.get() == 1:
-            with open(path + "/last_values.npy", "wb") as outfile:
-                np.save(outfile, self.last)
-        if self.seasonal_lookback_option.get() == 1:
-            with open(path + "/seasonal_last_values.npy", "wb") as outfile:
-                np.save(outfile, self.seasonal_last)
         with open(path + "/model.json", "w") as outfile:
             json.dump(save_params, outfile)
 
@@ -356,31 +279,10 @@ class XGB:
         self.is_negative = params.get("is_negative", False)
 
         self.model_validation_component.set_params(params)
+        self.customize_train_set_component.set_params(params)
 
-        self.lookback_option.set(params.get("lookback_option", 0))
-        self.sliding = params.get("sliding", -1)
-        if self.lookback_option.get() == 1:
-            self.lookback_val_var.set(params.get("lookback_value", 7))
-            with open(path + "/last_values.npy", "rb") as last_values:
-                self.last = np.load(last_values)
-        try:
-            self.seasonal_lookback_option.set(params.get("seasonal_lookback_option", 0))
-            if self.seasonal_lookback_option.get() == 1:
-                self.seasonal_period_var.set(params.get("seasonal_period", 8))
-                self.seasonal_val_var.set(params.get("seasonal_value", 7))
-                with open(path + "/seasonal_last_values.npy", "rb") as slv:
-                    self.seasonal_last = np.load(slv)
-        except Exception:
-            pass
-        self.scale_var.set(params.get("scale_type", "None"))
-        if self.scale_var.get() != "None":
-            try:
-                with open(path + "/feature_scaler.pkl", "rb") as f:
-                    self.feature_scaler = pickle_load(f)
-                with open(path + "/label_scaler.pkl", "rb") as f:
-                    self.label_scaler = pickle_load(f)
-            except Exception:
-                pass
+        self.customize_train_set_component.load_files(path)
+
         self.parameters[0].set(params.get("n_estimators", 100))
         self.parameters[1].set(params.get("max_depth", 5))
         self.parameters[2].set(params.get("learning_rate", 0.3))
@@ -420,35 +322,15 @@ class XGB:
 
         self.vars_nums = to_open
 
-    def __open_other_entries(self):
-        if self.lookback_option.get():
-            self.lookback_entry["state"] = tk.NORMAL
-        else:
-            self.lookback_entry["state"] = tk.DISABLED
-        if self.seasonal_lookback_option.get():
-            self.seasonal_lookback_entry_1["state"] = tk.NORMAL
-            self.seasonal_lookback_entry_2["state"] = tk.NORMAL
-        else:
-            self.seasonal_lookback_entry_1["state"] = tk.DISABLED
-            self.seasonal_lookback_entry_2["state"] = tk.DISABLED
-
     def __check_errors(self):
         if handle_errors(
             self.input_list_component.check_errors,
-            self.model_validation_component.check_errors
+            self.model_validation_component.check_errors,
+            self.customize_train_set_component.check_errors,
         ):
             return True
         else:
             try:
-                msg = "Enter a valid lookback value"
-                if self.lookback_option.get():
-                    self.lookback_val_var.get()
-
-                msg = "Enter valid periodic lookback values"
-                if self.seasonal_lookback_option.get():
-                    self.seasonal_val_var.get()
-                    self.seasonal_period_var.get()
-
                 msg = "Enter a valid Interval for grid search"
                 if self.grid_option_var.get() and self.interval_var.get() < 1:
                     raise Exception
@@ -493,11 +375,10 @@ class XGB:
     def __get_data(self):
         self.is_round = False
         self.is_negative = False
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
+        lookback_option = self.customize_train_set_component.lookback_option.get()
+        seasonal_lookback_option = self.customize_train_set_component.seasonal_lookback_option.get()
         sliding = lookback_option + 2 * seasonal_lookback_option - 1
-        self.sliding = sliding
-        scale_choice = self.scale_var.get()
+        scale_choice = self.customize_train_set_component.scale_var.get()
 
         self.predictor_names = self.input_list_component.get_predictor_names()
         self.label_name = self.input_list_component.get_target_name()
@@ -530,16 +411,9 @@ class XGB:
                 y.values.reshape(-1, 1)
             ).reshape(-1)
 
-        try:
-            lookback = self.lookback_val_var.get()
-        except Exception:
-            lookback = 0
-        try:
-            seasonal_period = self.seasonal_period_var.get()
-            seasonal_lookback = self.seasonal_val_var.get()
-        except Exception:
-            seasonal_period = 0
-            seasonal_lookback = 0
+        lookback = self.customize_train_set_component.lookback_val_var.get()
+        seasonal_period = self.customize_train_set_component.seasonal_period_var.get()
+        seasonal_lookback = self.customize_train_set_component.seasonal_val_var.get()
 
         X, y = self.__get_lookback(
             X, y, lookback, seasonal_period, seasonal_lookback, sliding
@@ -573,7 +447,7 @@ class XGB:
                 model.fit(X, y)
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
-                    if self.scale_var.get() != "None":
+                    if self.customize_train_set_component.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
@@ -594,11 +468,14 @@ class XGB:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
+                        X,
+                        y,
+                        train_size=self.model_validation_component.random_percent_var.get()
+                        / 100,
                     )
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
-                    if self.scale_var.get() != "None":
+                    if self.customize_train_set_component.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
@@ -615,7 +492,10 @@ class XGB:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
+                    size = int(
+                        (self.model_validation_component.random_percent_var.get() / 100)
+                        * len(X)
+                    )
                     X = X[-size:]
                     y = y[-size:]
                     model.fit(X, y)
@@ -624,7 +504,11 @@ class XGB:
             elif val_option == 2:
                 if do_forecast == 0:
                     cvs = cross_validate(
-                        model, X, y, cv=self.model_validation_component.cross_val_var.get(), scoring=skloss
+                        model,
+                        X,
+                        y,
+                        cv=self.model_validation_component.cross_val_var.get(),
+                        scoring=skloss,
                     )
                     for i, j in enumerate(list(cvs.values())[2:]):
                         self.test_metrics_vars[i].set(j.mean())
@@ -675,7 +559,7 @@ class XGB:
                 regressor.fit(X, y)
                 if do_forecast == 0:
                     pred = regressor.predict(X)
-                    if self.scale_var.get() != "None":
+                    if self.customize_train_set_component.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
@@ -696,11 +580,14 @@ class XGB:
             elif val_option == 1:
                 if do_forecast == 0:
                     X_train, X_test, y_train, y_test = train_test_split(
-                        X, y, train_size=self.model_validation_component.random_percent_var.get() / 100
+                        X,
+                        y,
+                        train_size=self.model_validation_component.random_percent_var.get()
+                        / 100,
                     )
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
-                    if self.scale_var.get() != "None":
+                    if self.customize_train_set_component.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
@@ -717,7 +604,10 @@ class XGB:
                     for i, j in enumerate(losses):
                         self.test_metrics_vars[i].set(j)
                 else:
-                    size = int((self.model_validation_component.random_percent_var.get() / 100) * len(X))
+                    size = int(
+                        (self.model_validation_component.random_percent_var.get() / 100)
+                        * len(X)
+                    )
                     X = X[-size:]
                     y = y[-size:]
                     regressor.fit(X, y)
@@ -740,7 +630,7 @@ class XGB:
             last = self.last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if self.customize_train_set_component.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
@@ -757,7 +647,7 @@ class XGB:
             seasonal_last = self.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if self.customize_train_set_component.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
@@ -777,7 +667,7 @@ class XGB:
             seasonal_last = self.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
-                if self.scale_var.get() != "None":
+                if self.customize_train_set_component.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
@@ -803,8 +693,6 @@ class XGB:
         except Exception:
             popupmsg("Enter a valid forecast value")
             return
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
         try:
             X_test = self.test_df[self.predictor_names][:num].to_numpy()  # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
@@ -813,28 +701,24 @@ class XGB:
             popupmsg("Read a test data")
             return
 
-        if lookback_option == 0 and seasonal_lookback_option == 0:
-            if self.scale_var.get() != "None":
+        if (
+            self.customize_train_set_component.lookback_option == 0
+            and self.customize_train_set_component.seasonal_lookback_option == 0
+        ):
+            if self.customize_train_set_component.scale_var.get() != "None":
                 X_test = self.feature_scaler.transform(X_test)
             self.pred = self.model.predict(X_test).reshape(-1)
         else:
-            sliding = self.sliding
-            try:
-                lookback = self.lookback_val_var.get()
-            except Exception:
-                lookback = 0
-            try:
-                seasonal_lookback = self.seasonal_val_var.get()
-                seasons = self.seasonal_period_var.get()
-            except Exception:
-                seasonal_lookback = 0
-                seasons = 0
+            sliding = self.customize_train_set_component.sliding
+            lookback = self.customize_train_set_component.lookback_val_var.get()
+            seasonal_lookback = self.customize_train_set_component.seasonal_val_var.get()
+            seasons = self.customize_train_set_component.seasonal_period_var.get()
 
             self.pred = self.__forecast_lookback(
                 num, lookback, seasons, seasonal_lookback, sliding
             )
 
-        if self.scale_var.get() != "None":
+        if self.customize_train_set_component.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(
                 self.pred.reshape(-1, 1)
             ).reshape(

@@ -78,7 +78,7 @@ class ModelValidationComponent:
         return True
 
 
-    def get_save_dict(self):
+    def get_params(self):
         return {
             "do_forecast": self.do_forecast_option.get(),
             "validation_option": self.validation_option.get(),
@@ -93,6 +93,7 @@ class ModelValidationComponent:
             self.random_percent_var.set(params.get("random_percent", 80))
         elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
+        self.__open_entries()
 
     def __open_entries(self):
         if not self.do_forecast_option.get():

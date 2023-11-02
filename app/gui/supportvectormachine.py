@@ -366,7 +366,7 @@ class SupportVectorMachine:
         save_params = {}
         save_params.update(model_params)
         save_params.update(self.input_list_componenet.get_save_dict())
-        save_params.update(self.model_validation_component.get_save_dict())
+        save_params.update(self.model_validation_component.get_params())
 
         save_params["is_round"] = self.is_round
         save_params["is_negative"] = self.is_negative
@@ -539,20 +539,6 @@ class SupportVectorMachine:
         self.vars_nums = to_open
 
     def __open_other_entries(self):
-        if not self.do_forecast_option.get():
-            self.cv_entry_1["state"] = tk.NORMAL
-            self.cv_entry_2["state"] = tk.NORMAL
-        else:
-            self.cv_entry_1["state"] = tk.DISABLED
-            self.cv_entry_2["state"] = tk.DISABLED
-        if self.validation_option.get() == 1:
-            self.random_percent_entry["state"] = tk.NORMAL
-        else:
-            self.random_percent_entry["state"] = tk.DISABLED
-        if self.validation_option.get() == 2:
-            self.cv_value_entry["state"] = tk.NORMAL
-        else:
-            self.cv_value_entry["state"] = tk.DISABLED
         if self.lookback_option.get():
             self.lookback_entry["state"] = tk.NORMAL
         else:
