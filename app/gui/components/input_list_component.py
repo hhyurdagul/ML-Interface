@@ -1,10 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
-from typing import List
+from tkinter import ttk, filedialog
+from typing import Union
 from .utils import popupmsg
+from ..backend import DataHandler
+
 
 class InputListComponent:
-    def __init__(self, root, data_handler):
+    def __init__(self, root: ttk.Frame, data_handler: DataHandler) -> None:
         self.data_handler = data_handler
 
         frame_root = ttk.Labelframe(root, text="Get Train Set")
@@ -63,43 +65,43 @@ class InputListComponent:
 
         return True
 
-    def get_save_dict(self):
+    def get_save_dict(self) -> dict[str, Union[list[str],str]]:
         return {
             "predictor_names": self.get_predictor_names(),
             "label_name": self.get_target_name(),
         }
 
-    def get_predictor_names(self) -> List[str]:
+    def get_predictor_names(self) -> list[str]:
         return list(self.predictor_list.get(0, tk.END))
 
     def get_target_name(self) -> str:
         return self.target_list.get(0)
 
-    def add_predictor(self, _=None):
+    def add_predictor(self, _=None) -> None:
         selected = self.input_list.curselection()
         if selected != "":
             item = self.input_list.get(selected)
             if item not in self.predictor_list.get(0, tk.END):
                 self.predictor_list.insert(tk.END, item)
 
-    def eject_predictor(self, _=None):
+    def eject_predictor(self, _=None) -> None:
         selected = self.predictor_list.curselection()
         if selected != "":
             self.predictor_list.delete(selected)
 
-    def add_target(self, _=None):
+    def add_target(self, _=None) -> None:
         selected = self.input_list.curselection()
         if selected != "" and self.target_list.size() < 1:
             item = self.input_list.get(selected)
             self.target_list.insert(tk.END, item)
 
-    def eject_target(self, _=None):
+    def eject_target(self, _=None) -> None:
         selected = self.target_list.curselection()
         if selected != "":
             self.target_list.delete(selected)
 
-    def read_train_data(self, file_path):
-        path = tk.filedialog.askopenfilename(
+    def read_train_data(self, file_path: tk.StringVar) -> None:
+        path = filedialog.askopenfilename(
             filetypes=[
                 ("Csv Files", "*.csv"),
                 ("Xlsx Files", "*.xlsx"),

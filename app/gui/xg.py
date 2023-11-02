@@ -5,32 +5,35 @@ from pandastable import Table  # type: ignore
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 
 from joblib import dump, load  # type: ignore
 from xgboost import XGBRegressor
-from sklearn.preprocessing import StandardScaler, MinMaxScaler  # type: ignore
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate  # type: ignore
 
 import os
 import json
-from pickle import dump as pickle_dump
-from pickle import load as pickle_load
 
 from .helpers import loss, skloss, popupmsg
-from .backend import DataHandler, handle_errors
-from .components import InputListComponent, ModelValidationComponent, CustomizeTrainSetComponent
-
+from .backend import DataHandler, ObjectHandler, handle_errors
+from .components import (
+    InputListComponent,
+    ModelValidationComponent,
+    CustomizeTrainSetComponent,
+)
 
 
 class XGB:
     def __init__(self):
         self.root = ttk.Frame()
         self.data_handler = DataHandler()
+        self.object_handler = ObjectHandler()
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
         self.model_validation_component = ModelValidationComponent(self.root)
-        self.customize_train_set_component = CustomizeTrainSetComponent(self.root)
+        self.customize_train_set_component = CustomizeTrainSetComponent(
+            self.root, self.object_handler
+        )
 
         # Model
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
@@ -235,13 +238,6 @@ class XGB:
         except Exception:
             popupmsg("Model is not created")
             return
-        
-        files = {
-            "last": self.last,
-            "seasonal_last": self.seasonal_last,
-            "feature_scaler": self.feature_scaler,
-            "label_scaler": self.label_scaler
-        }
 
         save_params = {}
         save_params.update(model_params)
@@ -252,9 +248,9 @@ class XGB:
         save_params["is_round"] = self.is_round
         save_params["is_negative"] = self.is_negative
 
-        self.customize_train_set_component.save_files(path, files)
-
         os.mkdir(path)
+        self.customize_train_set_component.save_files(path)
+
         dump(self.model, path + "/model.joblib")
         with open(path + "/model.json", "w") as outfile:
             json.dump(save_params, outfile)
@@ -288,7 +284,6 @@ class XGB:
         self.parameters[2].set(params.get("learning_rate", 0.3))
 
         self.__open_entries()
-        self.__open_other_entries()
         names = "\n".join(self.predictor_names)
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
@@ -363,12 +358,16 @@ class XGB:
         b = y.iloc[-len(a) :].to_numpy().reshape(-1)
 
         if sliding == 0:
-            self.last = b[-lookback:]
+            self.object_handler.set_last(b[-lookback:])
         elif sliding == 1:
-            self.seasonal_last = b[-seasonal_lookback * seasons :]
+            self.object_handler.set_seasonal_last(
+                b[-seasonal_lookback * seasons :]
+            )
         elif sliding == 2:
-            self.last = b[-(lookback + seasonal_lookback) : -seasonal_lookback]
-            self.seasonal_last = b[-seasonal_lookback * seasons :]
+            self.object_handler.set_last(b[-lookback:])
+            self.object_handler.set_seasonal_last(
+                b[-seasonal_lookback * seasons :]
+            )
 
         return a, b
 
@@ -376,8 +375,11 @@ class XGB:
         self.is_round = False
         self.is_negative = False
         lookback_option = self.customize_train_set_component.lookback_option.get()
-        seasonal_lookback_option = self.customize_train_set_component.seasonal_lookback_option.get()
+        seasonal_lookback_option = (
+            self.customize_train_set_component.seasonal_lookback_option.get()
+        )
         sliding = lookback_option + 2 * seasonal_lookback_option - 1
+        self.customize_train_set_component.sliding = sliding
         scale_choice = self.customize_train_set_component.scale_var.get()
 
         self.predictor_names = self.input_list_component.get_predictor_names()
@@ -394,20 +396,18 @@ class XGB:
             self.is_negative = True
 
         if scale_choice == "StandardScaler":
-            self.feature_scaler = StandardScaler()
-            self.label_scaler = StandardScaler()
+            self.object_handler.set_scalers("StandardScaler")
 
-            X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(
+            X.iloc[:] = self.object_handler.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.object_handler.label_scaler.fit_transform(
                 y.values.reshape(-1, 1)
             ).reshape(-1)
 
         elif scale_choice == "MinMaxScaler":
-            self.feature_scaler = MinMaxScaler()
-            self.label_scaler = MinMaxScaler()
+            self.object_handler.set_scalers("MinMaxScaler")
 
-            X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(
+            X.iloc[:] = self.object_handler.feature_scaler.fit_transform(X)
+            y.iloc[:] = self.object_handler.label_scaler.fit_transform(
                 y.values.reshape(-1, 1)
             ).reshape(-1)
 
@@ -429,8 +429,6 @@ class XGB:
         val_option = self.model_validation_component.validation_option.get()
 
         X, y = self.__get_data()
-        X: np.ndarray
-        y: np.ndarray
 
         if self.grid_option_var.get() == 0:
             n_estimators = self.parameters[0].get()
@@ -448,12 +446,12 @@ class XGB:
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(
+                        pred = self.object_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y = self.label_scaler.inverse_transform(
+                        y = self.object_handler.label_scaler.inverse_transform(
                             y.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -476,12 +474,12 @@ class XGB:
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(
+                        pred = self.object_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y_test = self.label_scaler.inverse_transform(
+                        y_test = self.object_handler.label_scaler.inverse_transform(
                             y_test.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -560,12 +558,12 @@ class XGB:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(
+                        pred = self.object_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y = self.label_scaler.inverse_transform(
+                        y = self.object_handler.label_scaler.inverse_transform(
                             y.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -588,12 +586,12 @@ class XGB:
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.label_scaler.inverse_transform(
+                        pred = self.object_handler.label_scaler.inverse_transform(
                             pred.reshape(-1, 1)
                         ).reshape(
                             -1
                         )  # type: ignore
-                        y_test = self.label_scaler.inverse_transform(
+                        y_test = self.object_handler.label_scaler.inverse_transform(
                             y_test.reshape(-1, 1)
                         ).reshape(
                             -1
@@ -624,14 +622,13 @@ class XGB:
     def __forecast_lookback(
         self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
     ):
-        self.test_df: pd.DataFrame
         pred = []
         if sliding == 0:
-            last = self.last
+            last = self.object_handler.last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(
+                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -644,11 +641,11 @@ class XGB:
                 pred.append(out)
 
         elif sliding == 1:
-            seasonal_last = self.seasonal_last
+            seasonal_last = self.object_handler.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(
+                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -663,12 +660,12 @@ class XGB:
                 pred.append(out)
 
         elif sliding == 2:
-            last = self.last
-            seasonal_last = self.seasonal_last
+            last = self.object_handler.last
+            seasonal_last = self.object_handler.seasonal_last
             for i in range(num):
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.customize_train_set_component.scale_var.get() != "None":
-                    X_test.iloc[:] = self.feature_scaler.transform(
+                    X_test.iloc[:] = self.object_handler.feature_scaler.transform(
                         X_test.values.reshape(1, -1)
                     ).reshape(
                         -1
@@ -701,17 +698,17 @@ class XGB:
             popupmsg("Read a test data")
             return
 
-        if (
-            self.customize_train_set_component.lookback_option == 0
-            and self.customize_train_set_component.seasonal_lookback_option == 0
-        ):
+        if self.customize_train_set_component.sliding == -1:
             if self.customize_train_set_component.scale_var.get() != "None":
-                X_test = self.feature_scaler.transform(X_test)
+                X_test = self.object_handler.feature_scaler.transform(X_test)
+
             self.pred = self.model.predict(X_test).reshape(-1)
         else:
             sliding = self.customize_train_set_component.sliding
             lookback = self.customize_train_set_component.lookback_val_var.get()
-            seasonal_lookback = self.customize_train_set_component.seasonal_val_var.get()
+            seasonal_lookback = (
+                self.customize_train_set_component.seasonal_val_var.get()
+            )
             seasons = self.customize_train_set_component.seasonal_period_var.get()
 
             self.pred = self.__forecast_lookback(
@@ -719,7 +716,7 @@ class XGB:
             )
 
         if self.customize_train_set_component.scale_var.get() != "None":
-            self.pred = self.label_scaler.inverse_transform(
+            self.pred = self.object_handler.label_scaler.inverse_transform(
                 self.pred.reshape(-1, 1)
             ).reshape(
                 -1

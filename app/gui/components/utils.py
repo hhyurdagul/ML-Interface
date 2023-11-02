@@ -1,5 +1,6 @@
-import tkinter as tk
+from tkinter import messagebox
 
-def popupmsg(msg):
-    tk.messagebox.showinfo("!", msg)
+
+def popupmsg(msg: str) -> bool:
+    messagebox.showinfo("!", msg)
     return False

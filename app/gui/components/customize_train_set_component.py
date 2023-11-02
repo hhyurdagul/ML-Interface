@@ -1,13 +1,15 @@
-import os
-import numpy as np
 import tkinter as tk
 from tkinter import ttk
-import pickle
+
+from typing import Any, Union
+from ..backend import ObjectHandler
 from .utils import popupmsg
 
 
 class CustomizeTrainSetComponent:
-    def __init__(self, root):
+    def __init__(self, root: ttk.Frame, object_handler: ObjectHandler) -> None:
+        self.object_handler = object_handler
+
         self.root = root
         self.lookback_option = tk.IntVar(value=0)
         self.lookback_val_var = tk.IntVar(value=0)
@@ -82,18 +84,20 @@ class CustomizeTrainSetComponent:
 
         return True
 
-    def get_params(self):
+    def get_params(self) -> dict[str, Union[str,int]]:
         return {
             "lookback_option": self.lookback_option.get(),
             "lookback_value": self.lookback_val_var.get(),
             "seasonal_lookback_option": self.seasonal_lookback_option.get(),
             "seasonal_period": self.seasonal_period_var.get(),
             "seasonal_value": self.seasonal_val_var.get(),
-            "sliding": self.lookback_option + 2 * self.seasonal_lookback_option - 1,
+            "sliding": self.lookback_option.get()
+            + 2 * self.seasonal_lookback_option.get()
+            - 1,
             "scale_type": self.scale_var.get(),
         }
 
-    def set_params(self, params):
+    def set_params(self, params: dict[str, Any]) -> None:
         self.lookback_option.set(params.get("lookback_option", 0))
         self.sliding = params.get("sliding", -1)
         if self.lookback_option.get() == 1:
@@ -109,51 +113,24 @@ class CustomizeTrainSetComponent:
 
         self.__open_entries()
 
-    def save_files(self, path: str, files: dict[str, object]):
-        last_values_path = f"{path}/last_values.npy"
-        slv_path = f"{path}/seasonal_last_values.py"
-
-        if self.lookback_option.get() == 1:
-            with open(last_values_path, "wb") as outfile:
-                np.save(outfile, files["last"])
-        if self.seasonal_lookback_option.get() == 1:
-            with open(slv_path, "wb") as outfile:
-                np.save(outfile, files["seasonal_last"])
-
-        fs_path = f"{path}/feature_scaler.pkl"
-        ls_path = f"{path}/label_scaler.pkl"
+    def save_files(self, path: str) -> None:
+        self.object_handler.save_lasts(
+            path,
+            bool(self.lookback_option.get()),
+            bool(self.seasonal_lookback_option.get()),
+        )
 
         if self.scale_var.get() != "None":
-            with open(fs_path, "wb") as fs, open(ls_path, "wb") as ls:
-                pickle.dump(files["feature_scaler"], fs)
-                pickle.dump(files["label_scaler"], ls)
+            self.object_handler.save_scalers(path)
 
-    def load_files(self, path: str) -> dict[str:object]:
-        files: dict[str:object] = {}
+    def load_files(self, path: str) -> None:
+        if self.lookback_option.get() == 1 or self.seasonal_lookback_option.get():
+            self.object_handler.load_lasts(path)
 
-        last_values_path = f"{path}/last_values.npy"
-        slv_path = f"{path}/seasonal_last_values.py"
-        if self.lookback_option.get() == 1 and os.path.exists(last_values_path):
-            with open(last_values_path, "rb") as last_values:
-                files["last"] = np.load(last_values)
-        if self.seasonal_lookback_option.get() == 1 and os.path.exists(slv_path):
-            with open(slv_path, "rb") as slv:
-                files["seasonal_last"] = np.load(slv)
+        if self.scale_var.get() != "None":
+            self.object_handler.load_scalers(path)
 
-        fs_path = f"{path}/feature_scaler.pkl"
-        ls_path = f"{path}/label_scaler.pkl"
-
-        if (
-            self.scale_var.get() != "None"
-            and os.path.exists(fs_path)
-            and os.path.exists(ls_path)
-        ):
-            with open(fs_path, "rb") as fs, open(ls_path, "rb") as ls:
-                files["feature_scaler"] = pickle.load(fs)
-                files["label_scaler"] = pickle.load(ls)
-        return files
-
-    def __open_entries(self):
+    def __open_entries(self) -> None:
         if self.lookback_option.get():
             self.lookback_entry["state"] = tk.NORMAL
         else:

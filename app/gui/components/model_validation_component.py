@@ -3,7 +3,7 @@ from tkinter import ttk
 from .utils import popupmsg
 
 class ModelValidationComponent:
-    def __init__(self, root):
+    def __init__(self, root: ttk.Frame) -> None:
         self.do_forecast_option = tk.IntVar(value=0)
         self.validation_option = tk.IntVar(value=0)
         self.random_percent_var = tk.IntVar(value=70)
@@ -78,7 +78,7 @@ class ModelValidationComponent:
         return True
 
 
-    def get_params(self):
+    def get_params(self) -> dict[str, int]:
         return {
             "do_forecast": self.do_forecast_option.get(),
             "validation_option": self.validation_option.get(),
@@ -86,7 +86,7 @@ class ModelValidationComponent:
             "k_fold_cv": self.cross_val_var.get(),
         }
 
-    def set_params(self, params):
+    def set_params(self, params: dict[str, int]) -> None:
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
         if self.validation_option.get() == 1:
@@ -95,7 +95,7 @@ class ModelValidationComponent:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
         self.__open_entries()
 
-    def __open_entries(self):
+    def __open_entries(self) -> None:
         if not self.do_forecast_option.get():
             self.cv_entry_1["state"] = tk.NORMAL
             self.cv_entry_2["state"] = tk.NORMAL
