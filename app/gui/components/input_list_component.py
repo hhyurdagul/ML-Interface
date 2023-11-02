@@ -65,7 +65,7 @@ class InputListComponent:
 
         return True
 
-    def get_save_dict(self) -> dict[str, Union[list[str],str]]:
+    def get_params(self) -> dict[str, Union[list[str],str]]:
         return {
             "predictor_names": self.get_predictor_names(),
             "label_name": self.get_target_name(),

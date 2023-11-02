@@ -8,26 +8,21 @@ import numpy as np
 import pandas as pd
 from joblib import dump, load  # type: ignore
 from pandastable import Table  # type: ignore
-from sklearn.model_selection import (  # type: ignore
-    GridSearchCV,
-    train_test_split,
-    cross_validate,
-)
-from xgboost import XGBRegressor
 
 from .backend import (
     DataHandler,
     ScalerHandler,
     LookbackHandler,
-    XGBModelHandler,
+    ModelHandler,
     handle_errors,
 )
 from .components import (
     InputListComponent,
     ModelValidationComponent,
     CustomizeTrainSetComponent,
+    ModelComponent,
 )
-from .helpers import loss, skloss, popupmsg
+from .helpers import loss, popupmsg
 
 
 class XGB:
@@ -36,124 +31,14 @@ class XGB:
         self.data_handler = DataHandler()
         self.scaler_handler = ScalerHandler()
         self.lookback_handler = LookbackHandler()
-        self.model_handler = XGBModelHandler()
+        self.model_handler = ModelHandler()
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
         self.model_validation_component = ModelValidationComponent(self.root)
         self.customize_train_set_component = CustomizeTrainSetComponent(
             self.root, self.scaler_handler, self.lookback_handler
         )
-
-        # Model
-        model_frame = ttk.Labelframe(self.root, text="Model Frame")
-        model_frame.grid(column=1, row=0)
-
-        ## Parameter Optimization
-        parameter_optimization_frame = ttk.Labelframe(
-            model_frame, text="Parameter Optimization"
-        )
-        parameter_optimization_frame.grid(column=0, row=2)
-
-        self.grid_option_var = tk.IntVar(value=0)
-        tk.Checkbutton(
-            parameter_optimization_frame,
-            text="Do grid search for optimal parameters",
-            offvalue=0,
-            onvalue=1,
-            variable=self.grid_option_var,
-            command=self.__open_entries,
-        ).grid(column=0, row=0, columnspan=3)
-
-        self.interval_var = tk.IntVar(value=3)
-        ttk.Label(parameter_optimization_frame, text="Interval:").grid(column=0, row=1)
-        self.interval_entry = ttk.Entry(
-            parameter_optimization_frame,
-            textvariable=self.interval_var,
-            width=8,
-            state=tk.DISABLED,
-        )
-        self.interval_entry.grid(column=1, row=1, pady=2)
-
-        self.gs_cross_val_option = tk.IntVar(value=0)
-        self.gs_cross_val_var = tk.IntVar(value=5)
-        tk.Checkbutton(
-            parameter_optimization_frame,
-            text="Cross validate; folds:",
-            offvalue=0,
-            onvalue=1,
-            variable=self.gs_cross_val_option,
-            command=self.__open_entries,
-        ).grid(column=0, row=2)
-        self.gs_cross_val_entry = tk.Entry(
-            parameter_optimization_frame,
-            textvariable=self.gs_cross_val_var,
-            state=tk.DISABLED,
-            width=8,
-        )
-        self.gs_cross_val_entry.grid(column=1, row=2)
-
-        ## Model Parameters
-        model_parameters_frame = ttk.LabelFrame(model_frame, text="Model Parameters")
-        model_parameters_frame.grid(column=1, row=0, rowspan=3, columnspan=2)
-
-        parameter_names = ["N Estimators", "Max Depth", "Learning Rate"]
-        self.parameters = [
-            tk.IntVar(value=100),
-            tk.IntVar(value=6),
-            tk.DoubleVar(value=0.3),
-        ]
-        self.optimization_parameters = [
-            [tk.IntVar(value=75), tk.IntVar(value=150)],
-            [tk.IntVar(value=5), tk.IntVar(value=10)],
-            [tk.DoubleVar(value=0.2), tk.DoubleVar(value=1)],
-        ]
-
-        ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
-        ttk.Label(model_parameters_frame, text="----- Search Range -----").grid(
-            column=2, row=0, columnspan=2
-        )
-
-        self.model_parameters_frame_options = [
-            [
-                ttk.Label(model_parameters_frame, text=j + ":").grid(
-                    column=0, row=i + 1
-                ),
-                ttk.Entry(
-                    model_parameters_frame,
-                    textvariable=self.parameters[i],
-                    state=tk.DISABLED,
-                    width=9,
-                ),
-                ttk.Entry(
-                    model_parameters_frame,
-                    textvariable=self.optimization_parameters[i][0],
-                    state=tk.DISABLED,
-                    width=9,
-                ),
-                ttk.Entry(
-                    model_parameters_frame,
-                    textvariable=self.optimization_parameters[i][1],
-                    state=tk.DISABLED,
-                    width=9,
-                ),
-            ]
-            for i, j in enumerate(parameter_names)
-        ]
-
-        for i, j in enumerate(self.model_parameters_frame_options):
-            j[1].grid(column=1, row=i + 1, padx=2, pady=2, sticky=tk.W)
-            j[2].grid(column=2, row=i + 1, padx=2, pady=2)
-            j[3].grid(column=3, row=i + 1, padx=2, pady=2)
-
-        ttk.Button(model_frame, text="Create Model", command=self.create_model).grid(
-            column=0, row=3
-        )
-        ttk.Button(model_frame, text="Save Model", command=self.save_model).grid(
-            column=1, row=3
-        )
-        ttk.Button(model_frame, text="Load Model", command=self.load_model).grid(
-            column=2, row=3
-        )
+        self.model_component = ModelComponent(self.root, self.model_handler)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -204,8 +89,6 @@ class XGB:
                 test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
             ).grid(column=1, row=i)
 
-        self.__open_entries()
-
     def get_test_data(self, file_path):
         path = filedialog.askopenfilename(
             filetypes=[
@@ -224,7 +107,7 @@ class XGB:
         if not path:
             return
         try:
-            if self.grid_option_var.get():
+            if self.model_component.grid_option_var.get():
                 print(self.best_params)
                 model_params = {
                     "n_estimators": self.best_params["n_estimators"],
@@ -233,9 +116,9 @@ class XGB:
                 }
             else:
                 model_params = {
-                    "n_estimators": self.parameters[0].get(),
-                    "max_depth": self.parameters[1].get(),
-                    "learning_rate": self.parameters[2].get(),
+                    "n_estimators": self.parameters["n_estimators"].get("var").get(),
+                    "max_depth": self.parameters["max_depth"].get("var").get(),
+                    "learning_rate": self.parameters["learning_rate"].get("var").get(),
                 }
 
         except Exception:
@@ -244,7 +127,7 @@ class XGB:
 
         save_params = {}
         save_params.update(model_params)
-        save_params.update(self.input_list_component.get_save_dict())
+        save_params.update(self.input_list_component.get_params())
         save_params.update(self.model_validation_component.get_params())
         save_params.update(self.customize_train_set_component.get_params())
 
@@ -291,231 +174,54 @@ class XGB:
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def __open_entries(self):
-        to_open = []
-        for i in self.model_parameters_frame_options:
-            i[1]["state"] = tk.DISABLED
-            i[2]["state"] = tk.DISABLED
-            i[3]["state"] = tk.DISABLED
-
-        self.interval_entry["state"] = tk.DISABLED
-        self.gs_cross_val_entry["state"] = tk.DISABLED
-
-        if self.grid_option_var.get() and self.gs_cross_val_option.get():
-            self.gs_cross_val_entry["state"] = tk.NORMAL
-
-        to_open = list(range(len(self.parameters)))
-        opt = self.grid_option_var.get()
-        self.__open(to_open, opt)
-
-    def __open(self, to_open, opt=0):
-        if opt == 1:
-            self.interval_entry["state"] = tk.NORMAL
-            for i in to_open:
-                self.model_parameters_frame_options[i][2]["state"] = tk.NORMAL
-                self.model_parameters_frame_options[i][3]["state"] = tk.NORMAL
-        else:
-            for i in to_open:
-                self.model_parameters_frame_options[i][1]["state"] = tk.NORMAL
-
     def __check_errors(self):
-        if handle_errors(
+        return handle_errors(
             self.input_list_component.check_errors,
             self.model_validation_component.check_errors,
             self.customize_train_set_component.check_errors,
-        ):
-            return True
-        else:
-            try:
-                msg = "Enter a valid Interval for grid search"
-                if self.grid_option_var.get() and self.interval_var.get() < 1:
-                    raise Exception
+            self.model_component.check_errors,
+        )
 
-                msg = "Enter a valid Cross Validation fold for grid search (Above 2)"
-                if self.gs_cross_val_option.get() and self.gs_cross_val_var.get() < 2:
-                    raise Exception
+    def __set_handlers(self):
+        self.data_handler.set_variables(
+            self.input_list_component.get_predictor_names(),
+            self.input_list_component.get_target_name(),
+            self.model_validation_component.validation_option.get(),
+            self.model_validation_component.do_forecast_option.get(),
+            self.model_validation_component.random_percent_var.get(),
+            self.model_validation_component.cross_val_var.get(),
+        )
 
-            except Exception:
-                popupmsg(msg)  # type: ignore
-                return False
-
-    def __get_data(self):
-        train_df = self.data_handler.train_df
-        self.predictor_names = self.input_list_component.get_predictor_names()
-        self.label_name = self.input_list_component.get_target_name()
-
-        X = train_df[self.predictor_names].copy()
-        y = train_df[self.label_name].copy()
-
-        self.is_round = True if y.dtype in [int, np.intc, np.int64] else False
-        self.is_negative = True if any(y < 0) else False
-
-        scale_choice = self.customize_train_set_component.scale_var.get()
-        if scale_choice != "None":
-            self.scaler_handler.set_scalers(scale_choice)
-            X.iloc[:], y.iloc[:] = self.scaler_handler.scaler_fit_transform(X, y)
+        self.scaler_handler.set_scalers(
+            self.customize_train_set_component.scale_var.get()
+        )
 
         self.customize_train_set_component.calculate_sliding()
-        X, y = self.lookback_handler.get_lookback(
-            X,
-            y,
-            self.customize_train_set_component.lookback_val_var.get(),
+        self.lookback_handler.set_variables(
+            self.customize_train_set_component.lookback_var.get(),
             self.customize_train_set_component.seasonal_period_var.get(),
             self.customize_train_set_component.seasonal_val_var.get(),
             self.customize_train_set_component.sliding,
         )
 
-        return X, y
+        self.model_handler.set_variables(
+                self.model_component.get_model_params(),
+                self.model_component.get_grid_params(),
+                self.model_component.grid_option_var.get()
+        )
 
     def create_model(self):
         if not self.__check_errors():
             return
 
-        X, y = self.__get_data()
-                
-        val_option = self.model_validation_component.validation_option.get()
-        do_forecast = self.model_validation_component.do_forecast_option.get()
+        self.__set_handlers()
+        self.model_handler.create_model()
+        
+        for i, j in enumerate(self.model_handler.loss):
+            self.test_metrics_vars[i].set(j)
 
-        if self.grid_option_var.get() == 0:
-            self.model = self.model_handler.create_model_without_grid_search(
-                {
-                    "n_estimators": self.parameters[0].get(),
-                    "max_depth": self.parameters[1].get(),
-                    "learning_rate": self.parameters[2].get(),
-                }
-            )
-
-            (
-                X_train,
-                y_train,
-                X_test,
-                y_test,
-            ) = self.data_handler.get_data_based_on_val_type(
-                X,
-                y,
-                self.model_validation_component.validation_option.get(),
-                self.model_validation_component.do_forecast_option.get(),
-                self.model_validation_component.random_percent_var.get(),
-            )
-            self.model.fit(X_train, y_train)
-            if not do_forecast:
-                if val_option in [0, 1]:
-                    self.y_test = y_test
-                    self.pred = self.model.predict(X_test).reshape(-1)
-                    if self.customize_train_set_component.scale_var.get() != "None":
-                        self.pred = self.scaler_handler.label_scaler.inverse_transform(
-                            self.pred.reshape(-1, 1)
-                        ).reshape(-1)
-                        self.y_test = self.scaler_handler.label_scaler.inverse_transform(
-                            self.y_test.reshape(-1, 1)
-                        ).reshape(-1)
-                    for i, j in enumerate(loss(self.y_test, self.pred)):
-                        self.test_metrics_vars[i].set(j)
-                elif val_option in [2, 3]:
-                    cv_count = (
-                        self.model_validation_component.cross_val_var.get()
-                        if val_option == 2
-                        else X_train.shape[0] - 1
-                    )
-                    cvs = cross_validate(self.model, X, y, cv=cv_count, scoring=skloss)
-                    for i, j in enumerate(list(cvs.values())[2:]):
-                        self.test_metrics_vars[i].set(j.mean())
-
-        else:
-            params = {}
-            interval = self.interval_var.get()
-
-            params["n_estimators"] = np.unique(
-                np.linspace(
-                    self.optimization_parameters[0][0].get(),
-                    self.optimization_parameters[0][1].get(),
-                    interval,
-                    dtype=int,
-                )
-            )
-            params["max_depth"] = np.unique(
-                np.linspace(
-                    self.optimization_parameters[1][0].get(),
-                    self.optimization_parameters[1][1].get(),
-                    interval,
-                    dtype=int,
-                )
-            )
-            params["learning_rate"] = np.unique(
-                np.linspace(
-                    self.optimization_parameters[2][0].get(),
-                    self.optimization_parameters[2][1].get(),
-                    interval,
-                    dtype=float,
-                )
-            )
-
-            cv = (
-                self.gs_cross_val_var.get()
-                if self.gs_cross_val_option.get() == 1
-                else None
-            )
-            regressor = GridSearchCV(XGBRegressor(), params, cv=cv)
-
-            if val_option == 0:
-                regressor.fit(X, y)
-                if do_forecast == 0:
-                    pred = regressor.predict(X)
-                    if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.scaler_handler.label_scaler.inverse_transform(
-                            pred.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                        y = self.scaler_handler.label_scaler.inverse_transform(
-                            y.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                    losses = loss(y, pred)
-                    self.y_test = y
-                    self.pred = pred
-                    for i, j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
-                self.model = regressor.best_estimator_
-
-            elif val_option == 1:
-                if do_forecast == 0:
-                    X_train, X_test, y_train, y_test = train_test_split(
-                        X,
-                        y,
-                        train_size=self.model_validation_component.random_percent_var.get()
-                        / 100,
-                    )
-                    regressor.fit(X_train, y_train)
-                    pred = regressor.predict(X_test)
-                    if self.customize_train_set_component.scale_var.get() != "None":
-                        pred = self.scaler_handler.label_scaler.inverse_transform(
-                            pred.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                        y_test = self.scaler_handler.label_scaler.inverse_transform(
-                            y_test.reshape(-1, 1)
-                        ).reshape(
-                            -1
-                        )  # type: ignore
-                    losses = loss(y_test, pred)
-                    self.y_test = y_test
-                    self.pred = pred
-                    for i, j in enumerate(losses):
-                        self.test_metrics_vars[i].set(j)
-                else:
-                    size = int(
-                        (self.model_validation_component.random_percent_var.get() / 100)
-                        * len(X)
-                    )
-                    X = X[-size:]
-                    y = y[-size:]
-                    regressor.fit(X, y)
-                self.model = regressor.best_estimator_
-
-            p = self.model.get_params()
+        if self.model_handler.grid_option:
+            p = self.model_handler.best_params()
             self.best_params = {
                 "n_estimators": int(p["n_estimators"]),
                 "max_depth": int(p["max_depth"]),
@@ -622,9 +328,7 @@ class XGB:
             )
 
         if self.customize_train_set_component.scale_var.get() != "None":
-            self.pred = self.scaler_handler.label_scaler.inverse_transform(
-                self.pred.reshape(-1, 1)
-            ).reshape(-1)
+            self.pred = self.scaler_handler.label_inverse_transform(self.pred)
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
