@@ -4,11 +4,18 @@ from tkinter import ttk
 from .utils import popupmsg
 from ..backend import ModelHandler
 
-from typing import List, Any
+from typing import List, Any, Callable
 
 
 class ModelComponent:
-    def __init__(self, root: ttk.Frame, model_handler: ModelHandler) -> None:
+    def __init__(
+        self,
+        root: ttk.Frame,
+        model_handler: ModelHandler,
+        create_model: Callable,
+        save_model: Callable,
+        load_model: Callable,
+    ) -> None:
         self.root = root
         self.model_handler = model_handler
 
@@ -101,14 +108,14 @@ class ModelComponent:
         )
         self.gs_cross_val_entry.grid(column=3, row=last_row + 1)
 
+        ttk.Button(model_frame, text="Create Model", command=create_model).grid(
+            column=0, row=last_row + 2
+        )
         ttk.Button(
-            model_frame, text="Create Model", command=self.model_handler.create_model
-        ).grid(column=0, row=last_row + 2)
-        ttk.Button(
-            model_frame, text="Save Model", command=self.model_handler.save_model
+            model_frame, text="Save Model", command=save_model
         ).grid(column=1, row=last_row + 2, columnspan=2)
         ttk.Button(
-            model_frame, text="Load Model", command=self.model_handler.load_model
+            model_frame, text="Load Model", command=load_model
         ).grid(column=3, row=last_row + 2)
 
     def check_errors(self) -> bool:

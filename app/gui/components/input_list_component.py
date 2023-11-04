@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
-from typing import Union
+from typing import Union, List
 from .utils import popupmsg
 from ..backend import DataHandler
 
@@ -71,7 +71,7 @@ class InputListComponent:
             "label_name": self.get_target_name(),
         }
 
-    def get_predictor_names(self) -> list[str]:
+    def get_predictor_names(self) -> List[str]:
         return list(self.predictor_list.get(0, tk.END))
 
     def get_target_name(self) -> str:

@@ -31,14 +31,22 @@ class XGB:
         self.data_handler = DataHandler()
         self.scaler_handler = ScalerHandler()
         self.lookback_handler = LookbackHandler()
-        self.model_handler = ModelHandler()
+        self.model_handler = ModelHandler(
+            self.data_handler, self.scaler_handler, self.lookback_handler
+        )
 
         self.input_list_component = InputListComponent(self.root, self.data_handler)
         self.model_validation_component = ModelValidationComponent(self.root)
         self.customize_train_set_component = CustomizeTrainSetComponent(
             self.root, self.scaler_handler, self.lookback_handler
         )
-        self.model_component = ModelComponent(self.root, self.model_handler)
+        self.model_component = ModelComponent(
+            self.root,
+            self.model_handler,
+            self.create_model,
+            self.save_model,
+            self.load_model,
+        )
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -198,16 +206,16 @@ class XGB:
 
         self.customize_train_set_component.calculate_sliding()
         self.lookback_handler.set_variables(
-            self.customize_train_set_component.lookback_var.get(),
+            self.customize_train_set_component.lookback_val_var.get(),
             self.customize_train_set_component.seasonal_period_var.get(),
             self.customize_train_set_component.seasonal_val_var.get(),
             self.customize_train_set_component.sliding,
         )
 
         self.model_handler.set_variables(
-                self.model_component.get_model_params(),
-                self.model_component.get_grid_params(),
-                self.model_component.grid_option_var.get()
+            self.model_component.get_model_params(),
+            self.model_component.get_grid_params(),
+            self.model_component.grid_option_var.get(),
         )
 
     def create_model(self):
@@ -216,18 +224,15 @@ class XGB:
 
         self.__set_handlers()
         self.model_handler.create_model()
-        
-        for i, j in enumerate(self.model_handler.loss):
-            self.test_metrics_vars[i].set(j)
+
+        if not self.data_handler.do_forecast:
+            self.pred = self.model_handler.pred
+            self.y_test = self.model_handler.y_test
+            for i, j in enumerate(self.model_handler.loss):
+                self.test_metrics_vars[i].set(j)
 
         if self.model_handler.grid_option:
-            p = self.model_handler.best_params()
-            self.best_params = {
-                "n_estimators": int(p["n_estimators"]),
-                "max_depth": int(p["max_depth"]),
-                "learning_rate": float(p["learning_rate"]),
-            }
-            popupmsg("Best Params: " + str(self.best_params))
+            popupmsg("Best Params: " + str(self.model_handler.best_params))
 
     def __forecast_lookback(
         self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
@@ -246,7 +251,7 @@ class XGB:
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
-                out = self.model.predict(to_pred)
+                out = self.model_handler.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 pred.append(out)
 
@@ -265,7 +270,7 @@ class XGB:
                         -j * seasonal_lookback
                     ]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
-                out = self.model.predict(to_pred)
+                out = self.model_handler.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
                 pred.append(out)
 
@@ -287,7 +292,7 @@ class XGB:
                         -j * seasonal_lookback
                     ]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
-                out = self.model.predict(to_pred)
+                out = self.model_handler.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
                 seasonal_last = np.append(seasonal_last, out)[1:]
                 pred.append(out)
@@ -314,7 +319,7 @@ class XGB:
             if self.customize_train_set_component.scale_var.get() != "None":
                 X_test = self.scaler_handler.feature_scaler.transform(X_test)
 
-            self.pred = self.model.predict(X_test).reshape(-1)
+            self.pred = self.model_handler.model.predict(X_test).reshape(-1)
         else:
             sliding = self.customize_train_set_component.sliding
             lookback = self.customize_train_set_component.lookback_val_var.get()

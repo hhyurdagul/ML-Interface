@@ -338,7 +338,12 @@ class ModelHandler:
 
         if self.grid_option:
             self.model = self.model.best_estimator_
-            self.best_params = self.model.get_params()
+            model_params = self.model.get_params()
+            self.best_params = {
+                "n_estimators": int(model_params["n_estimators"]),
+                "max_depth": int(model_params["max_depth"]),
+                "learning_rate": float(model_params["learning_rate"]),
+            }
 
     def save_model(self) -> None:
         pass
