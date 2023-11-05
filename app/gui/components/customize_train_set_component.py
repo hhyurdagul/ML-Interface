@@ -111,6 +111,7 @@ class CustomizeTrainSetComponent:
     def set_params(self, params: dict[str, Any]) -> None:
         self.lookback_option.set(params.get("lookback_option", 0))
         self.sliding = params.get("sliding", -1)
+        self.lookback_handler.sliding = self.sliding
         if self.lookback_option.get() == 1:
             self.lookback_val_var.set(params.get("lookback_value", 7))
 
@@ -135,7 +136,7 @@ class CustomizeTrainSetComponent:
             self.scaler_handler.save_scalers(path)
 
     def load_files(self, path: str) -> None:
-        if self.lookback_option.get() == 1 or self.seasonal_lookback_option.get():
+        if self.lookback_option.get() or self.seasonal_lookback_option.get():
             self.lookback_handler.load_lasts(path)
 
         if self.scale_var.get() != "None":

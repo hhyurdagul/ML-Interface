@@ -2,6 +2,7 @@ import os
 import pickle
 from typing import List, Union, Any, Tuple
 
+import joblib  # type: ignore
 import numpy as np
 import pandas as pd
 from sklearn.metrics import make_scorer, mean_absolute_error, mean_squared_error  # type: ignore
@@ -190,17 +191,18 @@ class LookbackHandler:
         if self.sliding in [0, 2]:
             for i in range(1, self.lookback + 1):
                 X[f"t-{i}"] = y.shift(i)
-        elif self.sliding in [1, 2]:
+        if self.sliding in [1, 2]:
             for i in range(1, self.seasons + 1):
                 X[f"t-{i*self.seasonal_lookback}"] = y.shift(i * self.seasonal_lookback)
 
         X.dropna(inplace=True)
+        print(X.columns)
         a = X.to_numpy()
         b = y.iloc[-len(a) :].to_numpy().reshape(-1)
 
         if self.sliding in [0, 2]:
             self.set_last(b[-self.lookback :])
-        elif self.sliding in [1, 2]:
+        if self.sliding in [1, 2]:
             self.set_seasonal_last(b[-self.seasonal_lookback * self.seasons :])
 
         return a, b
@@ -231,18 +233,17 @@ class DataHandler:
 
         self.test_df_read = True
 
+    def set_input_variables(self, predictor_names: List[str], label_name: str) -> None:
+        self.predictor_names = predictor_names
+        self.label_name = label_name
+
     def set_variables(
         self,
-        predictor_names: List[str],
-        label_name: str,
         val_option: int,
         do_forecast: int,
         random_percent_value: int,
         cross_val_value: int,
     ) -> None:
-        self.predictor_names = predictor_names
-        self.label_name = label_name
-
         self.val_option = val_option
         self.do_forecast = do_forecast
         self.random_percent_value = random_percent_value
@@ -251,6 +252,10 @@ class DataHandler:
     def get_data(self):
         X = self.train_df[self.predictor_names].copy()
         y = self.train_df[self.label_name].copy()
+
+        self.is_round = True if y.dtype in [int, np.intc, np.int64] else False
+        self.is_negative = True if any(y < 0) else False
+
         return X, y
 
     def get_data_based_on_val_type(
@@ -258,12 +263,13 @@ class DataHandler:
         X: np._typing.NDArray,
         y: np._typing.NDArray,
     ):
-        train_size = int(self.random_percent_value / 100 * len(X))
+        train_size = self.random_percent_value / 100
         if self.val_option == 0:
             return X, y, X, y
         elif self.val_option == 1 and not self.do_forecast:
             return train_test_split(X, y, train_size=train_size)
         elif self.val_option == 1 and self.do_forecast:
+            train_size = int(train_size * len(X))
             return X[-train_size:], y[-train_size:], None, None
         else:
             return X, y, None, None
@@ -279,12 +285,10 @@ class ModelHandler:
         self.data_handler = data_handler
         self.scaler_handler = scaler_handler
         self.lookback_handler = lookback_handler
+        self.model_created = False
 
     def __get_data(self):
         X, y = self.data_handler.get_data()
-
-        self.is_round = True if y.dtype in [int, np.intc, np.int64] else False
-        self.is_negative = True if any(y < 0) else False
 
         if self.scaler_handler.scale_choice != "None":
             X.iloc[:], y.iloc[:] = self.scaler_handler.scaler_fit_transform(X, y)
@@ -344,12 +348,17 @@ class ModelHandler:
                 "max_depth": int(model_params["max_depth"]),
                 "learning_rate": float(model_params["learning_rate"]),
             }
+            self.model_params = self.best_params
+        self.model_created = True
 
-    def save_model(self) -> None:
-        pass
+    def save_files(self, path: str) -> None:
+        joblib.dump(self.model, path + "/model.joblib")
 
-    def load_model(self) -> None:
-        pass
+    def load_model(self, model_path: str) -> None:
+        if not os.path.exists(model_path + "/model.joblib"):
+            return
+        self.model = joblib.load(model_path + "/model.joblib")
+        self.model_created = True
 
     def __create_model_without_grid_search(
         self, model_params: dict[str, Any]
@@ -387,3 +396,118 @@ class ModelHandler:
             )
         )
         return GridSearchCV(XGBRegressor(), params, cv)
+
+
+class ForecastHandler:
+    def __init__(self, model_handler: ModelHandler) -> None:
+        self.model_handler = model_handler
+        self.data_handler = model_handler.data_handler
+        self.scaler_handler = model_handler.scaler_handler
+        self.lookback_handler = model_handler.lookback_handler
+
+    def __forecast_lookback(
+        self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
+    ):
+        predictor_names = self.data_handler.predictor_names
+        pred = []
+        if sliding == 0:
+            last = self.lookback_handler.last
+            for i in range(num):
+                X_test = self.data_handler.test_df[predictor_names].iloc[i]
+                if self.scaler_handler.scale_choice != "None":
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
+                for j in range(1, lookback + 1):
+                    X_test[f"t-{j}"] = last[-j]  # type: ignore
+                to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
+                out = self.model_handler.model.predict(to_pred)
+                last = np.append(last, out)[-lookback:]
+                pred.append(out)
+
+        elif sliding == 1:
+            seasonal_last = self.lookback_handler.seasonal_last
+            for i in range(num):
+                X_test = self.data_handler.test_df[predictor_names].iloc[i]
+                if self.scaler_handler.scale_choice != "None":
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
+                for j in range(1, seasons + 1):
+                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[
+                        -j * seasonal_lookback
+                    ]  # type: ignore
+                to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
+                out = self.model_handler.model.predict(to_pred)
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                pred.append(out)
+
+        elif sliding == 2:
+            last = self.lookback_handler.last
+            seasonal_last = self.lookback_handler.seasonal_last
+            for i in range(num):
+                X_test = self.data_handler.test_df[predictor_names].iloc[i]
+                if self.scaler_handler.scale_choice != "None":
+                    X_test.iloc[:] = self.scaler_handler.feature_scaler.transform(
+                        X_test.values.reshape(1, -1)
+                    ).reshape(
+                        -1
+                    )  # type: ignore
+                for j in range(1, lookback + 1):
+                    X_test[f"t-{j}"] = last[-j]  # type: ignore
+                for j in range(1, seasons + 1):
+                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[
+                        -j * seasonal_lookback
+                    ]  # type: ignore
+                to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
+                out = self.model_handler.model.predict(to_pred)
+                last = np.append(last, out)[-lookback:]
+                seasonal_last = np.append(seasonal_last, out)[1:]
+                pred.append(out)
+
+        return np.array(pred).reshape(-1)
+
+    def forecast(self, forecast_num: int) -> bool:
+        if not self.data_handler.test_df_read:
+            return False
+
+        predictor_names = self.data_handler.predictor_names
+        label_name = self.data_handler.label_name
+
+        X_test = self.data_handler.test_df[predictor_names][:forecast_num].to_numpy()
+        y_test = (
+            self.data_handler.test_df[label_name][:forecast_num].to_numpy().reshape(-1)
+        )
+        self.y_test = y_test
+
+        if self.lookback_handler.sliding == -1:
+            if self.scaler_handler.scale_choice != "None":
+                X_test = self.scaler_handler.feature_scaler.transform(X_test)
+
+            self.pred = self.model_handler.model.predict(X_test).reshape(-1)
+        else:
+            sliding = self.lookback_handler.sliding
+            lookback = self.lookback_handler.lookback
+            seasonal_lookback = self.lookback_handler.seasonal_lookback
+            seasons = self.lookback_handler.seasons
+
+            self.pred = self.__forecast_lookback(
+                forecast_num, lookback, seasons, seasonal_lookback, sliding
+            )
+
+        if self.scaler_handler.scale_choice != "None":
+            self.pred = self.scaler_handler.label_inverse_transform(self.pred)[0]
+
+        if not self.data_handler.is_negative:
+            self.pred = self.pred.clip(0, None)
+        if self.data_handler.is_round:
+            self.pred = np.round(self.pred).astype(int)
+
+        self.loss = LossHandler.loss(self.y_test, self.pred)
+        self.result = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+
+        return True

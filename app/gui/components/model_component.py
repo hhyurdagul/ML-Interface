@@ -111,12 +111,12 @@ class ModelComponent:
         ttk.Button(model_frame, text="Create Model", command=create_model).grid(
             column=0, row=last_row + 2
         )
-        ttk.Button(
-            model_frame, text="Save Model", command=save_model
-        ).grid(column=1, row=last_row + 2, columnspan=2)
-        ttk.Button(
-            model_frame, text="Load Model", command=load_model
-        ).grid(column=3, row=last_row + 2)
+        ttk.Button(model_frame, text="Save Model", command=save_model).grid(
+            column=1, row=last_row + 2, columnspan=2
+        )
+        ttk.Button(model_frame, text="Load Model", command=load_model).grid(
+            column=3, row=last_row + 2
+        )
 
     def check_errors(self) -> bool:
         if self.grid_option_var.get() and self.interval_var.get() < 1:
@@ -129,12 +129,30 @@ class ModelComponent:
 
         return True
 
-    def get_model_params(self):
+    def get_model_params(self) -> dict[str, Any]:
         return {
             "n_estimators": self.parameters[0].get(),
             "max_depth": self.parameters[1].get(),
             "learning_rate": self.parameters[2].get(),
         }
+
+    def get_params(self) -> dict[str, Any]:
+        return self.model_handler.model_params
+
+    def set_params(self, params: dict[str, Any]) -> None:
+        self.parameters[0].set(params["n_estimators"])
+        self.parameters[1].set(params["max_depth"])
+        self.parameters[2].set(params["learning_rate"])
+
+    def save_files(self, path: str) -> None:
+        self.model_handler.save_files(path)
+        
+
+    def load_files(self, path: str) -> bool:
+        self.model_handler.load_model(path)
+        if not self.model_handler.model_created:
+            return popupmsg("Model file not found")
+        return True
 
     def get_grid_params(self):
         return {

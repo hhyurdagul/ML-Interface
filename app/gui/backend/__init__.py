@@ -5,4 +5,5 @@ from .handlers import (
     LookbackHandler,
     ModelHandler,
     DataHandler,
+    ForecastHandler
 )

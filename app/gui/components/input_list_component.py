@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
-from typing import Union, List
+from typing import Union, List, Any
 from .utils import popupmsg
 from ..backend import DataHandler
 
@@ -65,11 +65,26 @@ class InputListComponent:
 
         return True
 
-    def get_params(self) -> dict[str, Union[list[str],str]]:
+    def get_params(self) -> dict[str, Union[list[str], str]]:
         return {
             "predictor_names": self.get_predictor_names(),
             "label_name": self.get_target_name(),
+            "is_round": self.data_handler.is_round,
+            "is_negative": self.data_handler.is_negative,
         }
+
+    def set_params(self, params: dict[str, Any]):
+        self.data_handler.predictor_names = params.get("predictor_names", [])
+        self.data_handler.label_name = params.get("label_name", "")
+
+        self.data_handler.is_round = params.get("is_round", True)
+        self.data_handler.is_negative = params.get("is_negative", False)
+
+        names = "\n".join(self.data_handler.predictor_names)
+        msg = (
+            f"Predictor names are {names}\nLabel name is {self.data_handler.label_name}"
+        )
+        popupmsg(msg)
 
     def get_predictor_names(self) -> List[str]:
         return list(self.predictor_list.get(0, tk.END))
@@ -120,4 +135,3 @@ class InputListComponent:
 
         for column in columns:
             self.input_list.insert(tk.END, column)
-
