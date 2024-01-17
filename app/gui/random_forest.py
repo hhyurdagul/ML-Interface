@@ -606,7 +606,7 @@ class RandomForest:
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
         if self.validation_option.get() == 1:
-            self.random_percent_var.set(params["random_percent", 80])
+            self.random_percent_var.set(params.get("random_percent", 80))
         elif self.validation_option.get() == 2:
             self.cross_val_var.set(params.get("k_fold_cv", 5))
         self.lookback_option.set(params.get("lookback_option", 0))
