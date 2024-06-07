@@ -18,6 +18,7 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
 from .helpers import loss, skloss, popupmsg
+from backend.data import scale_data
 
 
 class RandomForest:
@@ -57,9 +58,9 @@ class RandomForest:
             get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
         ).grid(column=1, row=3)
 
-        ttk.Button(get_train_set_frame, text="Add Target", command=self.add_target).grid(
-            column=2, row=2
-        )
+        ttk.Button(
+            get_train_set_frame, text="Add Target", command=self.add_target
+        ).grid(column=2, row=2)
         ttk.Button(
             get_train_set_frame, text="Eject Target", command=self.eject_target
         ).grid(column=2, row=3)
@@ -334,7 +335,9 @@ class RandomForest:
             test_model_main_frame, text="Test Model", command=self.forecast
         ).grid(column=2, row=3)
         ttk.Button(
-            test_model_main_frame, text="Actual vs Forecast Graph", command=self.show_result_graph
+            test_model_main_frame,
+            text="Actual vs Forecast Graph",
+            command=self.show_result_graph,
         ).grid(column=0, row=4, columnspan=3)
 
         ## Test Model Metrics
@@ -649,8 +652,9 @@ class RandomForest:
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def __get_lookback(self, X, y, lookback=0, seasons=0, 
-                     seasonal_lookback=0, sliding=-1):
+    def __get_lookback(
+        self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
+    ):
         if sliding == 0:
             for i in range(1, lookback + 1):
                 X[f"t-{i}"] = y.shift(i)
@@ -689,7 +693,6 @@ class RandomForest:
         self.predictor_names = list(self.predictor_list.get(0, tk.END))
         self.label_name = self.target_list.get(0)
 
-        self.df: pd.DataFrame
         X = self.df[self.predictor_names].copy()
         y = self.df[self.label_name].copy()
 
@@ -698,23 +701,7 @@ class RandomForest:
         if any(y < 0):
             self.is_negative = True
 
-        if scale_choice == "StandardScaler":
-            self.feature_scaler = StandardScaler()
-            self.label_scaler = StandardScaler()
-
-            X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(
-                y.values.reshape(-1, 1)
-            ).reshape(-1)
-
-        elif scale_choice == "MinMaxScaler":
-            self.feature_scaler = MinMaxScaler()
-            self.label_scaler = MinMaxScaler()
-
-            X.iloc[:] = self.feature_scaler.fit_transform(X)
-            y.iloc[:] = self.label_scaler.fit_transform(
-                y.values.reshape(-1, 1)
-            ).reshape(-1)
+        X, y, self.feature_scaler, self.label_scaler = scale_data(X, y, scale_choice)
 
         try:
             lookback = self.lookback_val_var.get()
@@ -763,9 +750,11 @@ class RandomForest:
                     pred = model.predict(X).reshape(-1)
                     if self.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
-                                pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            pred.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                         y = self.label_scaler.inverse_transform(
-                                y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            y.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -782,9 +771,11 @@ class RandomForest:
                     pred = model.predict(X_test).reshape(-1)
                     if self.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
-                                pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            pred.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                         y_test = self.label_scaler.inverse_transform(
-                                y_test.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            y_test.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -861,9 +852,11 @@ class RandomForest:
                     pred = regressor.predict(X)
                     if self.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
-                                pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            pred.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                         y = self.label_scaler.inverse_transform(
-                                y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            y.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -880,9 +873,11 @@ class RandomForest:
                     pred = regressor.predict(X_test)
                     if self.scale_var.get() != "None":
                         pred = self.label_scaler.inverse_transform(
-                                pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            pred.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                         y_test = self.label_scaler.inverse_transform(
-                                y_test.reshape(-1, 1)).reshape(-1)  # type: ignore
+                            y_test.reshape(-1, 1)
+                        ).reshape(-1)  # type: ignore
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -908,7 +903,8 @@ class RandomForest:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                            X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(-1)  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
@@ -922,9 +918,12 @@ class RandomForest:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                            X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(-1)  # type: ignore
                 for j in range(1, seasons + 1):
-                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[-j * seasonal_lookback]  # type: ignore
+                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[
+                        -j * seasonal_lookback
+                    ]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
                 out = self.model.predict(to_pred)
                 seasonal_last = np.append(seasonal_last, out)[1:]
@@ -937,11 +936,14 @@ class RandomForest:
                 X_test = self.test_df[self.predictor_names].iloc[i]
                 if self.scale_var.get() != "None":
                     X_test.iloc[:] = self.feature_scaler.transform(
-                            X_test.values.reshape(1, -1)).reshape(-1)  # type: ignore
+                        X_test.values.reshape(1, -1)
+                    ).reshape(-1)  # type: ignore
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 for j in range(1, seasons + 1):
-                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[-j * seasonal_lookback]  # type: ignore
+                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[
+                        -j * seasonal_lookback
+                    ]  # type: ignore
                 to_pred = X_test.to_numpy().reshape(1, -1)  # type: ignore
                 out = self.model.predict(to_pred)
                 last = np.append(last, out)[-lookback:]
@@ -989,7 +991,8 @@ class RandomForest:
 
         if self.scale_var.get() != "None":
             self.pred = self.label_scaler.inverse_transform(
-                    self.pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+                self.pred.reshape(-1, 1)
+            ).reshape(-1)  # type: ignore
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
@@ -1019,4 +1022,3 @@ class RandomForest:
         plt.plot(pred)
         plt.legend(["test", "pred"], loc="upper left")
         plt.show()
-
