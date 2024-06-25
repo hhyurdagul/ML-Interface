@@ -9,11 +9,15 @@ class Lookback:
         seasonal_lookback_count: int,
         seasonal_lookback_period: int,
     ):
-        xnor = lambda x, y: (x and y) or (not x and not y)
-
-        assert xnor(
-            seasonal_lookback_count > 0, seasonal_lookback_period > 0
-        ), "Error"
+        match (seasonal_lookback_count, seasonal_lookback_period):
+            case x, y if x > 0 and y <= 0:
+                raise ValueError(
+                    "Seasonal lookback count and period both have to be zero or greater than zero"
+                )
+            case x, y if x <= 0 and y > 0:
+                raise ValueError(
+                    "Seasonal lookback count and period both have to be zero or greater than zero"
+                )
 
         self.lookback_count = lookback_count
         self.seasonal_lookback_count = seasonal_lookback_count
@@ -54,8 +58,7 @@ X = np.random.rand(15, 4).round(2)
 y = np.arange(15)
 
 
-lookback = Lookback(9, 6, 2)
+lookback = Lookback(9, 2, 2)
 X, y = lookback.get_lookback(X, y)
 print(X)
 print(y)
-

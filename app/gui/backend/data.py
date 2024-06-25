@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler  # type: ignore
+from sklearn.preprocessing import MinMaxScaler, StandardScaler  # type: ignore
+
 from .utils import pickle_dump, pickle_load
+
 
 class DataScaler:
     def __init__(self, scaler_choice: str):
@@ -14,7 +16,6 @@ class DataScaler:
             self.label_scaler = MinMaxScaler()
         self.fitted_X = False
         self.fitted_y = False
-        
 
     def __fit_X(self, X: pd.DataFrame):
         if not self.fitted_X:
@@ -57,14 +58,14 @@ class DataScaler:
 
     def save_scalers(self, path: str) -> None:
         if self.scaler_choice == "None":
-            return 
+            return
         pickle_dump(self.feature_scaler, path + "/feature_scaler.pickle")
         pickle_dump(self.label_scaler, path + "/label_scaler.pickle")
         # NOTE: Migration check the scaler paths were ending with .pkl not .pickle
 
     def load_scalers(self, path: str) -> None:
         if self.scaler_choice == "None":
-            return 
+            return
         self.feature_scaler = pickle_load(path + "/feature_scaler.pickle")
         self.label_scaler = pickle_load(path + "/label_scaler.pickle")
         self.fitted_X = True

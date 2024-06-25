@@ -17,8 +17,8 @@ def round_wrapper(func):
 
 class RegressionMetrics:
     def __init__(self, y_true: np.ndarray, y_pred: np.ndarray):
-        assert y_true.ndim == 1, "y_true must be a 1D array"
-        assert y_pred.ndim == 1, "y_pred must be a 1D array"
+        if y_true.ndim != 1 or y_pred.ndim != 1:
+            raise ValueError("y_true and y_pred must be 1D arrays")
 
         self.y_true = y_true
         self.y_pred = y_pred

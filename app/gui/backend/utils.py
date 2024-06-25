@@ -12,14 +12,15 @@ def shift_array(array: np.ndarray, n: int) -> np.ndarray:
         return array
 
     return np.concatenate((np.full(n, np.nan), array[:-n]))
-
+        
+def xnor(x, y): (x and y) or (not x and not y)
 
 def pickle_dump(obj: Any, file: str) -> None:
     with open(file, "wb") as f:
         pickle.dump(obj, f)
 
 
-def pickle_load(file: str) -> None:
+def pickle_load(file: str) -> Any:
     with open(file, "rb") as f:
         return pickle.load(f)
 
