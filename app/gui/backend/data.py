@@ -1,16 +1,7 @@
-import pickle
 import numpy as np
 import pandas as pd
-from typing import Any
 from sklearn.preprocessing import StandardScaler, MinMaxScaler  # type: ignore
-
-def pickle_dump(obj: Any, file: str):
-    with open(file, "wb") as f:
-        pickle.dump(obj, f)
-
-def pickle_load(file: str):
-    with open(file, "rb") as f:
-        return pickle.load(f)
+from .utils import pickle_dump, pickle_load
 
 class DataScaler:
     def __init__(self, scaler_choice: str):
