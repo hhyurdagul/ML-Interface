@@ -1,8 +1,8 @@
 import pickle
 import numpy as np
 import pandas as pd
-from typing import Tuple, TypeAlias, Any
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, FunctionTransformer
+from typing import Any
+from sklearn.preprocessing import StandardScaler, MinMaxScaler  # type: ignore
 
 def pickle_dump(obj: Any, file: str):
     with open(file, "wb") as f:
@@ -23,6 +23,7 @@ class DataScaler:
             self.label_scaler = MinMaxScaler()
         self.fitted_X = False
         self.fitted_y = False
+        
 
     def __fit_X(self, X: pd.DataFrame):
         if not self.fitted_X:
@@ -77,4 +78,3 @@ class DataScaler:
         self.label_scaler = pickle_load(path + "/label_scaler.pickle")
         self.fitted_X = True
         self.fitted_y = True
-

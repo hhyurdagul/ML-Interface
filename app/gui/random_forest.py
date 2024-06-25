@@ -680,7 +680,7 @@ class RandomForest:
         self.is_round = y.dtype in (int, np.intc, np.int64)
         self.is_negative = any(y < 0)
 
-        X, y = self.data_scaler.scale(X), self.data_scaler.scale(y)
+        X, y = self.data_scaler.scale_X(X), self.data_scaler.scale_y(y)
 
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()
