@@ -674,13 +674,14 @@ class RandomForest:
         self.predictor_names = list(self.predictor_list.get(0, tk.END))
         self.label_name = self.target_list.get(0)
 
-        X = self.df[self.predictor_names].copy()
-        y = self.df[self.label_name].copy()
+        X = self.df[self.predictor_names].to_numpy(copy=True)
+        y = self.df[self.label_name].to_numpy(copy=True)
+
 
         self.is_round = y.dtype in (int, np.intc, np.int64)
         self.is_negative = any(y < 0)
 
-        X, y = self.data_scaler.scale_X(X), self.data_scaler.scale_y(y)
+        X, y = self.data_scaler.scale(X, y)
 
         lookback_option = self.lookback_option.get()
         seasonal_lookback_option = self.seasonal_lookback_option.get()

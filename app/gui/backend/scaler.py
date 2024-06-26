@@ -1,15 +1,31 @@
+from dataclasses import dataclass, asdict
 import numpy as np
+
+
+@dataclass
+class ScalerParams:
+    min: np.ndarray
+    max: np.ndarray
+    scale: np.ndarray
+    min_scaled: np.ndarray
+    mean: np.ndarray
+    std: np.ndarray
+
+    def to_dict(self) -> dict[str, list[float]]:
+        data: dict[str, np.ndarray] = asdict(self)
+        return {i: j.tolist() for i, j in data.items()}
 
 
 class ScalerBase:
     def fit(self, data: np.ndarray) -> "ScalerBase":
-        self.min = np.min(data, axis=0)
-        self.max = np.max(data, axis=0)
-        self.scale = 1 / (self.max - self.min)
-        self.min_scaled = -self.min * self.scale
-
-        self.mean = np.mean(data, axis=0)
-        self.std = np.std(data, axis=0)
+        self.params = ScalerParams(
+            np.min(data, axis=0),
+            np.max(data, axis=0),
+            1 / (np.max(data, axis=0) - np.min(data, axis=0)),
+            -np.min(data, axis=0) * 1 / (np.max(data, axis=0) - np.min(data, axis=0)),
+            np.mean(data, axis=0),
+            np.std(data, axis=0),
+        )
         return self
 
     def transform(self, data: np.ndarray) -> np.ndarray:
@@ -22,45 +38,33 @@ class ScalerBase:
         pass
 
     def get_params(self) -> dict[str, list[float]]:
-        return {
-            "min": self.min.tolist(),
-            "max": self.max.tolist(),
-            "scale": self.scale.tolist(),
-            "min_scaled": self.min_scaled.tolist(),
-            "mean": self.mean.tolist(),
-            "std": self.std.tolist(),
-        }
+        return self.params.to_dict()
 
     def set_params(self, params: dict[str, list[float]]) -> "ScalerBase":
-        self.min = np.array(params["min"])
-        self.max = np.array(params["max"])
-        self.scale = np.array(params["scale"])
-        self.min_scaled = np.array(params["min_scaled"])
-
-        self.mean = np.array(params["mean"])
-        self.std = np.array(params["std"])
+        data = {i: np.array(j) for i, j in params.items()}
+        self.params = ScalerParams(**data)
         return self
+
 
 class StandardScaler(ScalerBase):
     def transform(self, data: np.ndarray) -> np.ndarray:
-        if self.mean is None or self.std is None:
+        if self.params.mean is None or self.params.std is None:
             raise ValueError("Fit the scaler before transforming data")
-        return (data - self.mean) / self.std
-    
+        return (data - self.params.mean) / self.params.std
+
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
-        if self.mean is None or self.std is None:
+        if self.params.mean is None or self.params.std is None:
             raise ValueError("Fit the scaler before inverse transforming data")
-        return data * self.std + self.mean
+        return data * self.params.std + self.params.mean
 
 
 class MinMaxScaler(ScalerBase):
     def transform(self, data: np.ndarray) -> np.ndarray:
-        if self.min is None or self.max is None:
+        if self.params.min is None or self.params.max is None:
             raise ValueError("Fit the scaler before transforming data")
-        return data * self.scale + self.min_scaled
+        return data * self.params.scale + self.params.min_scaled
 
     def inverse_transform(self, data: np.ndarray) -> np.ndarray:
-        if self.min is None or self.max is None:
+        if self.params.min is None or self.params.max is None:
             raise ValueError("Fit the scaler before inverse transforming data")
-        return (data - self.min_scaled) / self.scale
-
+        return (data - self.params.min_scaled) / self.params.scale
