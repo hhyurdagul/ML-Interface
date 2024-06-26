@@ -567,11 +567,14 @@ class RandomForest:
             self.seasonal_val_var.get() if self.seasonal_lookback_option.get() else None
         )
         params["sliding"] = self.sliding
-        params["scale_type"] = self.scale_var.get()
+
+        params["scaler"] = {
+            "type": self.scale_var.get(),
+            "params": self.data_scaler.get_params(),
+        }
 
         os.mkdir(path)
         dump(self.model, path + "/model.joblib")
-        self.data_scaler.save_scalers(path)
         if self.lookback_option.get() == 1:
             with open(path + "/last_values.npy", "wb") as outfile:
                 np.save(outfile, self.last)
@@ -625,8 +628,8 @@ class RandomForest:
             except Exception:
                 pass
 
-        self.scale_var.set(params.get("scale_type", "None"))
-        self.data_scaler.load_scalers(path)
+        self.scale_var.set(params.get("scaler", {"type": "None"}).get("type"))
+        self.data_scaler.set_params(params.get("scaler", {"params": {}}).get("params"))
 
         self.parameters[0].set(params.get("n_estimators", 100))
         self.parameters[1].set(params.get("max_depth", 5))
@@ -676,7 +679,6 @@ class RandomForest:
 
         X = self.df[self.predictor_names].to_numpy(copy=True)
         y = self.df[self.label_name].to_numpy(copy=True)
-
 
         self.is_round = y.dtype in (int, np.intc, np.int64)
         self.is_negative = any(y < 0)
@@ -732,12 +734,10 @@ class RandomForest:
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(
-                            pred.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
-                        y = self.data_scaler.unscale_y(
-                            y.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
+                            -1
+                        )  # type: ignore
+                        y = self.data_scaler.unscale_y(y.reshape(-1, 1)).reshape(-1)  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -753,9 +753,9 @@ class RandomForest:
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(
-                            pred.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
+                            -1
+                        )  # type: ignore
                         y_test = self.data_scaler.unscale_y(
                             y_test.reshape(-1, 1)
                         ).reshape(-1)  # type: ignore
@@ -834,12 +834,10 @@ class RandomForest:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(
-                            pred.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
-                        y = self.data_scaler.unscale_y(
-                            y.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
+                            -1
+                        )  # type: ignore
+                        y = self.data_scaler.unscale_y(y.reshape(-1, 1)).reshape(-1)  # type: ignore
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -855,9 +853,9 @@ class RandomForest:
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(
-                            pred.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
+                            -1
+                        )  # type: ignore
                         y_test = self.data_scaler.unscale_y(
                             y_test.reshape(-1, 1)
                         ).reshape(-1)  # type: ignore
@@ -963,9 +961,7 @@ class RandomForest:
             )
 
         if self.scale_var.get() != "None":
-            self.pred = self.data_scaler.unscale_y(
-                self.pred.reshape(-1, 1)
-            ).reshape(-1)  # type: ignore
+            self.pred = self.data_scaler.unscale_y(self.pred.reshape(-1, 1)).reshape(-1)  # type: ignore
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)

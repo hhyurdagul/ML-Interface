@@ -1,5 +1,5 @@
 import numpy as np
-from app.backend.scaler import StandardScaler, MinMaxScaler, ScalerBase
+from app.gui.backend.scalers import MinMaxScaler, StandardScaler, ScalerBase
 
 
 class DataScaler:
@@ -51,25 +51,14 @@ class DataScaler:
 
         return y
 
-    def save_scaler(self) -> dict[str, dict[str, list[float]]]:
+    def get_params(self) -> dict[str, dict[str, list[float]]]:
         data = {
             "feature_scaler": self.feature_scaler.get_params(), 
             "label_scaler": self.label_scaler.get_params()
         }
         return data
 
-    def load_scaler(self, data: dict[str, dict[str, list[float]]]):
+    def set_params(self, data: dict[str, dict[str, list[float]]]):
         self.feature_scaler.set_params(data["feature_scaler"])
         self.label_scaler.set_params(data["label_scaler"])
-
-
-
-X = np.random.rand(15, 4).round(2)
-y = np.arange(15)
-
-scaler = DataScaler("MinMaxScaler")
-X, y = scaler.scale(X, y)
-
-print(y)
-
 
