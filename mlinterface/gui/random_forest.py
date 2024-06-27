@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-from pandastable import Table
+# from pandastable import Table
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ import json
 
 from .helpers import loss, skloss, popupmsg
 from backend.data import DataScaler
+from components.data_table import DataTable
 
 from typing import Tuple
 
@@ -734,10 +735,8 @@ class RandomForest:
                 if do_forecast == 0:
                     pred = model.predict(X).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
-                            -1
-                        )  # type: ignore
-                        y = self.data_scaler.unscale_y(y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.inverse_scale(pred)
+                        y = self.data_scaler.inverse_scale(y)
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -753,12 +752,8 @@ class RandomForest:
                     model.fit(X_train, y_train)
                     pred = model.predict(X_test).reshape(-1)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
-                            -1
-                        )  # type: ignore
-                        y_test = self.data_scaler.unscale_y(
-                            y_test.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.inverse_scale(pred)
+                        y = self.data_scaler.inverse_scale(y)
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -834,10 +829,8 @@ class RandomForest:
                 if do_forecast == 0:
                     pred = regressor.predict(X)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
-                            -1
-                        )  # type: ignore
-                        y = self.data_scaler.unscale_y(y.reshape(-1, 1)).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.inverse_scale(pred)
+                        y = self.data_scaler.inverse_scale(y)
                     losses = loss(y, pred)
                     self.y_test = y
                     self.pred = pred
@@ -853,12 +846,8 @@ class RandomForest:
                     regressor.fit(X_train, y_train)
                     pred = regressor.predict(X_test)
                     if self.scale_var.get() != "None":
-                        pred = self.data_scaler.unscale_y(pred.reshape(-1, 1)).reshape(
-                            -1
-                        )  # type: ignore
-                        y_test = self.data_scaler.unscale_y(
-                            y_test.reshape(-1, 1)
-                        ).reshape(-1)  # type: ignore
+                        pred = self.data_scaler.inverse_scale(pred)
+                        y = self.data_scaler.inverse_scale(y)
                     losses = loss(y_test, pred)
                     self.y_test = y_test
                     self.pred = pred
@@ -879,10 +868,11 @@ class RandomForest:
         pred = []
         if sliding == 0:
             last = self.last
+            X_test, _ = self.data_scaler.scale(
+                self.test_df[self.predictor_names].iloc[:num],
+                np.ones(num)
+            )
             for i in range(num):
-                X_test = self.data_scaler.scale_X(
-                    self.test_df[self.predictor_names].iloc[[i]]
-                )
                 for j in range(1, lookback + 1):
                     X_test[f"t-{j}"] = last[-j]  # type: ignore
                 out = self.model.predict(X_test)
@@ -974,12 +964,17 @@ class RandomForest:
 
     def show_result_values(self):
         try:
-            df = pd.DataFrame({"Test": self.y_test, "Predict": self.pred})
+            data = list(zip(self.y_test.tolist(), self.pred.tolist()))
+            df = pd.DataFrame(data, columns=["Real", "Predict"])
         except Exception:
             return
         top = tk.Toplevel(self.root)
-        pt = Table(top, dataframe=df, editable=False)
-        pt.show()
+        DataTable(
+            top,
+            data=data,
+            save_func=lambda file_path: df.to_excel(file_path, index=False),
+        )
+        top.mainloop()
 
     def show_result_graph(self):
         y_test = self.y_test

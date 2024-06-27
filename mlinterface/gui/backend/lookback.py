@@ -23,8 +23,8 @@ class Lookback:
         self.seasonal_lookback_count = seasonal_lookback_count
         self.seasonal_lookback_period = seasonal_lookback_period
 
-        self.lookback_index = list(range(1, lookback_count + 1, 1))
-        self.seasonal_lookback_index = list(
+        lookback_index = list(range(1, lookback_count + 1, 1))
+        seasonal_lookback_index = list(
             range(
                 seasonal_lookback_period,
                 (seasonal_lookback_count + 1) * seasonal_lookback_period,
@@ -33,7 +33,7 @@ class Lookback:
         )
 
         self.merged_index = list(
-            set(self.lookback_index + self.seasonal_lookback_index)
+            set(lookback_index + seasonal_lookback_index)
         )
 
     def __get_lookback_stack(self, y: np.ndarray, n):
@@ -42,7 +42,7 @@ class Lookback:
             stack = np.hstack((stack, shift_array(y, i).reshape(-1, 1)))
         return stack
 
-    def get_lookback(self, X: np.ndarray, y: np.ndarray):
+    def get_lookback(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if self.merged_index:
             stack = self.__get_lookback_stack(y, max(self.merged_index))
             stack = stack[:, self.merged_index]
@@ -53,12 +53,6 @@ class Lookback:
 
         return X, y
 
+    def get_last_values(self):
+        return 
 
-X = np.random.rand(15, 4).round(2)
-y = np.arange(15)
-
-
-lookback = Lookback(9, 2, 2)
-X, y = lookback.get_lookback(X, y)
-print(X)
-print(y)

@@ -1,5 +1,5 @@
 import numpy as np
-from app.gui.backend.scalers import MinMaxScaler, StandardScaler, ScalerBase
+from .gui.backend.scalers import MinMaxScaler, StandardScaler, ScalerBase
 
 
 class DataScaler:

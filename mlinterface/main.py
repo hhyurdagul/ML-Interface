@@ -1,11 +1,11 @@
 # from gui.timeseries import TimeSeries
 # from gui.mlp import MultiLayerPerceptron
-from gui.supportvectormachine import SupportVectorMachine
+# from gui.supportvectormachine import SupportVectorMachine
 from gui.random_forest import RandomForest
-from gui.lgbm import LGBM
-from gui.catboost_arch import CatBoost
-from gui.ridge import Ridge
-from gui.linear_regression import LinearModel
+# from gui.lgbm import LGBM
+# from gui.catboost_arch import CatBoost
+# from gui.ridge import Ridge
+# from gui.linear_regression import LinearModel
 # from gui.generalregression import GeneralRegressionNeuralNetwork
 # from gui.random_walk import RandomWalk
 # from gui.sarima import SARIMA
@@ -35,23 +35,23 @@ class GUI:
         # mlp = MultiLayerPerceptron()
         # self.add(mlp, "MLP")
         
-        svm = SupportVectorMachine()
-        self.add(svm, "SVM")
+        # svm = SupportVectorMachine()
+        # self.add(svm, "SVM")
         
         rf = RandomForest()
         self.add(rf, "Random Forest")
         
-        lgbm = LGBM()
-        self.add(lgbm, "LightGBM")
+        # lgbm = LGBM()
+        # self.add(lgbm, "LightGBM")
         
-        catboost = CatBoost()
-        self.add(catboost, "CatBoost")
+        # catboost = CatBoost()
+        # self.add(catboost, "CatBoost")
         
-        ridge = Ridge()
-        self.add(ridge, "Ridge Regression")
+        # ridge = Ridge()
+        # self.add(ridge, "Ridge Regression")
         
-        lr = LinearModel()
-        self.add(lr, "Linear Regression")
+        # lr = LinearModel()
+        # self.add(lr, "Linear Regression")
         
         # grnn = GeneralRegressionNeuralNetwork()
         # self.add(grnn, "GRNN")
