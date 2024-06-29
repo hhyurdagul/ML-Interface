@@ -1,5 +1,6 @@
 import numpy as np
-from .gui.backend.scalers import MinMaxScaler, StandardScaler, ScalerBase
+from mlinterface.gui.backend.scalers import MinMaxScaler, StandardScaler, ScalerBase
+from mlinterface.gui.backend.utils import shift_array
 
 
 class DataScaler:
@@ -45,7 +46,7 @@ class DataScaler:
 
         return X, y
 
-    def inverse_scale(self, y):
+    def inverse_scale(self, y: np.array) -> np.array:
         if self.scale_y:
             y = self.label_scaler.inverse_transform(y.reshape(-1, 1)).ravel()
 
@@ -61,4 +62,70 @@ class DataScaler:
     def set_params(self, data: dict[str, dict[str, list[float]]]):
         self.feature_scaler.set_params(data["feature_scaler"])
         self.label_scaler.set_params(data["label_scaler"])
+
+
+class LookbackHandler:
+    def __init__(
+        self,
+        lookback_count: int,
+        seasonal_lookback_count: int,
+        seasonal_lookback_period: int,
+    ):
+        match (seasonal_lookback_count, seasonal_lookback_period):
+            case x, y if x > 0 and y <= 0:
+                raise ValueError(
+                    "Seasonal lookback count and period both have to be zero or greater than zero"
+                )
+            case x, y if x <= 0 and y > 0:
+                raise ValueError(
+                    "Seasonal lookback count and period both have to be zero or greater than zero"
+                )
+
+        self.lookback_count = lookback_count
+        self.seasonal_lookback_count = seasonal_lookback_count
+        self.seasonal_lookback_period = seasonal_lookback_period
+
+        lookback_index = list(range(1, lookback_count + 1, 1))
+        seasonal_lookback_index = list(
+            range(
+                seasonal_lookback_period,
+                (seasonal_lookback_count + 1) * seasonal_lookback_period,
+                max(seasonal_lookback_period, 1),
+            )
+        )
+
+        self.merged_index = list(
+            set(lookback_index + seasonal_lookback_index)
+        )
+
+    def __get_lookback_stack(self, y: np.ndarray, n):
+        stack = y.copy().reshape(-1, 1)
+        for i in range(1, n + 1):
+            stack = np.hstack((stack, shift_array(y, i).reshape(-1, 1)))
+        return stack
+
+    def get_lookback(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if self.merged_index:
+            stack = self.__get_lookback_stack(y, max(self.merged_index))
+            stack = stack[:, self.merged_index]
+            X = np.concatenate((X, stack), axis=1)
+
+            X = X[~np.isnan(X).any(axis=1)]
+            y = y[y.shape[0] - X.shape[0] :]
+            self.last = y[-max(self.merged_index):]
+
+        return X, y
+
+    def append_lookback(self, X: np.ndarray) -> np.ndarray:
+        if self.merged_index:
+            lookback = self.last[[-i for i in self.merged_index]]
+            X = np.concatenate((X.copy(), lookback))
+        return X.reshape(1, -1)
+
+    def update_last(self, value: int) -> None:
+        if self.merged_index:
+            self.last = np.append(self.last, value)[1:]
+
+
+
 

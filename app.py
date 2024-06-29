@@ -1,7 +1,8 @@
 # from gui.timeseries import TimeSeries
+
 # from gui.mlp import MultiLayerPerceptron
 # from gui.supportvectormachine import SupportVectorMachine
-from gui.random_forest import RandomForest
+from mlinterface.gui.random_forest import RandomForest
 # from gui.lgbm import LGBM
 # from gui.catboost_arch import CatBoost
 # from gui.ridge import Ridge
@@ -86,5 +87,6 @@ class GUI:
         self.gui.mainloop()
 
 
-s = GUI()
-s.start()
+if __name__ == "__main__":
+    GUI().start()
+    

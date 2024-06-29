@@ -1,5 +1,5 @@
 import numpy as np
-from utils import shift_array
+from mlinterface.gui.backend.utils import shift_array
 
 
 class Lookback:
@@ -50,9 +50,20 @@ class Lookback:
 
             X = X[~np.isnan(X).any(axis=1)]
             y = y[y.shape[0] - X.shape[0] :]
+            self.last = y[-max(self.merged_index):]
 
         return X, y
 
-    def get_last_values(self):
-        return 
+    def append_lookback(self, X: np.ndarray) -> np.ndarray:
+        if self.merged_index:
+            lookback = self.last[[-i for i in self.merged_index]]
+            X = np.concatenate((X, lookback)).reshape(1, -1)
+        return X
+
+    def update_last(self, value: int) -> None:
+        if self.merged_index:
+            self.last = np.append(self.last, value)[1:]
+
+
+
 

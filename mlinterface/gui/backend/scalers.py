@@ -34,8 +34,8 @@ class ScalerBase:
     def fit_transform(self, data: np.ndarray) -> np.ndarray:
         return self.fit(data).transform(data)
 
-    def inverse_transform(self, data):
-        pass
+    def inverse_transform(self, data: np.ndarray) -> np.ndarray:
+        return data
 
     def get_params(self) -> dict[str, list[float]]:
         return self.params.to_dict()

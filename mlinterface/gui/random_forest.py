@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-# from pandastable import Table
 
 import numpy as np
 import pandas as pd
@@ -15,8 +14,9 @@ import os
 import json
 
 from .helpers import loss, skloss, popupmsg
-from backend.data import DataScaler
-from components.data_table import DataTable
+from mlinterface.gui.backend.data import DataScaler, LookbackHandler
+from mlinterface.gui.components.data_table import DataTable
+from mlinterface.gui.components.variables import GenericVar
 
 from typing import Tuple
 
@@ -71,7 +71,7 @@ class RandomForest:
         )
         model_validation_frame.grid(column=0, row=1)
 
-        self.do_forecast_option = tk.IntVar(value=0)
+        self.do_forecast_option = GenericVar(value=0)
         tk.Checkbutton(
             model_validation_frame,
             text="Do Forecast",
@@ -81,9 +81,9 @@ class RandomForest:
             command=self.__open_other_entries,
         ).grid(column=0, row=0, columnspan=2)
 
-        self.validation_option = tk.IntVar(value=0)
-        self.random_percent_var = tk.IntVar(value=70)
-        self.cross_val_var = tk.IntVar(value=5)
+        self.validation_option = GenericVar(value=0)
+        self.random_percent_var = GenericVar(value=70)
+        self.cross_val_var = GenericVar(value=5)
         tk.Radiobutton(
             model_validation_frame,
             text="No validation, use all data rows",
@@ -129,8 +129,8 @@ class RandomForest:
         )
         customize_train_set_frame.grid(column=0, row=2)
 
-        self.lookback_option = tk.IntVar(value=0)
-        self.lookback_val_var = tk.IntVar(value="")  # type: ignore
+        self.lookback_option = GenericVar(value=0)
+        self.lookback_val_var = GenericVar(value="")  # type: ignore
         tk.Checkbutton(
             customize_train_set_frame,
             text="Lookback",
@@ -147,9 +147,9 @@ class RandomForest:
         )
         self.lookback_entry.grid(column=1, row=0)
 
-        self.seasonal_lookback_option = tk.IntVar(value=0)
-        self.seasonal_period_var = tk.IntVar(value="")  # type: ignore
-        self.seasonal_val_var = tk.IntVar(value="")  # type: ignore
+        self.seasonal_lookback_option = GenericVar(value=0)
+        self.seasonal_val_var = GenericVar(value="")
+        self.seasonal_period_var = GenericVar(value="")
         tk.Checkbutton(
             customize_train_set_frame,
             text="Periodic Lookback",
@@ -194,7 +194,7 @@ class RandomForest:
         )
         parameter_optimization_frame.grid(column=0, row=2)
 
-        self.grid_option_var = tk.IntVar(value=0)
+        self.grid_option_var = GenericVar(value=0)
         tk.Checkbutton(
             parameter_optimization_frame,
             text="Do grid search for optimal parameters",
@@ -204,7 +204,7 @@ class RandomForest:
             command=self.__open_entries,
         ).grid(column=0, row=0, columnspan=3)
 
-        self.interval_var = tk.IntVar(value=3)
+        self.interval_var = GenericVar(value=3)
         ttk.Label(parameter_optimization_frame, text="Interval:").grid(column=0, row=1)
         self.interval_entry = ttk.Entry(
             parameter_optimization_frame,
@@ -214,8 +214,8 @@ class RandomForest:
         )
         self.interval_entry.grid(column=1, row=1, pady=2)
 
-        self.gs_cross_val_option = tk.IntVar(value=0)
-        self.gs_cross_val_var = tk.IntVar(value=5)
+        self.gs_cross_val_option = GenericVar(value=0)
+        self.gs_cross_val_var = GenericVar(value=5)
         tk.Checkbutton(
             parameter_optimization_frame,
             text="Cross validate; folds:",
@@ -243,16 +243,16 @@ class RandomForest:
             "Min Samples Leaf",
         ]
         self.parameters = [
-            tk.IntVar(value=100),
-            tk.IntVar(value=100),
-            tk.IntVar(value=2),
-            tk.IntVar(value=1),
+            GenericVar(value=100),
+            GenericVar(value=100),
+            GenericVar(value=2),
+            GenericVar(value=1),
         ]
         self.optimization_parameters = [
-            [tk.IntVar(value=75), tk.IntVar(value=150)],
-            [tk.IntVar(value=5), tk.IntVar(value=15)],
-            [tk.IntVar(value=2), tk.IntVar(value=4)],
-            [tk.IntVar(value=1), tk.IntVar(value=4)],
+            [GenericVar(value=75), GenericVar(value=150)],
+            [GenericVar(value=5), GenericVar(value=15)],
+            [GenericVar(value=2), GenericVar(value=4)],
+            [GenericVar(value=1), GenericVar(value=4)],
         ]
 
         ttk.Label(model_parameters_frame, text="Current").grid(column=1, row=0)
@@ -310,7 +310,7 @@ class RandomForest:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        self.forecast_num = tk.IntVar(value="")  # type: ignore
+        self.forecast_num = GenericVar(value="")  # type: ignore
         ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
         ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
             column=1, row=0
@@ -319,7 +319,7 @@ class RandomForest:
             test_model_main_frame, text="Values", command=self.show_result_values
         ).grid(column=2, row=0)
 
-        test_file_path = tk.StringVar()
+        test_file_path = tk.StringVar(value="")
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
         ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
             column=1, row=1
@@ -343,8 +343,8 @@ class RandomForest:
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
-        test_metrics = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [tk.Variable() for _ in range(len(test_metrics))]
+        test_metrics: list[str] = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
+        self.test_metrics_vars = [GenericVar(value="") for _ in range(len(test_metrics))]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(
@@ -475,12 +475,16 @@ class RandomForest:
             self.lookback_entry["state"] = tk.NORMAL
         else:
             self.lookback_entry["state"] = tk.DISABLED
+            self.lookback_val_var.reset()
         if self.seasonal_lookback_option.get():
             self.seasonal_lookback_entry_1["state"] = tk.NORMAL
             self.seasonal_lookback_entry_2["state"] = tk.NORMAL
         else:
             self.seasonal_lookback_entry_1["state"] = tk.DISABLED
             self.seasonal_lookback_entry_2["state"] = tk.DISABLED
+            self.seasonal_val_var.reset()
+            self.seasonal_period_var.reset()
+
 
     def __check_errors(self):
         try:
@@ -643,34 +647,6 @@ class RandomForest:
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-    def __get_lookback(
-        self, X, y, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
-    ):
-        if sliding == 0:
-            for i in range(1, lookback + 1):
-                X[f"t-{i}"] = y.shift(i)
-        elif sliding == 1:
-            for i in range(1, seasons + 1):
-                X[f"t-{i*seasonal_lookback}"] = y.shift(i * seasonal_lookback)
-        elif sliding == 2:
-            for i in range(1, lookback + 1):
-                X[f"t-{i}"] = y.shift(i)
-            for i in range(1, seasons + 1):
-                X[f"t-{i*seasonal_lookback}"] = y.shift(i * seasonal_lookback)
-
-        X.dropna(inplace=True)
-        a = X.to_numpy()
-        b = y.iloc[-len(a) :].to_numpy().reshape(-1)
-
-        if sliding == 0:
-            self.last = b[-lookback:]
-        elif sliding == 1:
-            self.seasonal_last = b[-seasonal_lookback * seasons :]
-        elif sliding == 2:
-            self.last = b[-(lookback + seasonal_lookback) : -seasonal_lookback]
-            self.seasonal_last = b[-seasonal_lookback * seasons :]
-
-        return a, b
 
     def __get_data(self) -> Tuple[np.ndarray, np.ndarray]:
         self.data_scaler: DataScaler = DataScaler(self.scale_var.get())
@@ -681,30 +657,18 @@ class RandomForest:
         X = self.df[self.predictor_names].to_numpy(copy=True)
         y = self.df[self.label_name].to_numpy(copy=True)
 
-        self.is_round = y.dtype in (int, np.intc, np.int64)
+        self.is_round = np.issubdtype(y.dtype, np.integer)
         self.is_negative = any(y < 0)
 
         X, y = self.data_scaler.scale(X, y)
 
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
-        sliding = lookback_option + 2 * seasonal_lookback_option - 1
-        self.sliding = sliding
-
-        try:
-            lookback = self.lookback_val_var.get()
-        except Exception:
-            lookback = 0
-        try:
-            seasonal_period = self.seasonal_period_var.get()
-            seasonal_lookback = self.seasonal_val_var.get()
-        except Exception:
-            seasonal_period = 0
-            seasonal_lookback = 0
-
-        X, y = self.__get_lookback(
-            X, y, lookback, seasonal_period, seasonal_lookback, sliding
+        self.lookback_handler = LookbackHandler(
+            self.lookback_val_var.get(),
+            self.seasonal_val_var.get(),
+            self.seasonal_period_var.get(),
         )
+
+        X, y = self.lookback_handler.get_lookback(X, y)
 
         return X, y
 
@@ -716,6 +680,7 @@ class RandomForest:
         val_option = self.validation_option.get()
 
         X, y = self.__get_data()
+
 
         if self.grid_option_var.get() == 0:
             n_estimators = self.parameters[0].get()
@@ -862,56 +827,16 @@ class RandomForest:
 
             popupmsg("Best Params: " + str(self.model.get_params()))
 
-    def __forecast_lookback(
-        self, num, lookback=0, seasons=0, seasonal_lookback=0, sliding=-1
-    ):
+    def __predict(self, X_test: np.ndarray, num: int) -> np.ndarray:
         pred = []
-        if sliding == 0:
-            last = self.last
-            X_test, _ = self.data_scaler.scale(
-                self.test_df[self.predictor_names].iloc[:num],
-                np.ones(num)
-            )
-            for i in range(num):
-                for j in range(1, lookback + 1):
-                    X_test[f"t-{j}"] = last[-j]  # type: ignore
-                out = self.model.predict(X_test)
-                last = np.append(last, out)[-lookback:]
-                pred.append(out)
 
-        elif sliding == 1:
-            seasonal_last = self.seasonal_last
-            for i in range(num):
-                X_test = self.data_scaler.scale_X(
-                    self.test_df[self.predictor_names].iloc[[i]]
-                )
-                for j in range(1, seasons + 1):
-                    X_test[f"t-{j*seasonal_last}"] = seasonal_last[
-                        -j * seasonal_lookback
-                    ]  # type: ignore
-                out = self.model.predict(X_test)
-                seasonal_last = np.append(seasonal_last, out)[1:]
-                pred.append(out)
-
-        elif sliding == 2:
-            last = self.last
-            seasonal_last = self.seasonal_last
-            for i in range(num):
-                X_test = self.data_scaler.scale_X(
-                    self.test_df[self.predictor_names].iloc[[i]]
-                )
-                for j in range(1, lookback + 1):
-                    X_test[f"t-{j}"] = last[-j]  # type: ignore
-                for j in range(1, seasons + 1):
-                    X_test[f"t-{j*seasonal_lookback}"] = seasonal_last[
-                        -j * seasonal_lookback
-                    ]  # type: ignore
-                out = self.model.predict(X_test)
-                last = np.append(last, out)[-lookback:]
-                seasonal_last = np.append(seasonal_last, out)[1:]
-                pred.append(out)
-
-        return np.array(pred).reshape(-1)
+        for i in range(num):
+            in_value = self.lookback_handler.append_lookback(X_test[i])
+            pred_i = self.model.predict(in_value).ravel().item()
+            pred.append(pred_i)
+            self.lookback_handler.update_last(pred_i)
+    
+        return np.array(pred).ravel()
 
     def forecast(self):
         try:
@@ -919,8 +844,7 @@ class RandomForest:
         except Exception:
             popupmsg("Enter a valid forecast value")
             return
-        lookback_option = self.lookback_option.get()
-        seasonal_lookback_option = self.seasonal_lookback_option.get()
+
         try:
             X_test = self.test_df[self.predictor_names][:num].to_numpy()  # type: ignore
             y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
@@ -929,29 +853,9 @@ class RandomForest:
             popupmsg("Read a test data")
             return
 
-        if lookback_option == 0 and seasonal_lookback_option == 0:
-            if self.scale_var.get() != "None":
-                X_test = self.data_scaler.scale_X(X_test)
-            self.pred = self.model.predict(X_test).reshape(-1)
-        else:
-            sliding = self.sliding
-            try:
-                lookback = self.lookback_val_var.get()
-            except Exception:
-                lookback = 0
-            try:
-                seasonal_lookback = self.seasonal_val_var.get()
-                seasons = self.seasonal_period_var.get()
-            except Exception:
-                seasonal_lookback = 0
-                seasons = 0
-
-            self.pred = self.__forecast_lookback(
-                num, lookback, seasons, seasonal_lookback, sliding
-            )
-
-        if self.scale_var.get() != "None":
-            self.pred = self.data_scaler.unscale_y(self.pred.reshape(-1, 1)).reshape(-1)  # type: ignore
+        X_test, _ = self.data_scaler.scale(X_test, np.ones(num))
+        self.pred = self.__predict(X_test, num)
+        self.pred = self.data_scaler.inverse_scale(self.pred)
 
         if not self.is_negative:
             self.pred = self.pred.clip(0, None)
