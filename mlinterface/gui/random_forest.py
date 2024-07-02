@@ -14,8 +14,9 @@ import os
 import json
 
 from .helpers import loss, skloss, popupmsg
-from mlinterface.gui.backend.data import DataScaler, LookbackHandler
+from mlinterface.gui.backend.data import DataHandler, DataScaler, LookbackHandler
 from mlinterface.gui.components.data_table import DataTable
+from mlinterface.gui.components.input_component import InputComponent
 from mlinterface.gui.components.variables import GenericVar
 
 from typing import Tuple
@@ -24,46 +25,14 @@ from typing import Tuple
 class RandomForest:
     def __init__(self) -> None:
         self.root = ttk.Frame()
+        self.initialize()
 
         # Get Train Set
-        get_train_set_frame = ttk.Labelframe(self.root, text="Get Train Set")
-        get_train_set_frame.grid(column=0, row=0)
-
-        file_path = tk.StringVar(value="")
-        ttk.Label(get_train_set_frame, text="Train File Path").grid(column=0, row=0)
-        ttk.Entry(get_train_set_frame, textvariable=file_path).grid(column=1, row=0)
-        ttk.Button(
-            get_train_set_frame,
-            text="Read Data",
-            command=lambda: self.read_train_data(file_path),
-        ).grid(column=2, row=0)
-
-        self.input_list = tk.Listbox(get_train_set_frame)
-        self.input_list.grid(column=0, row=1)
-        self.input_list.bind("<Double-Button-1>", self.add_predictor)
-        self.input_list.bind("<Double-Button-3>", self.add_target)
-
-        self.predictor_list = tk.Listbox(get_train_set_frame)
-        self.predictor_list.grid(column=1, row=1)
-        self.predictor_list.bind("<Double-Button-1>", self.eject_predictor)
-
-        self.target_list = tk.Listbox(get_train_set_frame)
-        self.target_list.grid(column=2, row=1)
-        self.target_list.bind("<Double-Button-1>", self.eject_target)
-
-        ttk.Button(
-            get_train_set_frame, text="Add Predictor", command=self.add_predictor
-        ).grid(column=1, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Predictor", command=self.eject_predictor
-        ).grid(column=1, row=3)
-
-        ttk.Button(
-            get_train_set_frame, text="Add Target", command=self.add_target
-        ).grid(column=2, row=2)
-        ttk.Button(
-            get_train_set_frame, text="Eject Target", command=self.eject_target
-        ).grid(column=2, row=3)
+        self.input_component = InputComponent(
+            self.root,
+            text="Get Train Set",
+            read_func=self.data_handler.read_train_data,
+        ).grid(column=0, row=0)
 
         # Model testing and validation
         model_validation_frame = ttk.Labelframe(
@@ -344,7 +313,9 @@ class RandomForest:
         test_model_metrics_frame.grid(column=1, row=0)
 
         test_metrics: list[str] = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [GenericVar(value="") for _ in range(len(test_metrics))]
+        self.test_metrics_vars = [
+            GenericVar(value="") for _ in range(len(test_metrics))
+        ]
         for i, j in enumerate(test_metrics):
             ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
             ttk.Entry(
@@ -354,7 +325,12 @@ class RandomForest:
         self.__open_entries()
         self.__open_other_entries()
 
-    def read_train_data(self, file_path):
+    def initialize(self) -> None:
+        self.data_handler = DataHandler()
+        self.data_scaler = DataScaler()
+        self.lookback_handler = LookbackHandler()
+
+    def read_test_data(self, file_path: tk.StringVar) -> None:
         path = filedialog.askopenfilename(
             filetypes=[
                 ("Csv Files", "*.csv"),
@@ -365,67 +341,7 @@ class RandomForest:
         if not path:
             return
         file_path.set(path)
-        if path.endswith(".csv"):
-            self.df = pd.read_csv(path)  # type: ignore
-        else:
-            try:
-                self.df = pd.read_excel(path)
-            except Exception:
-                self.df = pd.read_excel(path, engine="openpyxl")
-        self.__fill_input_list()
-
-    def read_test_data(self, file_path):
-        path = filedialog.askopenfilename(
-            filetypes=[
-                ("Csv Files", "*.csv"),
-                ("Xlsx Files", "*.xlsx"),
-                ("Xlrd Files", ".xls"),
-            ]
-        )
-        if not path:
-            return
-        file_path.set(path)
-        if path.endswith(".csv"):
-            self.test_df = pd.read_csv(path)  # type: ignore
-        else:
-            try:
-                self.test_df = pd.read_excel(path)
-            except Exception:
-                self.test_df = pd.read_excel(path, engine="openpyxl")
-
-    def __fill_input_list(self):
-        self.input_list.delete(0, tk.END)
-
-        for i in self.df.columns.to_list():
-            self.input_list.insert(tk.END, i)
-
-    def add_predictor(self, event=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if a not in self.predictor_list.get(0, tk.END):
-                self.predictor_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_predictor(self, event=None):
-        try:
-            self.predictor_list.delete(self.predictor_list.curselection())
-        except Exception:
-            pass
-
-    def add_target(self, event=None):
-        try:
-            a = self.input_list.get(self.input_list.curselection())
-            if self.target_list.size() < 1:
-                self.target_list.insert(tk.END, a)
-        except Exception:
-            pass
-
-    def eject_target(self, event=None):
-        try:
-            self.target_list.delete(self.target_list.curselection())
-        except Exception:
-            pass
+        self.data_handler.read_test_data(path)
 
     def __open_entries(self):
         to_open = []
@@ -485,24 +401,10 @@ class RandomForest:
             self.seasonal_val_var.reset()
             self.seasonal_period_var.reset()
 
-
     def __check_errors(self):
+        self.input_component.check_errors()
+
         try:
-            msg = "Read a data first"
-            self.df.head(1)
-
-            msg = "Select predictors"
-            if not self.predictor_list.get(0):
-                raise Exception
-
-            msg = "Select a target"
-            if not self.target_list.get(0):
-                raise Exception
-
-            msg = "Target and predictor have same variable"
-            if self.target_list.get(0) in self.predictor_list.get(0, tk.END):
-                raise Exception
-
             msg = "Enter a valid percent value"
             if self.random_percent_var.get() <= 0:
                 raise Exception
@@ -548,8 +450,6 @@ class RandomForest:
             return
         params["predictor_names"] = self.predictor_names
         params["label_name"] = self.label_name
-        params["is_round"] = self.is_round
-        params["is_negative"] = self.is_negative
         params["do_forecast"] = self.do_forecast_option.get()
         params["validation_option"] = self.validation_option.get()
         params["random_percent"] = (
@@ -573,10 +473,7 @@ class RandomForest:
         )
         params["sliding"] = self.sliding
 
-        params["scaler"] = {
-            "type": self.scale_var.get(),
-            "params": self.data_scaler.get_params(),
-        }
+        params["scaler"] = self.data_scaler.get_params()
 
         os.mkdir(path)
         dump(self.model, path + "/model.joblib")
@@ -604,8 +501,6 @@ class RandomForest:
 
         self.predictor_names = params.get("predictor_names", [])
         self.label_name = params.get("label_name", "")
-        self.is_round = params.get("is_round", True)
-        self.is_negative = params.get("is_negative", False)
 
         self.do_forecast_option.set(params.get("do_forecast", 1))
         self.validation_option.set(params.get("validation_option", 0))
@@ -647,27 +542,20 @@ class RandomForest:
         msg = f"Predictor names are {names}\nLabel name is {self.label_name}"
         popupmsg(msg)
 
-
     def __get_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        self.data_scaler: DataScaler = DataScaler(self.scale_var.get())
+        self.data_scaler.initialize(self.scale_var.get())
+        self.data_handler.set_names(
+            self.input_component.get_predictors(), self.input_component.get_target()
+        )
 
-        self.predictor_names = list(self.predictor_list.get(0, tk.END))
-        self.label_name = self.target_list.get(0)
-
-        X = self.df[self.predictor_names].to_numpy(copy=True)
-        y = self.df[self.label_name].to_numpy(copy=True)
-
-        self.is_round = np.issubdtype(y.dtype, np.integer)
-        self.is_negative = any(y < 0)
-
-        X, y = self.data_scaler.scale(X, y)
-
-        self.lookback_handler = LookbackHandler(
+        self.lookback_handler.initialize(
             self.lookback_val_var.get(),
             self.seasonal_val_var.get(),
             self.seasonal_period_var.get(),
         )
 
+        X, y = self.data_handler.get_Xy()
+        X, y = self.data_scaler.scale(X, y)
         X, y = self.lookback_handler.get_lookback(X, y)
 
         return X, y
@@ -680,7 +568,6 @@ class RandomForest:
         val_option = self.validation_option.get()
 
         X, y = self.__get_data()
-
 
         if self.grid_option_var.get() == 0:
             n_estimators = self.parameters[0].get()
@@ -835,7 +722,7 @@ class RandomForest:
             pred_i = self.model.predict(in_value).ravel().item()
             pred.append(pred_i)
             self.lookback_handler.update_last(pred_i)
-    
+
         return np.array(pred).ravel()
 
     def forecast(self):
@@ -846,8 +733,7 @@ class RandomForest:
             return
 
         try:
-            X_test = self.test_df[self.predictor_names][:num].to_numpy()  # type: ignore
-            y_test = self.test_df[self.label_name][:num].to_numpy().reshape(-1)
+            X_test, y_test = self.data_handler.get_test_Xy(num)
             self.y_test = y_test
         except Exception:
             popupmsg("Read a test data")
@@ -856,11 +742,6 @@ class RandomForest:
         X_test, _ = self.data_scaler.scale(X_test, np.ones(num))
         self.pred = self.__predict(X_test, num)
         self.pred = self.data_scaler.inverse_scale(self.pred)
-
-        if not self.is_negative:
-            self.pred = self.pred.clip(0, None)
-        if self.is_round:
-            self.pred = np.round(self.pred).astype(int)
 
         losses = loss(y_test, self.pred)
         for i in range(len(self.test_metrics_vars)):
