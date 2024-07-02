@@ -27,8 +27,37 @@ warnings.filterwarnings("ignore")
 
 class GUI:
     def __init__(self):
-        self.gui = tk.Tk()
-        self.parent = ttk.Notebook(self.gui)
+        self.root = tk.Tk()
+        parent = ttk.Notebook(self.root, padding="0i")
+        parent.pack(expand=1, fill="both", padx=1, pady=1)
+
+        # Time Series
+        time_series = ttk.Frame(parent)
+        parent.add(time_series, text="Time Series")
+
+        time_series_models = ttk.Notebook(time_series, padding="0i")
+        time_series_models.pack(expand=1, fill="both")
+
+        rf = RandomForest()
+        time_series_models.add(rf.root, text="Random Forest")
+
+        # Regression
+        regression = ttk.Frame(parent)
+        parent.add(regression, text="Regression")
+
+        regression_models = ttk.Notebook(regression, padding="0i")
+        regression_models.pack(expand=1, fill="both")
+
+        regression_models.add(ttk.Frame(), text="Empty")
+        
+        # Classification
+        classification = ttk.Frame(parent)
+        parent.add(classification, text="Classification")
+
+        classification_models = ttk.Notebook(classification, padding="0i")
+        classification_models.pack(expand=1, fill="both")
+
+        classification_models.add(ttk.Frame(), text="Empty")
 
         # time_series = TimeSeries()
         # self.add(time_series, "Time Series")
@@ -39,8 +68,6 @@ class GUI:
         # svm = SupportVectorMachine()
         # self.add(svm, "SVM")
         
-        rf = RandomForest()
-        self.add(rf, "Random Forest")
         
         # lgbm = LGBM()
         # self.add(lgbm, "LightGBM")
@@ -78,15 +105,9 @@ class GUI:
         # hybrid = Hybrid()
         # self.add(hybrid, "Hybrid")
 
-        self.parent.pack(expand=1, fill="both")
 
-    def add(self, frame, text):
-        self.parent.add(frame.root, text=text)
-
-    def start(self):
-        self.gui.mainloop()
 
 
 if __name__ == "__main__":
-    GUI().start()
+    GUI().root.mainloop()
     

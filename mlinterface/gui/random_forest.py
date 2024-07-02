@@ -580,6 +580,7 @@ class RandomForest:
                 max_depth=max_depth,
                 min_samples_split=min_samples_split,
                 min_samples_leaf=min_samples_leaf,
+                random_state=0
             )
 
             if val_option == 0:

@@ -16,18 +16,17 @@ class DataHandler:
     def __read_data(self, path: str) -> pd.DataFrame:
         return pd.read_csv(path) if path.endswith(".csv") else pd.read_excel(path)
 
-    def read_train_data(self, path: str) -> list[str]:
-        self.df = self.__read_data(path)
-        return self.columns
-
-    def read_test_data(self, path: str) -> None:
-        self.test_df = self.__read_data(path)
-
-    @property
-    def columns(self) -> list[str]:
+    def __columns(self) -> list[str]:
         if self.df is None:
             raise ValueError("Train data not loaded yet")
         return self.df.columns.tolist()
+
+    def read_train_data(self, path: str) -> list[str]:
+        self.df = self.__read_data(path)
+        return self.__columns()
+
+    def read_test_data(self, path: str) -> None:
+        self.test_df = self.__read_data(path)
 
     def set_names(self, predictor_names: list[str], label_name: str) -> None:
         self.predictor_names = predictor_names
@@ -39,7 +38,7 @@ class DataHandler:
         X = self.df[self.predictor_names].to_numpy()
         y = self.df[self.label_name].to_numpy()
         return X, y
-    
+
     def get_test_Xy(self, num: int) -> tuple[np.ndarray, np.ndarray]:
         if self.test_df is None:
             raise ValueError("Test data not loaded yet")
@@ -49,14 +48,11 @@ class DataHandler:
 
 
 class DataScaler:
-    feature_scaler: ScalerBase
-    label_scaler: ScalerBase
+    feature_scaler: ScalerBase | MinMaxScaler | StandardScaler
+    label_scaler: ScalerBase | MinMaxScaler | StandardScaler
 
     def __init__(self, scale_y: bool = True) -> None:
         self.scale_y = scale_y
-        self.fitted = False
-        self.is_round = True
-        self.is_negative = False
 
     def initialize(self, scaler_type: str) -> None:
         match scaler_type:
@@ -69,7 +65,11 @@ class DataScaler:
             case _:
                 self.feature_scaler = ScalerBase()
                 self.label_scaler = ScalerBase()
+
         self.scaler_type = scaler_type
+        self.fitted = False
+        self.is_round = True
+        self.is_negative = False
 
     def __fit(self, X: np.ndarray, y: np.ndarray) -> None:
         self.feature_scaler.fit(X)
@@ -126,12 +126,8 @@ class DataScaler:
 
 
 class LookbackHandler:
-
     last: np.ndarray
     merged_index: list[int]
-
-    def __init__(self) -> None:
-        self.last = np.array([])
 
     def initialize(
         self,
@@ -196,8 +192,5 @@ class LookbackHandler:
         self.last = np.array(data["last_values"])
 
     def get_params(self) -> dict[str, Any]:
-        data = {
-            "last_values": self.last_to_save,
-            "merged_index": self.merged_index
-        }
+        data = {"last_values": self.last_to_save, "merged_index": self.merged_index}
         return data
