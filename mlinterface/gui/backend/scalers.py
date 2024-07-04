@@ -1,6 +1,5 @@
 import numpy as np
 
-
 # NOTE: Fuck inheritance
 
 class ScalerParams:
@@ -65,7 +64,7 @@ class StandardScaler:
 
 
 
-class MinMaxScaler(ScalerBase):
+class MinMaxScaler:
     def fit(self, data: np.ndarray) -> None:
         self.params = ScalerParams(data)
 
@@ -84,3 +83,4 @@ class MinMaxScaler(ScalerBase):
 
     def set_params(self, params: dict[str, list[float]]) -> None:
         self.params.from_dict(params)
+

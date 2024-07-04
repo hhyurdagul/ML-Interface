@@ -56,10 +56,10 @@ class DataScaler:
 
     def initialize(self, scaler_type: str) -> None:
         match scaler_type:
-            case "StandardScaler":
+            case "Standard":
                 self.feature_scaler = StandardScaler()
                 self.label_scaler = StandardScaler()
-            case "MinMaxScaler":
+            case "MinMax":
                 self.feature_scaler = MinMaxScaler()
                 self.label_scaler = MinMaxScaler()
             case _:
@@ -131,25 +131,21 @@ class LookbackHandler:
 
     def initialize(
         self,
-        lookback_count: int,
-        seasonal_lookback_count: int,
+        lookback_value: int,
+        seasonal_lookback_value: int,
         seasonal_lookback_period: int,
     ) -> None:
-        match (seasonal_lookback_count, seasonal_lookback_period):
-            case x, y if x > 0 and y <= 0:
+        match (seasonal_lookback_value, seasonal_lookback_period):
+            case x, y if (x > 0 and y <= 0) or (x <= 0 and y > 0):
                 raise ValueError(
-                    "Seasonal lookback count and period both have to be zero or greater than zero"
-                )
-            case x, y if x <= 0 and y > 0:
-                raise ValueError(
-                    "Seasonal lookback count and period both have to be zero or greater than zero"
+                    "Seasonal lookback value and period both have to be zero or greater than zero"
                 )
 
-        lookback_index = list(range(1, lookback_count + 1, 1))
+        lookback_index = list(range(1, lookback_value + 1, 1))
         seasonal_lookback_index = list(
             range(
                 seasonal_lookback_period,
-                (seasonal_lookback_count + 1) * seasonal_lookback_period,
+                (seasonal_lookback_value + 1) * seasonal_lookback_period,
                 max(seasonal_lookback_period, 1),
             )
         )

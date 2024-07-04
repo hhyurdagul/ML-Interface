@@ -1,6 +1,7 @@
 import tkinter as tk
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.metrics import make_scorer, mean_absolute_error, mean_squared_error
 
 
@@ -54,7 +55,7 @@ skloss = {
 }
 
 
-def loss(y_true, y_pred, seasons=1):
+def loss(y_true: NDArray[np.float64], y_pred: NDArray[np.float64]) -> list[float]:
     NMSE = round((((y_true - y_pred) ** 2) / (y_true.mean() * y_pred.mean())).mean(), 2)
     RMSE = round(np.sqrt(mean_squared_error(y_true, y_pred)), 2)
     MAE = round(mean_absolute_error(y_true, y_pred), 2)
@@ -73,7 +74,7 @@ def loss(y_true, y_pred, seasons=1):
 
     return [NMSE, RMSE, MAE, MAPE, SMAPE]
 
-def popupmsg(msg):
+def popupmsg(msg: str) -> bool:
     tk.messagebox.showinfo("!", msg)
     return False
 

@@ -6,7 +6,7 @@ from typing import Callable
 class InputComponent:
     def __init__(
         self,
-        parent: tk.Tk,
+        parent: ttk.Frame,
         text: str,
         read_func: Callable[[str], list[str]] = lambda _: list(),
     ):
@@ -105,6 +105,6 @@ class InputComponent:
         if self.get_target() in self.get_predictors():
             raise Exception("Target and predictor cannot be the same")
 
-    def grid(self, *args, **kwargs) -> "InputComponent":
-        self.root.grid(*args, **kwargs)
+    def grid(self, column: int, row: int) -> "InputComponent":
+        self.root.grid(column=column, row=row)
         return self

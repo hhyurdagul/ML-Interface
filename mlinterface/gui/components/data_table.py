@@ -5,7 +5,7 @@ from typing import Callable
 class DataTable(tk.Frame):
     def __init__(
         self,
-        parent: tk.Tk,
+        parent: tk.Toplevel,
         data: list[tuple[float, float]],
         save_func: Callable = lambda: None,
     ):
