@@ -1,4 +1,5 @@
-from tkinter import NORMAL, DISABLED, Entry
+from tkinter import NORMAL, DISABLED
+from tkinter.ttk import Entry
 from tkinter import Variable
 
 
@@ -31,6 +32,7 @@ class GenericIntVar(Variable):
     def reset(self):
         self.set(self.default)
 
+
 class GenericFloatVar(Variable):
     """Value holder for generic variables."""
 
@@ -62,7 +64,9 @@ class GenericFloatVar(Variable):
 
 
 def change_state(
-    state: int, entries: list[Entry], variables: list[GenericIntVar|GenericFloatVar] | None = None
+    state: int,
+    entries: list[Entry],
+    variables: list[GenericIntVar | GenericFloatVar] | None = None,
 ) -> None:
     for entry in entries:
         entry["state"] = NORMAL if state else DISABLED

@@ -19,7 +19,11 @@ from mlinterface.gui.components.input_component import InputComponent
 from mlinterface.gui.components.time_series.preprocessing_component import (
     PreprocessingComponent,
 )
-from mlinterface.gui.components.variables import GenericIntVar, GenericFloatVar
+from mlinterface.gui.components.variables import (
+    GenericIntVar,
+    GenericFloatVar,
+    change_state,
+)
 
 
 class RandomForest:
@@ -43,11 +47,31 @@ class RandomForest:
         model_frame = ttk.Labelframe(self.root, text="Model Frame")
         model_frame.grid(column=1, row=0)
 
+        self.do_optimization = tk.IntVar(value=0)
+
+        ttk.Radiobutton(
+            model_frame,
+            text="No Optimization",
+            variable=self.do_optimization,
+            value=0,
+            command=lambda: change_state(1, parameter_entries),
+        ).grid(column=0, row=0)
+        ttk.Radiobutton(
+            model_frame,
+            text="Do Optimization",
+            variable=self.do_optimization,
+            value=1,
+            command=lambda: change_state(0, parameter_entries),
+        ).grid(column=2, row=0)
+
+        model_parameters_frame = ttk.LabelFrame(model_frame, text="Parameters")
+        model_parameters_frame.grid(column=0, row=1, columnspan=3)
+
         parameter_names = [
             "N Estimators",
             "Max Depth",
-            "Min Samples Split",
-            "Min Samples Leaf",
+            "Min Samp. Split",
+            "Min Samp. Leaf",
         ]
         self.parameters = [
             tk.IntVar(value=100),
@@ -56,16 +80,20 @@ class RandomForest:
             tk.IntVar(value=1),
         ]
 
+        parameter_entries = [
+            ttk.Entry(
+                model_parameters_frame,
+                textvariable=var,
+                width=8,
+            )
+            for var in self.parameters
+        ]
+
         for i, j in enumerate(parameter_names):
-            ttk.Label(model_frame, text=f"{j}:", width=12).grid(
+            ttk.Label(model_parameters_frame, text=f"{j}:", width=12).grid(
                 column=0, row=i, sticky="w"
             )
-            ttk.Entry(
-                model_frame,
-                textvariable=self.parameters[i],
-                state=tk.NORMAL,
-                width=8,
-            ).grid(column=1, row=i, padx=2, pady=2, sticky=tk.W)
+            parameter_entries[i].grid(column=1, row=i, padx=2, pady=2, sticky=tk.W)
 
         ttk.Button(model_frame, text="Create Model", command=self.create_model).grid(
             column=0, row=4
