@@ -113,14 +113,19 @@ class RandomForest:
         test_model_main_frame = ttk.LabelFrame(test_model_frame, text="Test Model")
         test_model_main_frame.grid(column=0, row=0)
 
-        self.forecast_num = GenericIntVar(value="")  # type: ignore
-        ttk.Label(test_model_main_frame, text="# of Forecast").grid(column=0, row=0)
-        ttk.Entry(test_model_main_frame, textvariable=self.forecast_num).grid(
-            column=1, row=0
+        self.prediction_count = GenericIntVar(value="")  # type: ignore
+        ttk.Label(test_model_main_frame, text="Prediction Count", width=12).grid(
+            column=0, row=0, sticky="w"
         )
+        ttk.Entry(
+            test_model_main_frame, textvariable=self.prediction_count, width=8
+        ).grid(column=1, row=0, sticky="w")
         ttk.Button(
-            test_model_main_frame, text="Values", command=self.show_result_values
-        ).grid(column=2, row=0)
+            test_model_main_frame,
+            text="Result Values",
+            command=self.show_result_values,
+            width=8,
+        ).grid(column=2, row=0, sticky="w")
 
         test_file_path = tk.StringVar(value="")
         ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
@@ -138,7 +143,7 @@ class RandomForest:
         ).grid(column=2, row=3)
         ttk.Button(
             test_model_main_frame,
-            text="Actual vs Forecast Graph",
+            text="Result Graph",
             command=self.show_result_graph,
         ).grid(column=0, row=4, columnspan=3)
 
@@ -146,14 +151,14 @@ class RandomForest:
         test_model_metrics_frame = ttk.LabelFrame(test_model_frame, text="Test Metrics")
         test_model_metrics_frame.grid(column=1, row=0)
 
-        test_metrics: list[str] = ["NMSE", "RMSE", "MAE", "MAPE", "SMAPE"]
-        self.test_metrics_vars = [
-            GenericFloatVar(value="") for _ in range(len(test_metrics))
+        test_metric_names: list[str] = ["R2", "MAE", "MAPE", "SMAPE"]
+        self.test_metric_vars = [
+            GenericFloatVar(value="") for _ in range(len(test_metric_names))
         ]
-        for i, j in enumerate(test_metrics):
-            ttk.Label(test_model_metrics_frame, text=j).grid(column=0, row=i)
+        for i, j in enumerate(test_metric_names):
+            ttk.Label(test_model_metrics_frame, text=j, width=12).grid(column=0, row=i)
             ttk.Entry(
-                test_model_metrics_frame, textvariable=self.test_metrics_vars[i]
+                test_model_metrics_frame, textvariable=self.test_metric_vars[i], width=8
             ).grid(column=1, row=i)
 
     def initialize(self) -> None:
@@ -242,7 +247,9 @@ class RandomForest:
             self.preprocessing_component.seasonal_lookback_frequency.get(),
         )
 
-        X, y = self.data_handler.get_Xy()
+        X, y = self.data_handler.get_Xy(
+            self.preprocessing_component.train_data_size.get()
+        )
         X, y = self.data_scaler.scale(X, y)
         X, y = self.lookback_handler.get_lookback(X, y)
 
@@ -266,8 +273,6 @@ class RandomForest:
             min_samples_leaf=min_samples_leaf,
             random_state=0,
         )
-        size = int((self.preprocessing_component.train_data_size.get() / 100) * len(X))
-        X, y = X[-size:], y[-size:]
         model.fit(X, y)
 
     def __predict(self, X_test: np.ndarray, num: int) -> np.ndarray:
@@ -283,9 +288,9 @@ class RandomForest:
 
     def forecast(self):
         try:
-            num = self.forecast_num.get()
+            num = self.prediction_count.get()
         except Exception:
-            popupmsg("Enter a valid forecast value")
+            popupmsg("Enter a valid prediction count")
             return
 
         try:
@@ -300,8 +305,8 @@ class RandomForest:
         self.pred = self.data_scaler.inverse_scale(self.pred)
 
         losses = loss(y_test, self.pred)
-        for i in range(len(self.test_metrics_vars)):
-            self.test_metrics_vars[i].set(losses[i])
+        for i in range(len(self.test_metric_vars)):
+            self.test_metric_vars[i].set(losses[i])
 
     def show_result_values(self):
         try:

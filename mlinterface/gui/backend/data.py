@@ -32,11 +32,17 @@ class DataHandler:
         self.predictor_names = predictor_names
         self.label_name = label_name
 
-    def get_Xy(self) -> tuple[np.ndarray, np.ndarray]:
+    def get_Xy(self, train_size: int=100) -> tuple[np.ndarray, np.ndarray]:
         if self.df is None:
             raise ValueError("Train data not loaded yet")
+
+
         X = self.df[self.predictor_names].to_numpy()
         y = self.df[self.label_name].to_numpy()
+
+        size = int((train_size / 100) * len(X))
+        X, y = X[-size:], y[-size:]
+
         return X, y
 
     def get_test_Xy(self, num: int) -> tuple[np.ndarray, np.ndarray]:

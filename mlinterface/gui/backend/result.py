@@ -2,6 +2,7 @@ from functools import wraps
 
 import numpy as np
 from sklearn.metrics import (
+    r2_score,
     mean_absolute_error,
     mean_absolute_percentage_error,
     root_mean_squared_error,
@@ -15,13 +16,22 @@ def round_wrapper(func):
     return wrapper
 
 
-class RegressionMetrics:
+class RegressionResult:
     def __init__(self, y_true: np.ndarray, y_pred: np.ndarray):
         if y_true.ndim != 1 or y_pred.ndim != 1:
             raise ValueError("y_true and y_pred must be 1D arrays")
 
         self.y_true = y_true
         self.y_pred = y_pred
+
+    @property
+    @round_wrapper
+    def r2(self) -> float:
+        r = r2_score(self.y_true, self.y_pred)
+        if isinstance(r, np.ndarray):
+            return np.mean(r, 0).item()
+        else:
+            return r
 
     @property
     @round_wrapper
@@ -54,9 +64,9 @@ class RegressionMetrics:
 
     def __call__(self) -> list[float]:
         return [
-            self.nmse,
-            self.rmse,
+            self.r2,
             self.mae,
             self.mape,
             self.smape,
         ]
+
