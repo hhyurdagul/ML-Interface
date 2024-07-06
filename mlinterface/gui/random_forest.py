@@ -16,13 +16,13 @@ from .helpers import loss, popupmsg
 from mlinterface.gui.backend.data import DataHandler, DataScaler, LookbackHandler
 from mlinterface.gui.components.data_table import DataTable
 from mlinterface.gui.components.input_component import InputComponent
+from mlinterface.gui.components.model_components import ModelComponent
 from mlinterface.gui.components.time_series.preprocessing_component import (
     PreprocessingComponent,
 )
 from mlinterface.gui.components.variables import (
     GenericIntVar,
     GenericFloatVar,
-    change_state,
 )
 
 
@@ -44,66 +44,14 @@ class RandomForest:
         ).grid(column=0, row=1)
 
         # Model
-        model_frame = ttk.Labelframe(self.root, text="Model Frame")
-        model_frame.grid(column=1, row=0)
-
-        self.do_optimization = tk.IntVar(value=0)
-
-        ttk.Radiobutton(
-            model_frame,
-            text="No Optimization",
-            variable=self.do_optimization,
-            value=0,
-            command=lambda: change_state(1, parameter_entries),
-        ).grid(column=0, row=0)
-        ttk.Radiobutton(
-            model_frame,
-            text="Do Optimization",
-            variable=self.do_optimization,
-            value=1,
-            command=lambda: change_state(0, parameter_entries),
-        ).grid(column=2, row=0)
-
-        model_parameters_frame = ttk.LabelFrame(model_frame, text="Parameters")
-        model_parameters_frame.grid(column=0, row=1, columnspan=3)
-
-        parameter_names = [
-            "N Estimators",
-            "Max Depth",
-            "Min Samp. Split",
-            "Min Samp. Leaf",
-        ]
-        self.parameters = [
-            tk.IntVar(value=100),
-            tk.IntVar(value=100),
-            tk.IntVar(value=2),
-            tk.IntVar(value=1),
-        ]
-
-        parameter_entries = [
-            ttk.Entry(
-                model_parameters_frame,
-                textvariable=var,
-                width=8,
-            )
-            for var in self.parameters
-        ]
-
-        for i, j in enumerate(parameter_names):
-            ttk.Label(model_parameters_frame, text=f"{j}:", width=12).grid(
-                column=0, row=i, sticky="w"
-            )
-            parameter_entries[i].grid(column=1, row=i, padx=2, pady=2, sticky=tk.W)
-
-        ttk.Button(model_frame, text="Create Model", command=self.create_model).grid(
-            column=0, row=4
-        )
-        ttk.Button(model_frame, text="Save Model", command=self.save_model).grid(
-            column=1, row=4
-        )
-        ttk.Button(model_frame, text="Load Model", command=self.load_model).grid(
-            column=2, row=4
-        )
+        self.model_component = ModelComponent(
+            self.root,
+            text="Model",
+            model_type="RandomForest",
+            create_model_func=self.create_model,
+            save_model_func=self.save_model,
+            load_model_func=self.load_model,
+        ).grid(column=1, row=0)
 
         # Test Model
         test_model_frame = ttk.LabelFrame(self.root, text="Test Frame")
@@ -204,6 +152,7 @@ class RandomForest:
             return
 
         params["preprocessing_component"] = self.preprocessing_component.get_params()
+        params["model_component"] = self.model_component.get_params()
         params["scaler"] = self.data_scaler.get_params()
 
         os.mkdir(path)
@@ -224,14 +173,10 @@ class RandomForest:
         infile = open(path + "/model.json")
         params = json.load(infile)
 
-        self.parameters[0].set(params.get("n_estimators", 100))
-        self.parameters[1].set(params.get("max_depth", 5))
-        self.parameters[2].set(params.get("min_samples_split", 2))
-        self.parameters[3].set(params.get("min_samples_leaf", 1))
-
         self.preprocessing_component.set_params(
             params.get("preprocessing_component", {})
         )
+        self.model_component.set_params(params.get("model_component", {}))
 
         self.data_scaler.set_params(params.get("scaler", {}))
 
@@ -261,19 +206,16 @@ class RandomForest:
 
         X, y = self.__get_data()
 
-        n_estimators = self.parameters[0].get()
-        max_depth = self.parameters[1].get()
-        min_samples_split = self.parameters[2].get()
-        min_samples_leaf = self.parameters[3].get()
-
+        params = self.model_component.get_params()
         model = RandomForestRegressor(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            min_samples_split=min_samples_split,
-            min_samples_leaf=min_samples_leaf,
+            n_estimators=params["n_estimators"],
+            max_depth=params["max_depth"],
+            min_samples_split=params["min_samples_split"],
+            min_samples_leaf=params["min_samples_leaf"],
             random_state=0,
         )
         model.fit(X, y)
+        self.model = model
 
     def __predict(self, X_test: np.ndarray, num: int) -> np.ndarray:
         pred = []
@@ -296,8 +238,8 @@ class RandomForest:
         try:
             X_test, y_test = self.data_handler.get_test_Xy(num)
             self.y_test = y_test
-        except Exception:
-            popupmsg("Read a test data")
+        except Exception as msg:
+            popupmsg(msg.__str__())
             return
 
         X_test, _ = self.data_scaler.scale(X_test, np.ones(num))

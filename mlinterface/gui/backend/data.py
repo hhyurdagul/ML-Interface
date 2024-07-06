@@ -185,7 +185,7 @@ class LookbackHandler:
             X = np.concatenate((X.copy(), lookback))
         return X.reshape(1, -1)
 
-    def update_last(self, value: int) -> None:
+    def update_last(self, value: int|float) -> None:
         if self.merged_index:
             self.last = np.append(self.last, value)[1:]
 
