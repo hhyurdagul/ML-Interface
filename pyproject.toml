@@ -1,26 +1,14 @@
-[tool.basedpyright]
-typeCheckingMode = "standard"
-
-[tool.poetry]
+[project]
 name = "ml-interface"
 version = "0.1.0"
-description = ""
-authors = ["HHYurdagul <hhyurdagul@gmail.com>"]
+description = "Add your description here"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "==3.10.13"
-numpy = "^2.0.0"
-pandas = "^2.2.2"
-matplotlib = "^3.9.0"
-scikit-learn = "^1.5.0"
-openpyxl = "^3.1.4"
-
-[tool.poetry.group.dev.dependencies]
-basedpyright = "^1.13.2"
-ruff = "^0.5.0"
-ruff-lsp = "^0.0.54"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.9.2",
+    "numpy==1.26",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "scikit-learn>=1.5.2",
+    "tensorflow==2.17",
+]
