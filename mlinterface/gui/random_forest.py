@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from joblib import dump, load  # type: ignore
+from joblib import dump, load
 from sklearn.ensemble import RandomForestRegressor
 
 import os
@@ -24,6 +24,9 @@ from mlinterface.gui.components.variables import (
     GenericIntVar,
     GenericFloatVar,
 )
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 
 class RandomForest:
@@ -265,12 +268,13 @@ class RandomForest:
         top.mainloop()
 
     def show_result_graph(self):
-        y_test = self.y_test
-        try:
-            pred = self.pred
-        except Exception:
-            return
-        plt.plot(y_test)
-        plt.plot(pred)
-        plt.legend(["test", "pred"], loc="upper left")
-        plt.show()
+        fig = Figure()
+        ax = fig.add_subplot(111)
+        
+        top = tk.Toplevel(self.root)
+        canvas = FigureCanvasTkAgg(fig, master=top)
+        ax.plot(self.y_test)
+        ax.plot(self.pred)
+        ax.legend(["Real", "Predict"], loc="upper right")
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)

@@ -45,10 +45,10 @@ class InputComponent:
         ttk.Button(self.root, text="Eject Target", command=self.eject_target).grid(
             column=2, row=3
         )
-    
-    def __fill_input_list(self, columns: list[str]) -> None:
+
+    def __fill_input_list(self, values: list[str]) -> None:
         self.input_list.delete(0, tk.END)
-        self.input_list.insert(tk.END, *columns)
+        self.input_list.insert(tk.END, *values)
         self.predictor_list.delete(0, tk.END)
         self.target_list.delete(0, tk.END)
 
@@ -64,8 +64,8 @@ class InputComponent:
             return
         self.file_path.set(path)
 
-        columns = self.read_func(path)
-        self.__fill_input_list(columns)
+        data_columns = self.read_func(path)
+        self.__fill_input_list(data_columns)
 
     def add_predictor(self) -> None:
         selected = self.input_list.curselection()

@@ -1,3 +1,8 @@
+import os
+import sys
+os.environ["TCL_LIBRARY"] = sys.base_prefix + "/lib/tcl8.6"
+os.environ["TK_LIBRARY"] = sys.base_prefix + "/lib/tk8.6"
+
 # from gui.timeseries import TimeSeries
 
 # from gui.mlp import MultiLayerPerceptron
@@ -49,7 +54,7 @@ class GUI:
         regression_models.pack(expand=1, fill="both")
 
         regression_models.add(ttk.Frame(), text="Empty")
-        
+
         # Classification
         classification = ttk.Frame(parent)
         parent.add(classification, text="Classification")
@@ -61,32 +66,32 @@ class GUI:
 
         # time_series = TimeSeries()
         # self.add(time_series, "Time Series")
-        
+
         # mlp = MultiLayerPerceptron()
         # self.add(mlp, "MLP")
-        
+
         # svm = SupportVectorMachine()
         # self.add(svm, "SVM")
-        
-        
+
+
         # lgbm = LGBM()
         # self.add(lgbm, "LightGBM")
-        
+
         # catboost = CatBoost()
         # self.add(catboost, "CatBoost")
-        
+
         # ridge = Ridge()
         # self.add(ridge, "Ridge Regression")
-        
+
         # lr = LinearModel()
         # self.add(lr, "Linear Regression")
-        
+
         # grnn = GeneralRegressionNeuralNetwork()
         # self.add(grnn, "GRNN")
-        
+
         # sarima = SARIMA()
         # self.add(sarima, "SARIMA")
-        
+
         # elm = ELM()
         # self.add(elm, "ELM")
         #
@@ -110,4 +115,3 @@ class GUI:
 
 if __name__ == "__main__":
     GUI().root.mainloop()
-    

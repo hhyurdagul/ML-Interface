@@ -157,6 +157,7 @@ class LookbackHandler:
         )
 
         self.merged_index = list(set(lookback_index + seasonal_lookback_index))
+        print(self.merged_index)
 
     def __get_lookback_stack(self, y: np.ndarray, n: int) -> np.ndarray:
         stack = y.copy().reshape(-1, 1)
