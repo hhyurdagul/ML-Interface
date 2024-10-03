@@ -1,117 +1,60 @@
-import os
 import sys
-os.environ["TCL_LIBRARY"] = sys.base_prefix + "/lib/tcl8.6"
-os.environ["TK_LIBRARY"] = sys.base_prefix + "/lib/tk8.6"
-
-# from gui.timeseries import TimeSeries
-
-# from gui.mlp import MultiLayerPerceptron
-# from gui.supportvectormachine import SupportVectorMachine
-from mlinterface.gui.random_forest import RandomForest
-# from gui.lgbm import LGBM
-# from gui.catboost_arch import CatBoost
-# from gui.ridge import Ridge
-# from gui.linear_regression import LinearModel
-# from gui.generalregression import GeneralRegressionNeuralNetwork
-# from gui.random_walk import RandomWalk
-# from gui.sarima import SARIMA
-# from gui.elm import ELM
-
-# from gui.feature_selection import FS
-# from gui.montecarlo import MonteCarlo
-# from gui.movingaverage import MovingAverage
-# from gui.hybrid import Hybrid
-
-import tkinter as tk
-from tkinter import ttk
+from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout
+# from mlinterface.gui.random_forest_qt import RandomForest
+from mlinterface.pages.time_series import RandomForest
 
 import warnings
-
 warnings.filterwarnings("ignore")
 
-
-class GUI:
+class GUI(QMainWindow):
     def __init__(self):
-        self.root = tk.Tk()
-        parent = ttk.Notebook(self.root, padding="0i")
-        parent.pack(expand=1, fill="both", padx=1, pady=1)
+        super().__init__()
+        self.setWindowTitle("ML Interface")
+        self.setGeometry(100, 100, 1280, 720)
 
-        # Time Series
-        time_series = ttk.Frame(parent)
-        parent.add(time_series, text="Time Series")
+        # Create main tab widget
+        self.main_tabs = QTabWidget()
+        self.setCentralWidget(self.main_tabs)
 
-        time_series_models = ttk.Notebook(time_series, padding="0i")
-        time_series_models.pack(expand=1, fill="both")
+        # Time Series tab
+        time_series_tab = QWidget()
+        time_series_layout = QVBoxLayout()
+        time_series_tab.setLayout(time_series_layout)
+
+        time_series_models = QTabWidget()
+        time_series_layout.addWidget(time_series_models)
 
         rf = RandomForest()
-        time_series_models.add(rf.root, text="Random Forest")
+        time_series_models.addTab(rf, "Random Forest")
 
-        # Regression
-        regression = ttk.Frame(parent)
-        parent.add(regression, text="Regression")
+        self.main_tabs.addTab(time_series_tab, "Time Series")
 
-        regression_models = ttk.Notebook(regression, padding="0i")
-        regression_models.pack(expand=1, fill="both")
+        # Regression tab
+        regression_tab = QWidget()
+        regression_layout = QVBoxLayout()
+        regression_tab.setLayout(regression_layout)
 
-        regression_models.add(ttk.Frame(), text="Empty")
+        regression_models = QTabWidget()
+        regression_layout.addWidget(regression_models)
 
-        # Classification
-        classification = ttk.Frame(parent)
-        parent.add(classification, text="Classification")
+        regression_models.addTab(QWidget(), "Empty")
 
-        classification_models = ttk.Notebook(classification, padding="0i")
-        classification_models.pack(expand=1, fill="both")
+        self.main_tabs.addTab(regression_tab, "Regression")
 
-        classification_models.add(ttk.Frame(), text="Empty")
+        # Classification tab
+        classification_tab = QWidget()
+        classification_layout = QVBoxLayout()
+        classification_tab.setLayout(classification_layout)
 
-        # time_series = TimeSeries()
-        # self.add(time_series, "Time Series")
+        classification_models = QTabWidget()
+        classification_layout.addWidget(classification_models)
 
-        # mlp = MultiLayerPerceptron()
-        # self.add(mlp, "MLP")
+        classification_models.addTab(QWidget(), "Empty")
 
-        # svm = SupportVectorMachine()
-        # self.add(svm, "SVM")
-
-
-        # lgbm = LGBM()
-        # self.add(lgbm, "LightGBM")
-
-        # catboost = CatBoost()
-        # self.add(catboost, "CatBoost")
-
-        # ridge = Ridge()
-        # self.add(ridge, "Ridge Regression")
-
-        # lr = LinearModel()
-        # self.add(lr, "Linear Regression")
-
-        # grnn = GeneralRegressionNeuralNetwork()
-        # self.add(grnn, "GRNN")
-
-        # sarima = SARIMA()
-        # self.add(sarima, "SARIMA")
-
-        # elm = ELM()
-        # self.add(elm, "ELM")
-        #
-        # rw = RandomWalk()
-        # self.add(rw, "Random Walk")
-        #
-        # fs = FS()
-        # self.add(fs, "Feature Selection")
-
-        # monte = MonteCarlo()
-        # self.add(monte, "Monte Carlo")
-        #
-        # moving_average = MovingAverage()
-        # self.add(moving_average, "Moving Average")
-        #
-        # hybrid = Hybrid()
-        # self.add(hybrid, "Hybrid")
-
-
-
+        self.main_tabs.addTab(classification_tab, "Classification")
 
 if __name__ == "__main__":
-    GUI().root.mainloop()
+    app = QApplication(sys.argv)
+    gui = GUI()
+    gui.show()
+    sys.exit(app.exec_())

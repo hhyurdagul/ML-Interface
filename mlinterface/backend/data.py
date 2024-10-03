@@ -130,7 +130,6 @@ class DataScaler:
         self.feature_scaler.set_params(data["feature_scaler"])
         self.label_scaler.set_params(data["label_scaler"])
 
-# This is a change
 
 class LookbackHandler:
     last: np.ndarray
