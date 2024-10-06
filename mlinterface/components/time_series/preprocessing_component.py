@@ -1,31 +1,32 @@
 from PySide6.QtWidgets import (QWidget, QLabel, QLineEdit, QComboBox, QCheckBox,
                                QGridLayout, QGroupBox)
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIntValidator
+from PySide6.QtCore import Qt
 from typing import Any, Dict
 
-class PreprocessingComponent(QWidget):
-    paramsChanged = Signal()
+from mlinterface.components.variables import QIntLineEdit
 
+
+class PreprocessingComponent(QWidget):
     def __init__(self, text: str) -> None:
         super().__init__()
         self.root = QGroupBox(text)
         layout = QGridLayout()
         self.root.setLayout(layout)
 
-        self.train_data_size = QLineEdit("100")
-        self.train_data_size.setValidator(QIntValidator(0, 100))
+        self.train_data_size = QIntLineEdit("100", 1, 100)
+
         self.scale_type = QComboBox()
         self.scale_type.addItems(["None", "MinMax", "Standard"])
 
         self.lookback_option = QCheckBox("Lookback")
-        self.lookback_value = QLineEdit()
+        self.lookback_value = QIntLineEdit("", 1, 1000)
         self.lookback_value.setEnabled(False)
 
         self.seasonal_lookback_option = QCheckBox("Periodic Lookback")
-        self.seasonal_lookback_value = QLineEdit()
+        self.seasonal_lookback_value = QIntLineEdit("", 1, 1000)
         self.seasonal_lookback_value.setEnabled(False)
-        self.seasonal_lookback_frequency = QLineEdit()
+
+        self.seasonal_lookback_frequency = QIntLineEdit("", 1, 1000)
         self.seasonal_lookback_frequency.setEnabled(False)
 
         layout.addWidget(QLabel("Train data size:"), 0, 0)
@@ -45,24 +46,32 @@ class PreprocessingComponent(QWidget):
         layout.addWidget(QLabel("Frequency:"), 6, 0)
         layout.addWidget(self.seasonal_lookback_frequency, 6, 1)
 
-        self.lookback_option.stateChanged.connect(self.update_lookback_state)
-        self.seasonal_lookback_option.stateChanged.connect(self.update_seasonal_lookback_state)
+        self.lookback_option.stateChanged.connect(
+            self.__lookback_state_change
+        )
+        self.seasonal_lookback_option.stateChanged.connect(
+            self.__seasonal_lookback_state_change
+        )
 
-        # Connect all input widgets to emit paramsChanged signal
-        self.train_data_size.textChanged.connect(self.paramsChanged.emit)
-        self.scale_type.currentIndexChanged.connect(self.paramsChanged.emit)
-        self.lookback_option.stateChanged.connect(self.paramsChanged.emit)
-        self.lookback_value.textChanged.connect(self.paramsChanged.emit)
-        self.seasonal_lookback_option.stateChanged.connect(self.paramsChanged.emit)
-        self.seasonal_lookback_value.textChanged.connect(self.paramsChanged.emit)
-        self.seasonal_lookback_frequency.textChanged.connect(self.paramsChanged.emit)
+    def __lookback_state_change(self, state: int) -> None:
+        if state == 2:
+            self.lookback_value.setEnabled(True)
+            self.lookback_value.setText("1")
+        else:
+            self.lookback_value.setEnabled(False)
+            self.lookback_value.setText("")
 
-    def update_lookback_state(self, state):
-        self.lookback_value.setEnabled(state == Qt.CheckState.Checked)
-
-    def update_seasonal_lookback_state(self, state):
-        self.seasonal_lookback_value.setEnabled(state == Qt.CheckState.Checked)
-        self.seasonal_lookback_frequency.setEnabled(state == Qt.CheckState.Checked)
+    def __seasonal_lookback_state_change(self, state: int) -> None:
+        if state == 2:
+            self.seasonal_lookback_value.setEnabled(True)
+            self.seasonal_lookback_frequency.setEnabled(True)
+            self.seasonal_lookback_value.setText("1")
+            self.seasonal_lookback_frequency.setText("1")
+        else:
+            self.seasonal_lookback_value.setEnabled(False)
+            self.seasonal_lookback_frequency.setEnabled(False)
+            self.seasonal_lookback_value.setText("")
+            self.seasonal_lookback_frequency.setText("")
 
     def get_params(self) -> Dict[str, Any]:
         return {
@@ -83,23 +92,3 @@ class PreprocessingComponent(QWidget):
         self.seasonal_lookback_option.setChecked(data["seasonal_lookback_option"])
         self.seasonal_lookback_value.setText(str(data["seasonal_lookback_value"]) if data["seasonal_lookback_option"] else "")
         self.seasonal_lookback_frequency.setText(str(data["seasonal_lookback_frequency"]) if data["seasonal_lookback_option"] else "")
-
-    def check_errors(self) -> None:
-        train_data_size = int(self.train_data_size.text())
-        if train_data_size < 0:
-            raise ValueError("Train data size must be greater than 0")
-        if train_data_size > 100:
-            raise ValueError("Train data size must be less than 100")
-
-        if self.lookback_option.isChecked() and not self.lookback_value.text():
-            raise ValueError("Lookback value must be specified")
-
-        if self.seasonal_lookback_option.isChecked():
-            if not self.seasonal_lookback_value.text():
-                raise ValueError("Seasonal lookback value must be specified")
-            if not self.seasonal_lookback_frequency.text():
-                raise ValueError("Seasonal lookback frequency must be specified")
-
-    def grid(self, layout: QGridLayout, column: int, row: int) -> "PreprocessingComponent":
-        layout.addWidget(self.root, row, column)
-        return self

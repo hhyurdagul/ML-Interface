@@ -107,6 +107,3 @@ class InputComponent(QWidget):
             raise Exception("Target list is empty")
         if self.get_target() in self.get_predictors():
             raise Exception("Target and predictor cannot be the same")
-
-    def grid(self, column: int, row: int):
-        self.root.setGeometry(column * 100, row * 100, 400, 300)  # Adjust as needed

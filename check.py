@@ -1,9 +1,3 @@
-import os
-import sys
-os.environ["TCL_LIBRARY"] = sys.base_prefix + "/lib/tcl8.6"
-os.environ["TK_LIBRARY"] = sys.base_prefix + "/lib/tk8.6"
-
-
 import tkinter as tk
 import numpy as np
 from mlinterface.gui.components.variables import GenericFloatVar, GenericIntVar

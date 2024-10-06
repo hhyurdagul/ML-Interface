@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QGridLayout, QWidget, QVBoxLayout, QPushButton, QM
 from PySide6.QtCore import Signal
 from mlinterface.components.input_component import InputComponent
 from mlinterface.components.time_series import PreprocessingComponent
+from mlinterface.components.model_components.temp import ModelComponent
 
 class RandomForest(QWidget):
     def __init__(self):
@@ -10,11 +11,14 @@ class RandomForest(QWidget):
         layout = QGridLayout(self)
 
         # Add components to the layout
-        self.input_component = InputComponent("Train Data Input", self.read_data)
-        self.preprocessing_component = PreprocessingComponent("Preprocessing")
+        input_component = InputComponent("Train Data Input", self.read_data)
+        preprocessing_component = PreprocessingComponent("Preprocessing")
+        random_forest_component = ModelComponent()
 
-        layout.addWidget(self.input_component.root, 0, 0, 2, 1)
-        layout.addWidget(self.preprocessing_component.root, 2, 0, 1, 1)
+
+        layout.addWidget(input_component.root, 0, 0, 1, 1)
+        layout.addWidget(preprocessing_component.root, 1, 0, 1, 1)
+        layout.addWidget(random_forest_component.root, 0, 1, 1, 1)
 
         # Add stretch to push widgets to the top and distribute space
         self.setLayout(layout)
