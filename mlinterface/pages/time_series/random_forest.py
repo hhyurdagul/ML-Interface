@@ -1,9 +1,7 @@
 from PySide6.QtWidgets import QGridLayout, QWidget, QVBoxLayout, QPushButton, QMessageBox
 from PySide6.QtCore import Signal
-from mlinterface.components.input_component import InputComponent
-from mlinterface.components.time_series import PreprocessingComponent
-from mlinterface.components.model_components.temp import ModelComponent
-from mlinterface.components.prediction_component import PredictionComponent
+
+from mlinterface.components import InputComponent, PreprocessingComponent, ModelComponent, PredictionComponent
 
 class RandomForest(QWidget):
     def __init__(self):

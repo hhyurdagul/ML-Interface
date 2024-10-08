@@ -1,10 +1,10 @@
-from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QLineEdit, QGroupBox, QComboBox, QCheckBox
+from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QLineEdit, QGroupBox, QComboBox, QCheckBox, QPushButton
 from PySide6.QtCore import Signal
 from mlinterface.components.variables import QIntLineEdit, QFloatLineEdit
 
-class RandomForestWidget(QWidget):
+class RandomForestWidget(QGroupBox):
     def __init__(self):
-        super().__init__()
+        super().__init__("Random Forest")
         layout = QGridLayout(self)
         self.parameters = {
             "n_estimators": QIntLineEdit("100", 1, 1000),
@@ -14,15 +14,17 @@ class RandomForestWidget(QWidget):
         }
         for i, (name, widget) in enumerate(self.parameters.items()):
             layout.addWidget(QLabel(f"{name.replace('_', ' ').title()}:"), i, 0)
+            widget.setFixedWidth(100)
             layout.addWidget(widget, i, 1)
+        self.setLayout(layout)
 
     def toggle_params(self):
         for widget in self.parameters.values():
             widget.setEnabled(not widget.isEnabled())
 
-class XGBoostWidget(QWidget):
+class XGBoostWidget(QGroupBox):
     def __init__(self):
-        super().__init__()
+        super().__init__("XGBoost")
         layout = QGridLayout(self)
         self.parameters = {
             "n_estimators": QIntLineEdit("100", 1, 1000),
@@ -31,7 +33,9 @@ class XGBoostWidget(QWidget):
         }
         for i, (name, widget) in enumerate(self.parameters.items()):
             layout.addWidget(QLabel(f"{name.replace('_', ' ').title()}:"), i, 0)
+            widget.setFixedWidth(100)
             layout.addWidget(widget, i, 1)
+        self.setLayout(layout)
 
     def toggle_params(self):
         for widget in self.parameters.values():
@@ -39,8 +43,7 @@ class XGBoostWidget(QWidget):
 
 class ModelComponent(QGroupBox):
     def __init__(self, title: str):
-        super().__init__()
-        self.setTitle(title)
+        super().__init__(title)
         self.main_layout = QGridLayout()
 
         self.algorithm_combo = QComboBox()
@@ -55,7 +58,15 @@ class ModelComponent(QGroupBox):
         self.current_algorithm = RandomForestWidget()
         self.on_algorithm_changed(0)
 
-        self.main_layout.addWidget(self.optimization_checkbox, 1, 0)
+        self.main_layout.addWidget(self.optimization_checkbox, 0, 2)
+        self.create_model_button = QPushButton("Create Model")
+        self.save_model_button = QPushButton("Save Model")
+        self.load_model_button = QPushButton("Load Model")
+
+        self.main_layout.addWidget(self.create_model_button, 1, 2)
+        self.main_layout.addWidget(self.save_model_button, 2, 2)
+        self.main_layout.addWidget(self.load_model_button, 3, 2)
+
         self.setLayout(self.main_layout)
 
 
@@ -69,4 +80,4 @@ class ModelComponent(QGroupBox):
            self.current_algorithm = XGBoostWidget()
 
         self.optimization_checkbox.stateChanged.connect(self.current_algorithm.toggle_params)
-        self.main_layout.addWidget(self.current_algorithm, 2, 0, 1, 2)
+        self.main_layout.addWidget(self.current_algorithm, 1, 0, 3, 2)

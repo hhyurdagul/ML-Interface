@@ -10,31 +10,32 @@ class InputComponent(QGroupBox):
         read_func: Callable[[str], list[str]] = lambda _: list(),
     ):
         super().__init__(title)
-        self.read_func = read_func
+        self.__read_func = read_func
         layout = QGridLayout()
 
-        self.file_path = QLineEdit()
-        self.file_path.setFixedWidth(150)
+        self.__file_path = QLineEdit()
+        self.__file_path.setFixedWidth(150)
+        self.__file_path.setEnabled(False)
         layout.addWidget(QLabel("Train File Path:"), 0, 0)
-        layout.addWidget(self.file_path, 0, 1)
+        layout.addWidget(self.__file_path, 0, 1)
 
         read_button = QPushButton("Read Data")
         read_button.clicked.connect(self.__read_train_data)
         layout.addWidget(read_button, 0, 2)
 
-        self.input_list = QListWidget()
-        self.input_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.input_list.setFixedWidth(150)
-        layout.addWidget(self.input_list, 1, 0)
+        self.__input_list = QListWidget()
+        self.__input_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.__input_list.setFixedWidth(150)
+        layout.addWidget(self.__input_list, 1, 0)
 
-        self.predictor_list = QListWidget()
-        self.predictor_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.predictor_list.setFixedWidth(150)
-        layout.addWidget(self.predictor_list, 1, 1)
+        self.__predictor_list = QListWidget()
+        self.__predictor_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.__predictor_list.setFixedWidth(150)
+        layout.addWidget(self.__predictor_list, 1, 1)
 
-        self.target_list = QListWidget()
-        self.target_list.setFixedWidth(150)
-        layout.addWidget(self.target_list, 1, 2)
+        self.__target_list = QListWidget()
+        self.__target_list.setFixedWidth(150)
+        layout.addWidget(self.__target_list, 1, 2)
 
         add_predictor_button = QPushButton("Add Predictor")
         add_predictor_button.clicked.connect(self.__add_predictor)
@@ -55,10 +56,10 @@ class InputComponent(QGroupBox):
         self.setLayout(layout)
 
     def __fill_input_list(self, values: list[str]) -> None:
-        self.input_list.clear()
-        self.input_list.addItems(values)
-        self.predictor_list.clear()
-        self.target_list.clear()
+        self.__input_list.clear()
+        self.__input_list.addItems(values)
+        self.__predictor_list.clear()
+        self.__target_list.clear()
 
     def __read_train_data(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -69,41 +70,41 @@ class InputComponent(QGroupBox):
         )
         if not path:
             return
-        self.file_path.setText(path)
+        self.__file_path.setText(path)
 
-        data_columns = self.read_func(path)
+        data_columns = self.__read_func(path)
         self.__fill_input_list(data_columns)
 
     def __add_predictor(self) -> None:
-        for item in self.input_list.selectedItems():
-            if self.predictor_list.findItems(item.text(), Qt.MatchFlag.MatchExactly):
+        for item in self.__input_list.selectedItems():
+            if self.__predictor_list.findItems(item.text(), Qt.MatchFlag.MatchExactly):
                 continue
-            self.predictor_list.addItem(item.text())
+            self.__predictor_list.addItem(item.text())
 
     def __eject_predictor(self) -> None:
-        for item in self.predictor_list.selectedItems():
-            self.predictor_list.takeItem(self.predictor_list.row(item))
+        for item in self.__predictor_list.selectedItems():
+            self.__predictor_list.takeItem(self.__predictor_list.row(item))
 
     def __add_target(self) -> None:
-        selected = self.input_list.selectedItems()
-        if selected and self.target_list.count() < 1:
-            self.target_list.addItem(selected[0].text())
+        selected = self.__input_list.selectedItems()
+        if selected and self.__target_list.count() < 1:
+            self.__target_list.addItem(selected[0].text())
 
     def __eject_target(self) -> None:
-        self.target_list.clear()
+        self.__target_list.clear()
 
     def get_predictors(self) -> list[str]:
-        return [self.predictor_list.item(i).text() for i in range(self.predictor_list.count())]
+        return [self.__predictor_list.item(i).text() for i in range(self.__predictor_list.count())]
 
     def get_target(self) -> str:
-        return self.target_list.item(0).text() if self.target_list.count() > 0 else ""
+        return self.__target_list.item(0).text() if self.__target_list.count() > 0 else ""
 
     def check_errors(self) -> None:
-        if self.input_list.count() < 1:
+        if self.__input_list.count() < 1:
             raise Exception("Read a data first")
-        if self.predictor_list.count() < 1:
+        if self.__predictor_list.count() < 1:
             raise Exception("Predictor list is empty")
-        if self.target_list.count() < 1:
+        if self.__target_list.count() < 1:
             raise Exception("Target list is empty")
         if self.get_target() in self.get_predictors():
             raise Exception("Target and predictor cannot be the same")
