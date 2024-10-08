@@ -6,14 +6,14 @@ from typing import Any, Dict
 from mlinterface.components.variables import QIntLineEdit
 
 
-class PreprocessingComponent(QWidget):
-    def __init__(self, text: str) -> None:
+class PreprocessingComponent(QGroupBox):
+    def __init__(self, title: str) -> None:
         super().__init__()
-        self.root = QGroupBox(text)
+        self.setTitle(title)
         layout = QGridLayout()
-        self.root.setLayout(layout)
 
         self.train_data_size = QIntLineEdit("100", 1, 100)
+        self.train_data_size.setFixedWidth(100)
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(["None", "MinMax", "Standard"])
@@ -47,13 +47,15 @@ class PreprocessingComponent(QWidget):
         layout.addWidget(self.seasonal_lookback_frequency, 6, 1)
 
         self.lookback_option.stateChanged.connect(
-            self.__lookback_state_change
+            lambda state: self.__lookback_state_change(state)
         )
         self.seasonal_lookback_option.stateChanged.connect(
-            self.__seasonal_lookback_state_change
+            lambda state: self.__seasonal_lookback_state_change(state)
         )
+        self.setLayout(layout)
 
     def __lookback_state_change(self, state: int) -> None:
+        print("State", state)
         if state == 2:
             self.lookback_value.setEnabled(True)
             self.lookback_value.setText("1")

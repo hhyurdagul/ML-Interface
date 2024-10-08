@@ -1,66 +1,82 @@
-import tkinter as tk
-from tkinter import ttk
+from PySide6.QtWidgets import (
+    QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QFrame
+)
+from PySide6.QtCore import Qt
 from typing import Callable
 
-from mlinterface.gui.components.variables import GenericIntVar, GenericFloatVar
+class PredictionComponent(QGroupBox):
+    def __init__(self, title: str, get_result_data: Callable[[str], list[str]] = lambda _: list()):
+        super().__init__(title)
 
+        layout = QHBoxLayout()
+        self.setLayout(layout)
 
-class PredictionComponent:
-    def __init__(self, parent: ttk.Frame, text: str, get_result_data: Callable) -> None:
-        self.root = ttk.LabelFrame(parent, text=text)
+        # Test Model Main
+        test_model_main_frame = QGroupBox("Test Model")
+        test_model_main_layout = QVBoxLayout()
+        test_model_main_frame.setLayout(test_model_main_layout)
 
-        ## Test Model Main
-        test_model_main_frame = ttk.LabelFrame(self.root, text="Test Model")
-        test_model_main_frame.grid(column=0, row=0)
+        prediction_count_layout = QHBoxLayout()
+        prediction_count_layout.addWidget(QLabel("Prediction Count"))
+        self.prediction_count = QLineEdit()
+        prediction_count_layout.addWidget(self.prediction_count)
+        result_values_button = QPushButton("Result Values")
+        result_values_button.clicked.connect(self.show_result_values)
+        prediction_count_layout.addWidget(result_values_button)
+        test_model_main_layout.addLayout(prediction_count_layout)
 
-        self.prediction_count = GenericIntVar(value="")  # type: ignore
-        ttk.Label(test_model_main_frame, text="Prediction Count", width=12).grid(
-            column=0, row=0, sticky="w"
-        )
-        ttk.Entry(
-            test_model_main_frame, textvariable=self.prediction_count, width=8
-        ).grid(column=1, row=0, sticky="w")
-        ttk.Button(
-            test_model_main_frame,
-            text="Result Values",
-            command=self.show_result_values,
-            width=8,
-        ).grid(column=2, row=0, sticky="w")
+        test_file_layout = QHBoxLayout()
+        test_file_layout.addWidget(QLabel("Test File Path"))
+        self.test_file_path = QLineEdit()
+        test_file_layout.addWidget(self.test_file_path)
+        get_test_set_button = QPushButton("Get Test Set")
+        get_test_set_button.clicked.connect(self.read_test_data)
+        test_file_layout.addWidget(get_test_set_button)
+        test_model_main_layout.addLayout(test_file_layout)
 
-        test_file_path = tk.StringVar(value="")
-        ttk.Label(test_model_main_frame, text="Test File Path").grid(column=0, row=1)
-        ttk.Entry(test_model_main_frame, textvariable=test_file_path).grid(
-            column=1, row=1
-        )
-        ttk.Button(
-            test_model_main_frame,
-            text="Get Test Set",
-            command=lambda: self.read_test_data(test_file_path),
-        ).grid(column=2, row=1)
+        test_model_buttons_layout = QHBoxLayout()
+        test_model_button = QPushButton("Test Model")
+        test_model_button.clicked.connect(self.forecast)
+        test_model_buttons_layout.addWidget(test_model_button)
+        result_graph_button = QPushButton("Result Graph")
+        result_graph_button.clicked.connect(self.show_result_graph)
+        test_model_buttons_layout.addWidget(result_graph_button)
+        test_model_main_layout.addLayout(test_model_buttons_layout)
 
-        ttk.Button(
-            test_model_main_frame, text="Test Model", command=self.forecast
-        ).grid(column=2, row=3)
-        ttk.Button(
-            test_model_main_frame,
-            text="Result Graph",
-            command=self.show_result_graph,
-        ).grid(column=0, row=4, columnspan=3)
+        layout.addWidget(test_model_main_frame)
 
-        ## Test Model Metrics
-        test_model_metrics_frame = ttk.LabelFrame(self.root, text="Test Metrics")
-        test_model_metrics_frame.grid(column=1, row=0)
+        # Test Model Metrics
+        test_model_metrics_frame = QGroupBox("Test Metrics")
+        test_model_metrics_layout = QVBoxLayout()
+        test_model_metrics_frame.setLayout(test_model_metrics_layout)
 
-        test_metric_names: list[str] = ["R2", "MAE", "MAPE", "SMAPE"]
-        self.test_metric_vars = [
-            GenericFloatVar(value="") for _ in range(len(test_metric_names))
-        ]
-        for i, j in enumerate(test_metric_names):
-            ttk.Label(test_model_metrics_frame, text=j, width=12).grid(column=0, row=i)
-            ttk.Entry(
-                test_model_metrics_frame, textvariable=self.test_metric_vars[i], width=8
-            ).grid(column=1, row=i)
+        test_metric_names = ["R2:", "MAE:", "MAPE:", "SMAPE:"]
+        self.test_metric_inputs = []
+        for metric_name in test_metric_names:
+            metric_layout = QHBoxLayout()
+            metric_layout.addWidget(QLabel(metric_name))
+            metric_input = QLineEdit()
+            metric_input.setFixedWidth(100)
+            self.test_metric_inputs.append(metric_input)
+            metric_layout.addWidget(metric_input)
+            test_model_metrics_layout.addLayout(metric_layout)
 
-    def grid(self, column: int, row: int) -> "PredictionComponent":
-        self.root.grid(column=column, row=row)
-        return self
+        layout.addWidget(test_model_metrics_frame)
+
+        self.get_result_data = get_result_data
+
+    def show_result_values(self):
+        # Implement this method
+        pass
+
+    def read_test_data(self):
+        # Implement this method
+        pass
+
+    def forecast(self):
+        # Implement this method
+        pass
+
+    def show_result_graph(self):
+        # Implement this method
+        pass

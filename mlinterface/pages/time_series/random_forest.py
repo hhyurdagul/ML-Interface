@@ -3,6 +3,7 @@ from PySide6.QtCore import Signal
 from mlinterface.components.input_component import InputComponent
 from mlinterface.components.time_series import PreprocessingComponent
 from mlinterface.components.model_components.temp import ModelComponent
+from mlinterface.components.prediction_component import PredictionComponent
 
 class RandomForest(QWidget):
     def __init__(self):
@@ -11,14 +12,16 @@ class RandomForest(QWidget):
         layout = QGridLayout(self)
 
         # Add components to the layout
-        input_component = InputComponent("Train Data Input", self.read_data)
+        input_component = InputComponent("Train Data", self.read_data)
         preprocessing_component = PreprocessingComponent("Preprocessing")
-        random_forest_component = ModelComponent()
+        model_component = ModelComponent("Model Parameters")
+        prediction_component = PredictionComponent("Prediction")
 
 
-        layout.addWidget(input_component.root, 0, 0, 1, 1)
-        layout.addWidget(preprocessing_component.root, 1, 0, 1, 1)
-        layout.addWidget(random_forest_component.root, 0, 1, 1, 1)
+        layout.addWidget(input_component, 0, 0, 1, 1)
+        layout.addWidget(preprocessing_component, 1, 0, 1, 1)
+        layout.addWidget(model_component, 0, 1, 1, 1)
+        layout.addWidget(prediction_component, 1, 1, 1, 1)
 
         # Add stretch to push widgets to the top and distribute space
         self.setLayout(layout)

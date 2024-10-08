@@ -3,56 +3,56 @@ from PySide6.QtWidgets import (QWidget, QLabel, QLineEdit, QPushButton, QListWid
 from PySide6.QtCore import Signal, Qt
 from typing import Callable
 
-class InputComponent(QWidget):
+class InputComponent(QGroupBox):
     def __init__(
         self,
-        text: str,
+        title: str,
         read_func: Callable[[str], list[str]] = lambda _: list(),
     ):
-        super().__init__()
+        super().__init__(title)
         self.read_func = read_func
-
-        self.root = QGroupBox(text)
         layout = QGridLayout()
-        self.root.setLayout(layout)
 
         self.file_path = QLineEdit()
-        layout.addWidget(QLabel("Train File Path"), 0, 0)
+        self.file_path.setFixedWidth(150)
+        layout.addWidget(QLabel("Train File Path:"), 0, 0)
         layout.addWidget(self.file_path, 0, 1)
 
         read_button = QPushButton("Read Data")
-        read_button.clicked.connect(self.read_train_data)
+        read_button.clicked.connect(self.__read_train_data)
         layout.addWidget(read_button, 0, 2)
 
         self.input_list = QListWidget()
         self.input_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.input_list.setFixedWidth(150)
         layout.addWidget(self.input_list, 1, 0)
 
         self.predictor_list = QListWidget()
         self.predictor_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.predictor_list.setFixedWidth(150)
         layout.addWidget(self.predictor_list, 1, 1)
 
         self.target_list = QListWidget()
+        self.target_list.setFixedWidth(150)
         layout.addWidget(self.target_list, 1, 2)
 
         add_predictor_button = QPushButton("Add Predictor")
-        add_predictor_button.clicked.connect(self.add_predictor)
+        add_predictor_button.clicked.connect(self.__add_predictor)
         layout.addWidget(add_predictor_button, 2, 1)
 
         eject_predictor_button = QPushButton("Eject Predictor")
-        eject_predictor_button.clicked.connect(self.eject_predictor)
+        eject_predictor_button.clicked.connect(self.__eject_predictor)
         layout.addWidget(eject_predictor_button, 3, 1)
 
         add_target_button = QPushButton("Add Target")
-        add_target_button.clicked.connect(self.add_target)
+        add_target_button.clicked.connect(self.__add_target)
         layout.addWidget(add_target_button, 2, 2)
 
         eject_target_button = QPushButton("Eject Target")
-        eject_target_button.clicked.connect(self.eject_target)
+        eject_target_button.clicked.connect(self.__eject_target)
         layout.addWidget(eject_target_button, 3, 2)
 
-        self.setLayout(QGridLayout())
-        self.layout().addWidget(self.root)
+        self.setLayout(layout)
 
     def __fill_input_list(self, values: list[str]) -> None:
         self.input_list.clear()
@@ -60,7 +60,7 @@ class InputComponent(QWidget):
         self.predictor_list.clear()
         self.target_list.clear()
 
-    def read_train_data(self) -> None:
+    def __read_train_data(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
@@ -74,22 +74,22 @@ class InputComponent(QWidget):
         data_columns = self.read_func(path)
         self.__fill_input_list(data_columns)
 
-    def add_predictor(self) -> None:
+    def __add_predictor(self) -> None:
         for item in self.input_list.selectedItems():
             if self.predictor_list.findItems(item.text(), Qt.MatchFlag.MatchExactly):
                 continue
             self.predictor_list.addItem(item.text())
 
-    def eject_predictor(self) -> None:
+    def __eject_predictor(self) -> None:
         for item in self.predictor_list.selectedItems():
             self.predictor_list.takeItem(self.predictor_list.row(item))
 
-    def add_target(self) -> None:
+    def __add_target(self) -> None:
         selected = self.input_list.selectedItems()
         if selected and self.target_list.count() < 1:
             self.target_list.addItem(selected[0].text())
 
-    def eject_target(self) -> None:
+    def __eject_target(self) -> None:
         self.target_list.clear()
 
     def get_predictors(self) -> list[str]:
